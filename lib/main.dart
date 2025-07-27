@@ -51,15 +51,16 @@ class MyApp extends StatelessWidget {
     // Initialize the app controller
     final appController = Get.put(AppController());
     
-    return GetMaterialApp(
+    return Obx(() => GetMaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Activity Timer',
-      theme: Obx(() => ForUI.getLightTheme(appController.themeColor.value)),
-      darkTheme: Obx(() => ForUI.getDarkTheme(appController.themeColor.value)),
-      themeMode: Obx(() => appController.themeMode.value),
+      theme: ForUI.getLightTheme(appController.themeColor.value),
+      darkTheme: ForUI.getDarkTheme(appController.themeColor.value),
+      themeMode: appController.themeMode.value,
       initialRoute: AppPages.INITIAL,
       getPages: AppPages.routes,
       defaultTransition: Transition.cupertino,
+    )
     );
   }
 }

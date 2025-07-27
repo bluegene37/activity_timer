@@ -28,7 +28,7 @@ class ForUI {
         seedColor: primaryColor,
         brightness: Brightness.light,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: cardElevation,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(cardRadius),
@@ -60,7 +60,7 @@ class ForUI {
         seedColor: primaryColor,
         brightness: Brightness.dark,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: cardElevation,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(cardRadius),
