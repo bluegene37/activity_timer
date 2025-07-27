@@ -1,0 +1,53 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'settings.dart';
+
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
+
+class AppSettingsDataAdapter extends TypeAdapter<AppSettingsData> {
+  @override
+  final int typeId = 0;
+
+  @override
+  AppSettingsData read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return AppSettingsData(
+      themeMode: fields[0] as String,
+      soundEnabled: fields[1] as bool,
+      vibrationEnabled: fields[2] as bool,
+      themeColor: fields[3] as int,
+      defaultAlarmSound: fields[4] as String,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, AppSettingsData obj) {
+    writer
+      ..writeByte(5)
+      ..writeByte(0)
+      ..write(obj.themeMode)
+      ..writeByte(1)
+      ..write(obj.soundEnabled)
+      ..writeByte(2)
+      ..write(obj.vibrationEnabled)
+      ..writeByte(3)
+      ..write(obj.themeColor)
+      ..writeByte(4)
+      ..write(obj.defaultAlarmSound);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AppSettingsDataAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
