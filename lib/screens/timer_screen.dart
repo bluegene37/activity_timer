@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
-import 'dart:math' as math;
 import '../models/activity_timer.dart';
 import '../models/settings.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -9,16 +8,14 @@ import 'package:audioplayers/audioplayers.dart';
 class TimerScreen extends StatefulWidget {
   final TimerSequence sequence;
 
-  const TimerScreen({
-    super.key,
-    required this.sequence,
-  });
+  const TimerScreen({super.key, required this.sequence});
 
   @override
   State<TimerScreen> createState() => _TimerScreenState();
 }
 
-class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin {
+class _TimerScreenState extends State<TimerScreen>
+    with TickerProviderStateMixin {
   late List<ActivityTimer> _timers;
   int _currentTimerIndex = 0;
   int _remainingSeconds = 0;
@@ -42,9 +39,11 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
       duration: Duration(seconds: _remainingSeconds),
     );
     _startTimer();
-    
-    // Load the alarm sound
-    _audioPlayer.setSource(AssetSource('sounds/timer_complete.mp3'));
+
+    // Load the alarm sound — use the user's selected default alarm sound
+    _audioPlayer.setSource(
+      AssetSource('sounds/${_settings.defaultAlarmSound.fileName}'),
+    );
     _audioPlayer.setReleaseMode(ReleaseMode.stop);
   }
 
@@ -75,12 +74,18 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
     });
   }
 
-  void _playAlarm() async {
+  Future<void> _playAlarm() async {
     // Play sound if enabled
     if (_settings.soundEnabled) {
-      await _audioPlayer.resume();
+      try {
+        await _audioPlayer.stop();
+        await _audioPlayer.setSource(
+          AssetSource('sounds/${_settings.defaultAlarmSound.fileName}'),
+        );
+        await _audioPlayer.resume();
+      } catch (_) {}
     }
-    
+
     // Vibrate if enabled
     if (_settings.vibrationEnabled) {
       HapticFeedback.heavyImpact();
@@ -171,11 +176,15 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
   void _skipToNextTimer() {
     if (_currentTimerIndex < _timers.length - 1) {
       _moveToNextTimer();
+    } else if (_loopEnabled) {
+      // On last timer with loop — wrap around
+      _moveToNextTimer();
     }
   }
 
   void _goToPreviousTimer() {
     if (_currentTimerIndex > 0) {
+      final wasRunning = _isRunning;
       _timer?.cancel();
       _animationController.reset();
       setState(() {
@@ -183,6 +192,9 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
         _remainingSeconds = _timers[_currentTimerIndex].durationInSeconds;
         _isRunning = false;
       });
+      if (wasRunning) {
+        _startTimer();
+      }
     }
   }
 
@@ -195,9 +207,11 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     final currentTimer = _timers[_currentTimerIndex];
-    final progress = _isRunning
-        ? 1 - (_remainingSeconds / currentTimer.durationInSeconds)
-        : 0.0;
+    // Always show the real elapsed progress, even when paused
+    final double progress =
+        currentTimer.durationInSeconds > 0
+            ? 1 - (_remainingSeconds / currentTimer.durationInSeconds)
+            : 0.0;
 
     return Scaffold(
       appBar: AppBar(
@@ -208,23 +222,26 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
           onPressed: () {
             showDialog(
               context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Exit Activity?'),
-                content: const Text('Are you sure you want to exit this activity?'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
+              builder:
+                  (context) => AlertDialog(
+                    title: const Text('Exit Activity?'),
+                    content: const Text(
+                      'Are you sure you want to exit this activity?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context); // Close dialog
+                          Navigator.pop(context); // Close timer screen
+                        },
+                        child: const Text('Exit'),
+                      ),
+                    ],
                   ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context); // Close dialog
-                      Navigator.pop(context); // Close timer screen
-                    },
-                    child: const Text('Exit'),
-                  ),
-                ],
-              ),
             );
           },
         ),
@@ -233,7 +250,10 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
           IconButton(
             icon: Icon(
               _settings.soundEnabled ? Icons.volume_up : Icons.volume_off,
-              color: _settings.soundEnabled ? Theme.of(context).colorScheme.primary : null,
+              color:
+                  _settings.soundEnabled
+                      ? Theme.of(context).colorScheme.primary
+                      : null,
             ),
             onPressed: () async {
               bool newValue = !_settings.soundEnabled;
@@ -246,16 +266,18 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
           IconButton(
             icon: Icon(
               _loopEnabled ? Icons.repeat_on : Icons.repeat,
-              color: _loopEnabled ? Theme.of(context).colorScheme.primary : null,
+              color:
+                  _loopEnabled ? Theme.of(context).colorScheme.primary : null,
             ),
             onPressed: _toggleLoop,
             tooltip: _loopEnabled ? 'Disable loop' : 'Enable loop',
           ),
         ],
       ),
-      body: _isCompleted
-          ? _buildCompletedView()
-          : _buildTimerView(currentTimer, progress),
+      body:
+          _isCompleted
+              ? _buildCompletedView()
+              : _buildTimerView(currentTimer, progress),
     );
   }
 
@@ -267,7 +289,7 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
           value: (_currentTimerIndex + progress) / _timers.length,
           minHeight: 8,
         ),
-        
+
         // Timer info
         Padding(
           padding: const EdgeInsets.all(16.0),
@@ -283,7 +305,10 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
                   if (_loopEnabled && _loopCount > 0) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.primary,
                         borderRadius: BorderRadius.circular(12),
@@ -319,7 +344,7 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
             ],
           ),
         ),
-        
+
         // Timer circle
         Expanded(
           child: Center(
@@ -353,7 +378,7 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
             ),
           ),
         ),
-        
+
         // Notification indicators
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -409,7 +434,7 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
                 if (_loopCount > 0) ...[
                   const SizedBox(width: 4),
                   Text(
-                    '(${_loopCount})',
+                    '($_loopCount)',
                     style: TextStyle(
                       fontSize: 14,
                       color: Theme.of(context).colorScheme.primary,
@@ -420,9 +445,9 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
             ],
           ),
         ),
-        
+
         const SizedBox(height: 8),
-        
+
         // Next timer preview
         if (_currentTimerIndex < _timers.length - 1) ...[
           Padding(
@@ -443,7 +468,9 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           Text(
-                            _formatTime(_timers[_currentTimerIndex + 1].durationInSeconds),
+                            _formatTime(
+                              _timers[_currentTimerIndex + 1].durationInSeconds,
+                            ),
                             style: Theme.of(context).textTheme.bodyLarge,
                           ),
                         ],
@@ -486,7 +513,7 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
             ),
           ),
         ],
-        
+
         // Control buttons
         Padding(
           padding: const EdgeInsets.all(24.0),
@@ -567,7 +594,7 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
     final hours = seconds ~/ 3600;
     final minutes = (seconds % 3600) ~/ 60;
     final remainingSeconds = seconds % 60;
-    
+
     if (hours > 0) {
       return '$hours:${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
     } else {
@@ -577,7 +604,9 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
 
   Color _getTimerColor(double progress) {
     if (progress < 0.5) {
-      return Theme.of(context).colorScheme.primary; // Primary color for first half
+      return Theme.of(
+        context,
+      ).colorScheme.primary; // Primary color for first half
     } else if (progress < 0.75) {
       return Colors.orange; // Orange for next quarter
     } else {

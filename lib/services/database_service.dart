@@ -1,4 +1,4 @@
-import 'package:hive/hive.dart';
+import 'package:hive_ce/hive.dart';
 import '../models/activity_timer.dart';
 import '../models/interval_timer.dart';
 
@@ -31,7 +31,11 @@ class DatabaseService {
   // Get an activity sequence by ID
   Future<TimerSequence?> getActivitySequence(String id) async {
     final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
-    return box.values.firstWhere((sequence) => sequence.id == id);
+    try {
+      return box.values.firstWhere((sequence) => sequence.id == id);
+    } catch (_) {
+      return null;
+    }
   }
 
   // Create a new activity sequence
@@ -55,50 +59,71 @@ class DatabaseService {
   }
 
   // Add a timer to a sequence
-  Future<void> addTimerToSequence(String sequenceId, ActivityTimer timer) async {
+  Future<void> addTimerToSequence(
+    String sequenceId,
+    ActivityTimer timer,
+  ) async {
     final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
-    final sequence = box.values.firstWhere((s) => s.id == sequenceId);
-    sequence.timers.add(timer);
-    sequence.updatedAt = DateTime.now();
-    await box.put(sequenceId, sequence);
+    try {
+      final sequence = box.values.firstWhere((s) => s.id == sequenceId);
+      sequence.timers.add(timer);
+      sequence.updatedAt = DateTime.now();
+      await box.put(sequenceId, sequence);
+    } catch (_) {}
   }
 
   // Update a timer in a sequence
-  Future<void> updateTimerInSequence(String sequenceId, ActivityTimer timer) async {
+  Future<void> updateTimerInSequence(
+    String sequenceId,
+    ActivityTimer timer,
+  ) async {
     final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
-    final sequence = box.values.firstWhere((s) => s.id == sequenceId);
-    final index = sequence.timers.indexWhere((t) => t.id == timer.id);
-    if (index != -1) {
-      sequence.timers[index] = timer;
-      sequence.updatedAt = DateTime.now();
-      await box.put(sequenceId, sequence);
-    }
+    try {
+      final sequence = box.values.firstWhere((s) => s.id == sequenceId);
+      final index = sequence.timers.indexWhere((t) => t.id == timer.id);
+      if (index != -1) {
+        sequence.timers[index] = timer;
+        sequence.updatedAt = DateTime.now();
+        await box.put(sequenceId, sequence);
+      }
+    } catch (_) {}
   }
 
   // Delete a timer from a sequence
-  Future<void> deleteTimerFromSequence(String sequenceId, String timerId) async {
+  Future<void> deleteTimerFromSequence(
+    String sequenceId,
+    String timerId,
+  ) async {
     final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
-    final sequence = box.values.firstWhere((s) => s.id == sequenceId);
-    sequence.timers.removeWhere((t) => t.id == timerId);
-    sequence.updatedAt = DateTime.now();
-    await box.put(sequenceId, sequence);
+    try {
+      final sequence = box.values.firstWhere((s) => s.id == sequenceId);
+      sequence.timers.removeWhere((t) => t.id == timerId);
+      sequence.updatedAt = DateTime.now();
+      await box.put(sequenceId, sequence);
+    } catch (_) {}
   }
 
-  // Reorder timers in a sequence
-  Future<void> reorderTimersInSequence(String sequenceId, List<String> timerIds) async {
+  Future<void> reorderTimersInSequence(
+    String sequenceId,
+    List<String> timerIds,
+  ) async {
     final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
-    final sequence = box.values.firstWhere((s) => s.id == sequenceId);
-    
-    // Create a new ordered list of timers
-    final orderedTimers = <ActivityTimer>[];
-    for (final id in timerIds) {
-      final timer = sequence.timers.firstWhere((t) => t.id == id);
-      orderedTimers.add(timer);
+    final sequence = box.values.where((s) => s.id == sequenceId).firstOrNull;
+
+    if (sequence != null) {
+      // Create a new ordered list of timers
+      final orderedTimers = <ActivityTimer>[];
+      for (final id in timerIds) {
+        final timer = sequence.timers.where((t) => t.id == id).firstOrNull;
+        if (timer != null) {
+          orderedTimers.add(timer);
+        }
+      }
+
+      sequence.timers = orderedTimers;
+      sequence.updatedAt = DateTime.now();
+      await box.put(sequenceId, sequence);
     }
-    
-    sequence.timers = orderedTimers;
-    sequence.updatedAt = DateTime.now();
-    await box.put(sequenceId, sequence);
   }
 
   // INTERVAL TIMER METHODS
@@ -112,7 +137,11 @@ class DatabaseService {
   // Get an interval timer by ID
   Future<IntervalTimer?> getIntervalTimer(String id) async {
     final box = await Hive.openBox<IntervalTimer>(_intervalTimersBoxName);
-    return box.values.firstWhere((timer) => timer.id == id);
+    try {
+      return box.values.firstWhere((timer) => timer.id == id);
+    } catch (_) {
+      return null;
+    }
   }
 
   // Create a new interval timer
@@ -175,7 +204,7 @@ class DatabaseService {
           ),
         ],
       );
-      
+
       // Strength Training
       final strengthTraining = TimerSequence(
         name: 'Strength Activity',
@@ -212,19 +241,21 @@ class DatabaseService {
           ),
         ],
       );
-      
+
       await box.put(hiitActivity.id, hiitActivity);
       await box.put(strengthTraining.id, strengthTraining);
     }
 
     // Add demo interval timer
-    final intervalBox = await Hive.openBox<IntervalTimer>(_intervalTimersBoxName);
+    final intervalBox = await Hive.openBox<IntervalTimer>(
+      _intervalTimersBoxName,
+    );
     if (intervalBox.isEmpty) {
       // Create a workday timer (8am to 5pm, alarm every hour)
       final now = DateTime.now();
       final today8am = DateTime(now.year, now.month, now.day, 8, 0);
       final today5pm = DateTime(now.year, now.month, now.day, 17, 0);
-      
+
       final workdayTimer = IntervalTimer(
         name: 'Workday Reminders',
         startTime: today8am,
@@ -232,7 +263,7 @@ class DatabaseService {
         intervalValue: 1,
         intervalType: IntervalType.hour,
       );
-      
+
       await intervalBox.put(workdayTimer.id, workdayTimer);
     }
   }

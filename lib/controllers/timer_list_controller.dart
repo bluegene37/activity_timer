@@ -7,7 +7,7 @@ import '../screens/timer_screen.dart';
 
 class TimerListController extends GetxController {
   final _databaseService = DatabaseService();
-  
+
   // Reactive variables
   final Rx<TimerSequence> sequence = TimerSequence(name: '', timers: []).obs;
 
@@ -20,11 +20,19 @@ class TimerListController extends GetxController {
     }
   }
 
+  Future<void> _reloadSequence() async {
+    try {
+      final updated = await _databaseService.getActivitySequence(
+        sequence.value.id,
+      );
+      if (updated != null) {
+        sequence.value = updated;
+      }
+    } catch (_) {}
+  }
+
   Future<void> addTimer() async {
-    final newTimer = ActivityTimer(
-      name: 'New Timer',
-      durationInSeconds: 60,
-    );
+    final newTimer = ActivityTimer(name: 'New Timer', durationInSeconds: 60);
 
     final result = await Get.to<ActivityTimer>(
       () => EditTimerScreen(timer: newTimer),
@@ -32,10 +40,9 @@ class TimerListController extends GetxController {
 
     if (result != null) {
       try {
-        await _databaseService.addTimerToSequence(sequence.value.id, result);
-        
-        // Update the local sequence
-        final updatedTimers = List<ActivityTimer>.from(sequence.value.timers)..add(result);
+        // Optimistic update with a fresh list copy
+        final updatedTimers = List<ActivityTimer>.from(sequence.value.timers)
+          ..add(result);
         sequence.value = TimerSequence(
           id: sequence.value.id,
           name: sequence.value.name,
@@ -44,27 +51,29 @@ class TimerListController extends GetxController {
           createdAt: sequence.value.createdAt,
           updatedAt: DateTime.now(),
         );
+
+        await _databaseService.addTimerToSequence(sequence.value.id, result);
       } catch (e) {
+        await _reloadSequence(); // Revert on failure
         Get.snackbar('Error', 'Failed to add timer: $e');
       }
     }
   }
 
   Future<void> editTimer(int index) async {
+    if (index < 0 || index >= sequence.value.timers.length) return;
     final timer = sequence.value.timers[index];
-    
+
     final result = await Get.to<ActivityTimer>(
       () => EditTimerScreen(timer: timer),
     );
 
     if (result != null) {
       try {
-        await _databaseService.updateTimerInSequence(sequence.value.id, result);
-        
-        // Update the local sequence
+        // Optimistic update with a fresh list copy
         final updatedTimers = List<ActivityTimer>.from(sequence.value.timers);
         updatedTimers[index] = result;
-        
+
         sequence.value = TimerSequence(
           id: sequence.value.id,
           name: sequence.value.name,
@@ -73,15 +82,19 @@ class TimerListController extends GetxController {
           createdAt: sequence.value.createdAt,
           updatedAt: DateTime.now(),
         );
+
+        await _databaseService.updateTimerInSequence(sequence.value.id, result);
       } catch (e) {
+        await _reloadSequence(); // Revert on failure
         Get.snackbar('Error', 'Failed to update timer: $e');
       }
     }
   }
 
   Future<void> deleteTimer(int index) async {
+    if (index < 0 || index >= sequence.value.timers.length) return;
     final timer = sequence.value.timers[index];
-    
+
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         title: const Text('Delete Timer'),
@@ -101,10 +114,9 @@ class TimerListController extends GetxController {
 
     if (confirmed == true) {
       try {
-        await _databaseService.deleteTimerFromSequence(sequence.value.id, timer.id);
-        
-        // Update the local sequence
-        final updatedTimers = List<ActivityTimer>.from(sequence.value.timers)..removeAt(index);
+        // Optimistic update with a fresh list copy
+        final updatedTimers = List<ActivityTimer>.from(sequence.value.timers)
+          ..removeAt(index);
         sequence.value = TimerSequence(
           id: sequence.value.id,
           name: sequence.value.name,
@@ -113,13 +125,24 @@ class TimerListController extends GetxController {
           createdAt: sequence.value.createdAt,
           updatedAt: DateTime.now(),
         );
+
+        await _databaseService.deleteTimerFromSequence(
+          sequence.value.id,
+          timer.id,
+        );
       } catch (e) {
+        await _reloadSequence(); // Revert on failure
         Get.snackbar('Error', 'Failed to delete timer: $e');
       }
     }
   }
 
   Future<void> reorderTimers(int oldIndex, int newIndex) async {
+    final timers = sequence.value.timers;
+    if (oldIndex < 0 || oldIndex >= timers.length) return;
+    if (newIndex < 0) newIndex = 0;
+    if (newIndex > timers.length) newIndex = timers.length;
+
     if (oldIndex < newIndex) {
       newIndex -= 1;
     }
@@ -128,20 +151,25 @@ class TimerListController extends GetxController {
     final timer = updatedTimers.removeAt(oldIndex);
     updatedTimers.insert(newIndex, timer);
 
+    // Optimistically update local state for smooth UI
+    sequence.value = TimerSequence(
+      id: sequence.value.id,
+      name: sequence.value.name,
+      timers: updatedTimers,
+      defaultLoopEnabled: sequence.value.defaultLoopEnabled,
+      createdAt: sequence.value.createdAt,
+      updatedAt: DateTime.now(),
+    );
+
     try {
       final timerIds = updatedTimers.map((t) => t.id).toList();
-      await _databaseService.reorderTimersInSequence(sequence.value.id, timerIds);
-      
-      // Update the local sequence
-      sequence.value = TimerSequence(
-        id: sequence.value.id,
-        name: sequence.value.name,
-        timers: updatedTimers,
-        defaultLoopEnabled: sequence.value.defaultLoopEnabled,
-        createdAt: sequence.value.createdAt,
-        updatedAt: DateTime.now(),
+      await _databaseService.reorderTimersInSequence(
+        sequence.value.id,
+        timerIds,
       );
     } catch (e) {
+      // Revert on error
+      await _reloadSequence();
       Get.snackbar('Error', 'Failed to reorder timers: $e');
     }
   }

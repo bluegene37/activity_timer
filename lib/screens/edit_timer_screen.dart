@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../models/activity_timer.dart';
 import '../components/for_ui_button.dart';
-import '../components/for_ui_card.dart';
 import '../components/for_ui_text_field.dart';
 import '../theme/for_ui.dart';
 
 class EditTimerScreen extends StatefulWidget {
   final ActivityTimer timer;
 
-  const EditTimerScreen({
-    super.key,
-    required this.timer,
-  });
+  const EditTimerScreen({super.key, required this.timer});
 
   @override
   State<EditTimerScreen> createState() => _EditTimerScreenState();
@@ -29,8 +24,10 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.timer.name);
-    _descriptionController = TextEditingController(text: widget.timer.description ?? '');
-    
+    _descriptionController = TextEditingController(
+      text: widget.timer.description ?? '',
+    );
+
     // Convert total seconds to hours, minutes, seconds
     int totalSeconds = widget.timer.durationInSeconds;
     _hours = totalSeconds ~/ 3600;
@@ -88,17 +85,23 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                               const Text('Hours'),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<int>(
-                                value: hours,
+                                initialValue: hours,
                                 decoration: const InputDecoration(
                                   border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                 ),
-                                items: List.generate(24, (index) => index)
-                                    .map((hour) => DropdownMenuItem<int>(
-                                          value: hour,
-                                          child: Text(hour.toString()),
-                                        ))
-                                    .toList(),
+                                items:
+                                    List.generate(24, (index) => index)
+                                        .map(
+                                          (hour) => DropdownMenuItem<int>(
+                                            value: hour,
+                                            child: Text(hour.toString()),
+                                          ),
+                                        )
+                                        .toList(),
                                 onChanged: (value) {
                                   if (value != null) {
                                     setState(() => hours = value);
@@ -116,17 +119,23 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                               const Text('Minutes'),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<int>(
-                                value: minutes,
+                                initialValue: minutes,
                                 decoration: const InputDecoration(
                                   border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                 ),
-                                items: List.generate(60, (index) => index)
-                                    .map((minute) => DropdownMenuItem<int>(
-                                          value: minute,
-                                          child: Text(minute.toString()),
-                                        ))
-                                    .toList(),
+                                items:
+                                    List.generate(60, (index) => index)
+                                        .map(
+                                          (minute) => DropdownMenuItem<int>(
+                                            value: minute,
+                                            child: Text(minute.toString()),
+                                          ),
+                                        )
+                                        .toList(),
                                 onChanged: (value) {
                                   if (value != null) {
                                     setState(() => minutes = value);
@@ -144,17 +153,23 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                               const Text('Seconds'),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<int>(
-                                value: seconds,
+                                initialValue: seconds,
                                 decoration: const InputDecoration(
                                   border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                 ),
-                                items: List.generate(60, (index) => index)
-                                    .map((second) => DropdownMenuItem<int>(
-                                          value: second,
-                                          child: Text(second.toString()),
-                                        ))
-                                    .toList(),
+                                items:
+                                    List.generate(60, (index) => index)
+                                        .map(
+                                          (second) => DropdownMenuItem<int>(
+                                            value: second,
+                                            child: Text(second.toString()),
+                                          ),
+                                        )
+                                        .toList(),
                                 onChanged: (value) {
                                   if (value != null) {
                                     setState(() => seconds = value);
@@ -216,7 +231,10 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
     final updatedTimer = widget.timer.copyWith(
       name: _nameController.text.isNotEmpty ? _nameController.text : 'Timer',
       durationInSeconds: totalSeconds,
-      description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
+      description:
+          _descriptionController.text.isEmpty
+              ? null
+              : _descriptionController.text,
     );
 
     Navigator.pop(context, updatedTimer);
@@ -225,7 +243,7 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.timer.id.isEmpty ? 'Add Timer' : 'Edit Timer'),
@@ -255,17 +273,17 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
               hint: 'Enter timer name',
             ),
             const SizedBox(height: ForUI.spacingLarge),
-            
-            Text(
-              'Duration',
-              style: theme.textTheme.titleMedium,
-            ),
+
+            Text('Duration', style: theme.textTheme.titleMedium),
             const SizedBox(height: ForUI.spacingSmall),
             InkWell(
               onTap: _showTimePickerDialog,
               borderRadius: BorderRadius.circular(ForUI.borderRadius),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   border: Border.all(color: theme.colorScheme.outline),
                   borderRadius: BorderRadius.circular(ForUI.borderRadius),
@@ -282,15 +300,12 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: ForUI.spacingLarge),
-            
-            Text(
-              'Quick Presets',
-              style: theme.textTheme.titleMedium,
-            ),
+
+            Text('Quick Presets', style: theme.textTheme.titleMedium),
             const SizedBox(height: ForUI.spacingSmall),
-            
+
             // Quick duration buttons
             Wrap(
               spacing: 8,
@@ -307,9 +322,9 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                 _buildQuickDurationButton(3600),
               ],
             ),
-            
+
             const SizedBox(height: ForUI.spacingLarge),
-            
+
             ForUITextField(
               label: 'Description (optional)',
               controller: _descriptionController,
@@ -326,10 +341,11 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
     final hours = seconds ~/ 3600;
     final minutes = (seconds % 3600) ~/ 60;
     final remainingSeconds = seconds % 60;
-    
+
     String label;
     if (hours > 0) {
-      label = '$hours:${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+      label =
+          '$hours:${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
     } else if (minutes > 0) {
       label = '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
     } else {

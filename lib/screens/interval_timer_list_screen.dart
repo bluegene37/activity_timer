@@ -6,8 +6,6 @@ import '../controllers/interval_timer_controller.dart';
 import '../components/for_ui_card.dart';
 import '../components/for_ui_button.dart';
 import '../theme/for_ui.dart';
-import 'edit_interval_timer_screen.dart';
-import 'interval_timer_screen.dart';
 
 class IntervalTimerListScreen extends StatelessWidget {
   const IntervalTimerListScreen({super.key});
@@ -16,29 +14,32 @@ class IntervalTimerListScreen extends StatelessWidget {
     final now = DateTime.now();
     final startTime = DateTime(now.year, now.month, now.day, now.hour, 0);
     final endTime = startTime.add(const Duration(hours: 8));
-    
-    final result = await Get.toNamed('/edit-interval-timer', arguments: {
-      'timer': IntervalTimer(
-        name: 'New Interval Timer',
-        startTime: startTime,
-        endTime: endTime,
-        intervalValue: 1,
-        intervalType: IntervalType.hour,
-      ),
-      'isNew': true,
-    });
-    
+
+    final result = await Get.toNamed(
+      '/edit-interval-timer',
+      arguments: {
+        'timer': IntervalTimer(
+          name: 'New Interval Timer',
+          startTime: startTime,
+          endTime: endTime,
+          intervalValue: 1,
+          intervalType: IntervalType.hour,
+        ),
+        'isNew': true,
+      },
+    );
+
     if (result == true) {
       Get.find<IntervalTimerController>().refreshTimers();
     }
   }
 
   Future<void> _editIntervalTimer(IntervalTimer timer) async {
-    final result = await Get.toNamed('/edit-interval-timer', arguments: {
-      'timer': timer,
-      'isNew': false,
-    });
-    
+    final result = await Get.toNamed(
+      '/edit-interval-timer',
+      arguments: {'timer': timer, 'isNew': false},
+    );
+
     if (result == true) {
       Get.find<IntervalTimerController>().refreshTimers();
     }
@@ -52,34 +53,32 @@ class IntervalTimerListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.find<IntervalTimerController>();
     final theme = Theme.of(context);
-    
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Interval Timers'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Interval Timers'), centerTitle: true),
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
         }
-        
+
         if (controller.intervalTimers.isEmpty) {
           return ForUI.emptyState(
             title: 'No Interval Timers Yet',
-            message: 'Create your first interval timer to get started with timed alerts.',
+            message:
+                'Create your first interval timer to get started with timed alerts.',
             buttonText: 'Create Interval Timer',
             onButtonPressed: _addNewIntervalTimer,
             icon: Icons.schedule,
           );
         }
-        
+
         return ListView.builder(
           itemCount: controller.intervalTimers.length,
           padding: const EdgeInsets.all(ForUI.spacing),
           itemBuilder: (context, index) {
             final timer = controller.intervalTimers[index];
             final timeFormat = DateFormat('h:mm a');
-            
+
             return ForUICard(
               padding: const EdgeInsets.all(ForUI.spacing),
               child: Column(
@@ -104,7 +103,7 @@ class IntervalTimerListScreen extends StatelessWidget {
                             AlertDialog(
                               title: const Text('Delete Interval Timer'),
                               content: Text(
-                                'Are you sure you want to delete "${timer.name}"?'
+                                'Are you sure you want to delete "${timer.name}"?',
                               ),
                               actions: [
                                 TextButton(
@@ -184,6 +183,7 @@ class IntervalTimerListScreen extends StatelessWidget {
         );
       }),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'interval_timer_list_fab',
         onPressed: _addNewIntervalTimer,
         child: const Icon(Icons.add),
       ),

@@ -4,16 +4,12 @@ import 'package:intl/intl.dart';
 import 'dart:async';
 import '../models/interval_timer.dart';
 import '../models/settings.dart';
-import '../theme/for_ui.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 class IntervalTimerScreen extends StatefulWidget {
   final IntervalTimer timer;
 
-  const IntervalTimerScreen({
-    super.key,
-    required this.timer,
-  });
+  const IntervalTimerScreen({super.key, required this.timer});
 
   @override
   State<IntervalTimerScreen> createState() => _IntervalTimerScreenState();
@@ -29,44 +25,96 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
   bool _isCompleted = false;
   final AudioPlayer _audioPlayer = AudioPlayer();
   final _settings = AppSettings();
-  
+
   @override
   void initState() {
     super.initState();
     _initializeTimer();
-    
+
     // Load the alarm sound
-    _audioPlayer.setSource(AssetSource('sounds/${widget.timer.alarmSound.fileName}'));
+    _audioPlayer.setSource(
+      AssetSource('sounds/${widget.timer.alarmSound.fileName}'),
+    );
     _audioPlayer.setReleaseMode(ReleaseMode.stop);
   }
-  
+
   void _initializeTimer() {
-    _currentTime = DateTime.now();
-    _allAlarmTimes = widget.timer.getAllAlarmTimes();
-    
+    final now = DateTime.now();
+    _currentTime = now;
+
+    // Normalize start and end times to the current day
+    DateTime normalizedStart = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      widget.timer.startTime.hour,
+      widget.timer.startTime.minute,
+      widget.timer.startTime.second,
+    );
+
+    DateTime normalizedEnd = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      widget.timer.endTime.hour,
+      widget.timer.endTime.minute,
+      widget.timer.endTime.second,
+    );
+
+    // If normalized end time is before normalized start time,
+    // it means the range crosses midnight. Adjust the end time
+    // to the next day.
+    if (normalizedEnd.isBefore(normalizedStart)) {
+      normalizedEnd = normalizedEnd.add(const Duration(days: 1));
+    }
+
+    // If the entire window is in the past, shift it to the next day
+    if (now.isAfter(normalizedEnd)) {
+      normalizedStart = normalizedStart.add(const Duration(days: 1));
+      normalizedEnd = normalizedEnd.add(const Duration(days: 1));
+    }
+
+    // Create a temporary timer model with normalized dates to calculate alarms
+    final tempTimer = IntervalTimer(
+      id: widget.timer.id,
+      name: widget.timer.name,
+      startTime: normalizedStart,
+      endTime: normalizedEnd,
+      intervalValue: widget.timer.intervalValue,
+      intervalType: widget.timer.intervalType,
+    );
+
+    _allAlarmTimes = tempTimer.getAllAlarmTimes();
+
     // Find the next alarm time
-    if (_currentTime.isBefore(widget.timer.startTime)) {
+    if (_currentTime.isBefore(normalizedStart)) {
       // If current time is before start time, first alarm is at start time
-      _nextAlarmTime = widget.timer.startTime;
+      _nextAlarmTime = normalizedStart;
       _currentAlarmIndex = 0;
-    } else if (_currentTime.isAfter(widget.timer.endTime)) {
-      // If current time is after end time, timer is completed
-      _nextAlarmTime = widget.timer.endTime;
+    } else if (_currentTime.isAfter(normalizedEnd)) {
+      // Should not happen with the normalization logic above, but for safety:
+      _nextAlarmTime = normalizedEnd;
       _currentAlarmIndex = _allAlarmTimes.length - 1;
       _isCompleted = true;
     } else {
-      // Find the next alarm time
-      _nextAlarmTime = widget.timer.getNextAlarmTime(_currentTime);
+      // Find the next alarm time using the normalized timer
+      _nextAlarmTime = tempTimer.getNextAlarmTime(_currentTime);
       _currentAlarmIndex = _allAlarmTimes.indexWhere(
-        (time) => time.isAtSameMomentAs(_nextAlarmTime)
+        (time) =>
+            time.year == _nextAlarmTime.year &&
+            time.month == _nextAlarmTime.month &&
+            time.day == _nextAlarmTime.day &&
+            time.hour == _nextAlarmTime.hour &&
+            time.minute == _nextAlarmTime.minute &&
+            time.second == _nextAlarmTime.second,
       );
-      
+
       if (_currentAlarmIndex == -1) {
         // If no exact match, find the closest future alarm
         _currentAlarmIndex = _allAlarmTimes.indexWhere(
-          (time) => time.isAfter(_currentTime)
+          (time) => time.isAfter(_currentTime),
         );
-        
+
         if (_currentAlarmIndex == -1) {
           // If all alarms are in the past, timer is completed
           _currentAlarmIndex = _allAlarmTimes.length - 1;
@@ -76,18 +124,18 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
         }
       }
     }
-    
+
     // Start the timer
     _startTimer();
   }
-  
+
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         _currentTime = DateTime.now();
-        
+
         // Check if it's time for the alarm
-        if (_currentTime.isAfter(_nextAlarmTime) || 
+        if (_currentTime.isAfter(_nextAlarmTime) ||
             _currentTime.isAtSameMomentAs(_nextAlarmTime)) {
           _triggerAlarm();
           _moveToNextAlarm();
@@ -95,13 +143,21 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
       });
     });
   }
-  
+
   void _triggerAlarm() {
     // Play sound if enabled
     if (_settings.soundEnabled) {
-      _audioPlayer.resume();
+      try {
+        _audioPlayer.stop().then((_) {
+          _audioPlayer
+              .setSource(
+                AssetSource('sounds/${widget.timer.alarmSound.fileName}'),
+              )
+              .then((_) => _audioPlayer.resume());
+        });
+      } catch (_) {}
     }
-    
+
     // Vibrate if enabled
     if (_settings.vibrationEnabled) {
       HapticFeedback.heavyImpact();
@@ -111,52 +167,54 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
       });
     }
   }
-  
+
   void _moveToNextAlarm() {
-    if (_currentAlarmIndex < _allAlarmTimes.length - 1) {
-      _currentAlarmIndex++;
-      _nextAlarmTime = _allAlarmTimes[_currentAlarmIndex];
-    } else {
-      // All alarms completed
-      _isCompleted = true;
-      _timer.cancel();
-    }
+    setState(() {
+      if (_currentAlarmIndex < _allAlarmTimes.length - 1) {
+        _currentAlarmIndex++;
+        _nextAlarmTime = _allAlarmTimes[_currentAlarmIndex];
+      } else {
+        // All alarms completed
+        _isCompleted = true;
+        _timer.cancel();
+      }
+    });
   }
-  
+
   void _toggleTimer() {
     if (_isRunning) {
       _timer.cancel();
     } else {
       _startTimer();
     }
-    
+
     setState(() {
       _isRunning = !_isRunning;
     });
   }
-  
+
   void _resetTimer() {
-    _timer.cancel();
+    _timer.cancel(); // Bug 7 Fix: Cancel before starting over
     setState(() {
       _isCompleted = false;
       _isRunning = true;
     });
     _initializeTimer();
   }
-  
+
   @override
   void dispose() {
     _timer.cancel();
     _audioPlayer.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final timeFormat = DateFormat('h:mm:ss a');
     final timeFormatShort = DateFormat('h:mm a');
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.timer.name),
@@ -166,23 +224,26 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
           onPressed: () {
             showDialog(
               context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Exit Timer?'),
-                content: const Text('Are you sure you want to exit this timer?'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
+              builder:
+                  (context) => AlertDialog(
+                    title: const Text('Exit Timer?'),
+                    content: const Text(
+                      'Are you sure you want to exit this timer?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context); // Close dialog
+                          Navigator.pop(context); // Close timer screen
+                        },
+                        child: const Text('Exit'),
+                      ),
+                    ],
                   ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context); // Close dialog
-                      Navigator.pop(context); // Close timer screen
-                    },
-                    child: const Text('Exit'),
-                  ),
-                ],
-              ),
             );
           },
         ),
@@ -202,18 +263,23 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
           ),
         ],
       ),
-      body: _isCompleted
-          ? _buildCompletedView(theme, timeFormatShort)
-          : _buildRunningView(theme, timeFormat, timeFormatShort),
+      body:
+          _isCompleted
+              ? _buildCompletedView(theme, timeFormatShort)
+              : _buildRunningView(theme, timeFormat, timeFormatShort),
     );
   }
-  
-  Widget _buildRunningView(ThemeData theme, DateFormat timeFormat, DateFormat timeFormatShort) {
+
+  Widget _buildRunningView(
+    ThemeData theme,
+    DateFormat timeFormat,
+    DateFormat timeFormatShort,
+  ) {
     final timeDifference = _nextAlarmTime.difference(_currentTime);
     final hours = timeDifference.inHours;
     final minutes = (timeDifference.inMinutes % 60);
     final seconds = (timeDifference.inSeconds % 60);
-    
+
     return Column(
       children: [
         // Progress indicator
@@ -221,16 +287,13 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
           value: _currentAlarmIndex / (_allAlarmTimes.length - 1),
           minHeight: 8,
         ),
-        
+
         // Timer info
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              Text(
-                'Current Time',
-                style: theme.textTheme.titleMedium,
-              ),
+              Text('Current Time', style: theme.textTheme.titleMedium),
               const SizedBox(height: 4),
               Text(
                 timeFormat.format(_currentTime),
@@ -265,30 +328,39 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
             ],
           ),
         ),
-        
+
         // Next alarm countdown
         Expanded(
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  'Next Alarm In',
-                  style: theme.textTheme.titleLarge,
-                ),
+                Text('Next Alarm In', style: theme.textTheme.titleLarge),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildTimeUnit(theme, hours.toString().padLeft(2, '0'), 'HR'),
+                    _buildTimeUnit(
+                      theme,
+                      hours.toString().padLeft(2, '0'),
+                      'HR',
+                    ),
                     const SizedBox(width: 8),
                     Text(':', style: theme.textTheme.displayMedium),
                     const SizedBox(width: 8),
-                    _buildTimeUnit(theme, minutes.toString().padLeft(2, '0'), 'MIN'),
+                    _buildTimeUnit(
+                      theme,
+                      minutes.toString().padLeft(2, '0'),
+                      'MIN',
+                    ),
                     const SizedBox(width: 8),
                     Text(':', style: theme.textTheme.displayMedium),
                     const SizedBox(width: 8),
-                    _buildTimeUnit(theme, seconds.toString().padLeft(2, '0'), 'SEC'),
+                    _buildTimeUnit(
+                      theme,
+                      seconds.toString().padLeft(2, '0'),
+                      'SEC',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -300,7 +372,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
             ),
           ),
         ),
-        
+
         // Alarm list
         Container(
           height: 120,
@@ -309,7 +381,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
             color: theme.colorScheme.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 4,
                 offset: const Offset(0, -2),
               ),
@@ -319,7 +391,10 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 child: Text(
                   'Alarm Schedule',
                   style: theme.textTheme.titleSmall,
@@ -334,21 +409,27 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                     final alarmTime = _allAlarmTimes[index];
                     final isCurrentAlarm = index == _currentAlarmIndex;
                     final isPastAlarm = index < _currentAlarmIndex;
-                    
+
                     return Container(
                       width: 80,
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
-                        color: isCurrentAlarm 
-                            ? theme.colorScheme.primary.withOpacity(0.2)
-                            : isPastAlarm
+                        color:
+                            isCurrentAlarm
+                                ? theme.colorScheme.primary.withValues(
+                                  alpha: 0.2,
+                                )
+                                : isPastAlarm
                                 ? theme.colorScheme.surface
                                 : theme.colorScheme.surface,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: isCurrentAlarm 
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.outline.withOpacity(0.3),
+                          color:
+                              isCurrentAlarm
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.outline.withValues(
+                                    alpha: 0.3,
+                                  ),
                         ),
                       ),
                       child: Column(
@@ -358,10 +439,13 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                             '#${index + 1}',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: isCurrentAlarm 
-                                  ? theme.colorScheme.primary
-                                  : isPastAlarm
-                                      ? theme.colorScheme.onSurface.withOpacity(0.5)
+                              color:
+                                  isCurrentAlarm
+                                      ? theme.colorScheme.primary
+                                      : isPastAlarm
+                                      ? theme.colorScheme.onSurface.withValues(
+                                        alpha: 0.5,
+                                      )
                                       : null,
                             ),
                           ),
@@ -370,22 +454,30 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                             timeFormatShort.format(alarmTime),
                             style: TextStyle(
                               fontSize: 12,
-                              color: isCurrentAlarm 
-                                  ? theme.colorScheme.primary
-                                  : isPastAlarm
-                                      ? theme.colorScheme.onSurface.withOpacity(0.5)
+                              color:
+                                  isCurrentAlarm
+                                      ? theme.colorScheme.primary
+                                      : isPastAlarm
+                                      ? theme.colorScheme.onSurface.withValues(
+                                        alpha: 0.5,
+                                      )
                                       : null,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Icon(
-                            isPastAlarm ? Icons.check_circle : Icons.circle_outlined,
+                            isPastAlarm
+                                ? Icons.check_circle
+                                : Icons.circle_outlined,
                             size: 16,
-                            color: isPastAlarm 
-                                ? Colors.green
-                                : isCurrentAlarm
+                            color:
+                                isPastAlarm
+                                    ? Colors.green
+                                    : isCurrentAlarm
                                     ? theme.colorScheme.primary
-                                    : theme.colorScheme.onSurface.withOpacity(0.5),
+                                    : theme.colorScheme.onSurface.withValues(
+                                      alpha: 0.5,
+                                    ),
                           ),
                         ],
                       ),
@@ -396,7 +488,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
             ],
           ),
         ),
-        
+
         // Control buttons
         Padding(
           padding: const EdgeInsets.all(24.0),
@@ -426,14 +518,14 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
       ],
     );
   }
-  
+
   Widget _buildTimeUnit(ThemeData theme, String value, String label) {
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withOpacity(0.1),
+            color: theme.colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
@@ -444,29 +536,19 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: theme.textTheme.bodySmall,
-        ),
+        Text(label, style: theme.textTheme.bodySmall),
       ],
     );
   }
-  
+
   Widget _buildCompletedView(ThemeData theme, DateFormat timeFormatShort) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.task_alt,
-            size: 100,
-            color: theme.colorScheme.primary,
-          ),
+          Icon(Icons.task_alt, size: 100, color: theme.colorScheme.primary),
           const SizedBox(height: 24),
-          Text(
-            'Timer Complete!',
-            style: theme.textTheme.headlineMedium,
-          ),
+          Text('Timer Complete!', style: theme.textTheme.headlineMedium),
           const SizedBox(height: 16),
           Text(
             'All ${_allAlarmTimes.length} alarms have been triggered',
@@ -474,7 +556,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Time Range: ${timeFormatShort.format(widget.timer.startTime)} - ${timeFormatShort.format(widget.timer.endTime)}',
+            'Time Range: ${DateFormat('h:mm a').format(_allAlarmTimes.first)} - ${DateFormat('h:mm a').format(_allAlarmTimes.last)}',
             style: theme.textTheme.bodyLarge,
           ),
           const SizedBox(height: 32),

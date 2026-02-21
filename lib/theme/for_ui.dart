@@ -14,72 +14,112 @@ class ForUI {
   // Button constants
   static const double buttonHeight = 48.0;
   static const double buttonElevation = 2.0;
-  static const EdgeInsets buttonPadding = EdgeInsets.symmetric(horizontal: 24, vertical: 12);
+  static const EdgeInsets buttonPadding = EdgeInsets.symmetric(
+    horizontal: 24,
+    vertical: 12,
+  );
 
   // Card constants
   static const double cardElevation = 4.0;
 
   // Theme methods
   static ThemeData getLightTheme(Color primaryColor) {
+    final bool isLightPrimary = primaryColor.computeLuminance() > 0.5;
+    final onPrimary = isLightPrimary ? Colors.black : Colors.white;
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      primaryColor: primaryColor,
+      scaffoldBackgroundColor: Colors.white,
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor,
         brightness: Brightness.light,
+        surface: Colors.white,
+      ).copyWith(
+        primary: primaryColor,
+        onPrimary: onPrimary,
+        secondary: primaryColor,
+        surface: Colors.white,
+        surfaceContainerLow: Colors.white,
+        surfaceContainer: Colors.white,
+        outlineVariant: primaryColor.withValues(alpha: 0.1),
       ),
       cardTheme: CardThemeData(
-        elevation: cardElevation,
+        color: Colors.white,
+        elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(cardRadius),
+          side: BorderSide(color: Colors.grey.shade200),
         ),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        centerTitle: true,
+        elevation: 0,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          elevation: buttonElevation,
+          elevation: 0,
           padding: buttonPadding,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(borderRadius),
           ),
+          backgroundColor: primaryColor,
+          foregroundColor: onPrimary,
         ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(borderRadius),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }
 
   static ThemeData getDarkTheme(Color primaryColor) {
+    final bool isLightPrimary = primaryColor.computeLuminance() > 0.5;
+    final onPrimary = isLightPrimary ? Colors.black : Colors.white;
+    const scaffoldBlack = Color(0xFF000000); // True Black for OLED
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      primaryColor: primaryColor,
+      scaffoldBackgroundColor: scaffoldBlack,
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor,
         brightness: Brightness.dark,
+        surface: scaffoldBlack,
+      ).copyWith(
+        primary: primaryColor,
+        onPrimary: onPrimary,
+        secondary: primaryColor,
+        surface: scaffoldBlack,
+        surfaceContainerLow: const Color(0xFF121212),
+        surfaceContainer: const Color(0xFF1E1E1E),
+        outlineVariant: primaryColor.withValues(alpha: 0.2),
       ),
       cardTheme: CardThemeData(
-        elevation: cardElevation,
+        color: const Color(0xFF121212),
+        elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(cardRadius),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
         ),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: scaffoldBlack,
+        surfaceTintColor: Colors.transparent,
+        centerTitle: true,
+        elevation: 0,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          elevation: buttonElevation,
+          elevation: 0,
           padding: buttonPadding,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(borderRadius),
           ),
+          backgroundColor: primaryColor,
+          foregroundColor: onPrimary,
         ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(borderRadius),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }
@@ -104,7 +144,7 @@ class ForUI {
                 Icon(
                   icon,
                   size: 80,
-                  color: theme.colorScheme.primary.withOpacity(0.5),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: spacingLarge),
                 Text(
@@ -116,7 +156,7 @@ class ForUI {
                 Text(
                   message,
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
                 ),

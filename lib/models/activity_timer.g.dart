@@ -8,7 +8,7 @@ part of 'activity_timer.dart';
 
 class ActivityTimerAdapter extends TypeAdapter<ActivityTimer> {
   @override
-  final int typeId = 1;
+  final typeId = 1;
 
   @override
   ActivityTimer read(BinaryReader reader) {
@@ -19,7 +19,7 @@ class ActivityTimerAdapter extends TypeAdapter<ActivityTimer> {
     return ActivityTimer(
       id: fields[0] as String?,
       name: fields[1] as String,
-      durationInSeconds: fields[2] as int,
+      durationInSeconds: (fields[2] as num).toInt(),
       description: fields[3] as String?,
     );
   }
@@ -51,7 +51,7 @@ class ActivityTimerAdapter extends TypeAdapter<ActivityTimer> {
 
 class TimerSequenceAdapter extends TypeAdapter<TimerSequence> {
   @override
-  final int typeId = 2;
+  final typeId = 2;
 
   @override
   TimerSequence read(BinaryReader reader) {
@@ -63,7 +63,7 @@ class TimerSequenceAdapter extends TypeAdapter<TimerSequence> {
       id: fields[0] as String?,
       name: fields[1] as String,
       timers: (fields[2] as List).cast<ActivityTimer>(),
-      defaultLoopEnabled: fields[3] as bool,
+      defaultLoopEnabled: fields[3] == null ? false : fields[3] as bool,
       createdAt: fields[4] as DateTime?,
       updatedAt: fields[5] as DateTime?,
     );

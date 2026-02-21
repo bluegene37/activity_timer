@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:get/get.dart';
 import 'models/settings.dart';
 import 'models/activity_timer.dart';
 import 'models/interval_timer.dart';
 import 'models/alarm_sound.dart';
 import 'services/database_service.dart';
-import 'routes/app_routes.dart';
 import 'routes/app_pages.dart';
 import 'theme/for_ui.dart';
 import 'controllers/app_controller.dart';
@@ -50,17 +49,18 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // Initialize the app controller
     final appController = Get.put(AppController());
-    
-    return Obx(() => GetMaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Activity Timer',
-      theme: ForUI.getLightTheme(appController.themeColor.value),
-      darkTheme: ForUI.getDarkTheme(appController.themeColor.value),
-      themeMode: appController.themeMode.value,
-      initialRoute: AppPages.INITIAL,
-      getPages: AppPages.routes,
-      defaultTransition: Transition.cupertino,
-    )
+
+    return Obx(
+      () => GetMaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Activity Timer',
+        theme: ForUI.getLightTheme(appController.themeColor.value),
+        darkTheme: ForUI.getDarkTheme(appController.themeColor.value),
+        themeMode: appController.themeMode.value,
+        initialRoute: AppPages.INITIAL,
+        getPages: AppPages.routes,
+        defaultTransition: Transition.cupertino,
+      ),
     );
   }
 }

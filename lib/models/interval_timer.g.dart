@@ -8,7 +8,7 @@ part of 'interval_timer.dart';
 
 class IntervalTimerAdapter extends TypeAdapter<IntervalTimer> {
   @override
-  final int typeId = 3;
+  final typeId = 3;
 
   @override
   IntervalTimer read(BinaryReader reader) {
@@ -21,9 +21,9 @@ class IntervalTimerAdapter extends TypeAdapter<IntervalTimer> {
       name: fields[1] as String,
       startTime: fields[2] as DateTime,
       endTime: fields[3] as DateTime,
-      intervalValue: fields[4] as int,
+      intervalValue: (fields[4] as num).toInt(),
       intervalType: fields[5] as IntervalType,
-      isActive: fields[6] as bool,
+      isActive: fields[6] == null ? false : fields[6] as bool,
       createdAt: fields[7] as DateTime?,
       updatedAt: fields[8] as DateTime?,
       alarmSoundName: fields[9] as String?,
@@ -69,7 +69,7 @@ class IntervalTimerAdapter extends TypeAdapter<IntervalTimer> {
 
 class IntervalTypeAdapter extends TypeAdapter<IntervalType> {
   @override
-  final int typeId = 4;
+  final typeId = 4;
 
   @override
   IntervalType read(BinaryReader reader) {
@@ -90,13 +90,10 @@ class IntervalTypeAdapter extends TypeAdapter<IntervalType> {
     switch (obj) {
       case IntervalType.hour:
         writer.writeByte(0);
-        break;
       case IntervalType.minute:
         writer.writeByte(1);
-        break;
       case IntervalType.second:
         writer.writeByte(2);
-        break;
     }
   }
 

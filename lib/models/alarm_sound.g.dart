@@ -8,7 +8,7 @@ part of 'alarm_sound.dart';
 
 class AlarmSoundAdapter extends TypeAdapter<AlarmSound> {
   @override
-  final int typeId = 5;
+  final typeId = 5;
 
   @override
   AlarmSound read(BinaryReader reader) {
@@ -33,19 +33,14 @@ class AlarmSoundAdapter extends TypeAdapter<AlarmSound> {
     switch (obj) {
       case AlarmSound.beep:
         writer.writeByte(0);
-        break;
       case AlarmSound.bell:
         writer.writeByte(1);
-        break;
       case AlarmSound.chime:
         writer.writeByte(2);
-        break;
       case AlarmSound.digital:
         writer.writeByte(3);
-        break;
       case AlarmSound.gentle:
         writer.writeByte(4);
-        break;
     }
   }
 

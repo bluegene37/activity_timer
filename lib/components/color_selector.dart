@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import '../theme/for_ui.dart';
 
 class ColorSelector extends StatefulWidget {
@@ -22,12 +21,15 @@ class _ColorSelectorState extends State<ColorSelector> {
 
   // Predefined color options - swapped Blue (index 0) with Yellow (index 5)
   final List<Color> _colorOptions = [
-    const Color(0xFFFFEB3B), // Yellow (now default at index 0)
+    const Color(0xFFFFEB3B), // Yellow
+    const Color(0xFF000000), // Black
+    const Color(0xFF1A237E), // Indigo 900 (Navy)
+    const Color(0xFF311B92), // Deep Purple 900
     const Color(0xFF9C27B0), // Purple
     const Color(0xFFE91E63), // Pink
     const Color(0xFFF44336), // Red
     const Color(0xFFFF9800), // Orange
-    const Color(0xFF4A6FFF), // Blue (moved to index 5)
+    const Color(0xFF4A6FFF), // Blue
     const Color(0xFF4CAF50), // Green
     const Color(0xFF009688), // Teal
     const Color(0xFF00BCD4), // Cyan
@@ -46,7 +48,9 @@ class _ColorSelectorState extends State<ColorSelector> {
   }
 
   void _scrollToSelectedColor() {
-    final index = _colorOptions.indexWhere((color) => color.value == _selectedColor.value);
+    final index = _colorOptions.indexWhere(
+      (color) => color.toARGB32() == _selectedColor.toARGB32(),
+    );
     if (index != -1) {
       final itemWidth = 60.0; // Width of each color item
       final offset = index * itemWidth;
@@ -86,9 +90,9 @@ class _ColorSelectorState extends State<ColorSelector> {
       children: [
         Text(
           'Theme Color',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: ForUI.spacingSmall),
         Container(
@@ -96,7 +100,9 @@ class _ColorSelectorState extends State<ColorSelector> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(ForUI.borderRadius),
             border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.outline.withValues(alpha: 0.3),
             ),
           ),
           child: ListView.builder(
@@ -119,33 +125,40 @@ class _ColorSelectorState extends State<ColorSelector> {
                 child: Container(
                   width: 60,
                   height: 60,
-                  margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: color,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.onSurface
-                          : Colors.transparent,
+                      color:
+                          isSelected
+                              ? Theme.of(context).colorScheme.onSurface
+                              : Colors.transparent,
                       width: 2,
                     ),
-                    boxShadow: isSelected
-                        ? [
-                      BoxShadow(
-                        color: color.withOpacity(0.5),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                      ),
-                    ]
-                        : null,
+                    boxShadow:
+                        isSelected
+                            ? [
+                              BoxShadow(
+                                color: color.withValues(alpha: 0.5),
+                                blurRadius: 8,
+                                spreadRadius: 2,
+                              ),
+                            ]
+                            : null,
                   ),
-                  child: isSelected
-                      ? Icon(
-                    Icons.check,
-                    color: iconColor, // Dynamic color based on background
-                    size: 24,
-                  )
-                      : null,
+                  child:
+                      isSelected
+                          ? Icon(
+                            Icons.check,
+                            color:
+                                iconColor, // Dynamic color based on background
+                            size: 24,
+                          )
+                          : null,
                 ),
               );
             },

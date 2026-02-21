@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/activity_timer.dart';
 import '../services/database_service.dart';
-import 'timer_list_controller.dart';
 
 class ActivityListController extends GetxController {
   final _databaseService = DatabaseService();
-  
+
   // Reactive variables
   final RxList<TimerSequence> sequences = <TimerSequence>[].obs;
   final RxBool isLoading = true.obs;
@@ -30,10 +29,12 @@ class ActivityListController extends GetxController {
   }
 
   Future<void> addNewSequence() async {
+    final textController = TextEditingController();
     final result = await Get.dialog<String>(
       AlertDialog(
         title: const Text('New Activity'),
         content: TextField(
+          controller: textController,
           decoration: const InputDecoration(
             labelText: 'Activity Name',
             hintText: 'Enter activity name',
@@ -42,28 +43,26 @@ class ActivityListController extends GetxController {
           onSubmitted: (value) => Get.back(result: value),
         ),
         actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
           TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Get.back(result: 'New Activity'),
+            onPressed: () {
+              final name = textController.text.trim();
+              Get.back(result: name.isNotEmpty ? name : 'New Activity');
+            },
             child: const Text('Create'),
           ),
         ],
       ),
     );
+    textController.dispose();
 
     if (result != null && result.isNotEmpty) {
-      final newSequence = TimerSequence(
-        name: result,
-        timers: [],
-      );
+      final newSequence = TimerSequence(name: result, timers: []);
 
       try {
         await _databaseService.createActivitySequence(newSequence);
         sequences.add(newSequence);
-        
+
         // Navigate to timer list for the new sequence
         Get.toNamed('/timer-list', arguments: newSequence);
       } catch (e) {
@@ -95,7 +94,7 @@ class ActivityListController extends GetxController {
 
   Future<void> deleteSequence(int index) async {
     final sequence = sequences[index];
-    
+
     try {
       await _databaseService.deleteActivitySequence(sequence.id);
       sequences.removeAt(index);
