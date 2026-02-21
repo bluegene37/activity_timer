@@ -47,9 +47,15 @@ class ActivityListScreen extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          sequence.name,
-                          style: theme.textTheme.titleLarge,
+                        child: Hero(
+                          tag: 'sequence_name_${sequence.id}',
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: Text(
+                              sequence.name,
+                              style: theme.textTheme.titleLarge,
+                            ),
+                          ),
                         ),
                       ),
                       IconButton(

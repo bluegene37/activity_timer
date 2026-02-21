@@ -42,52 +42,6 @@ class SettingsScreen extends StatelessWidget {
                     onColorSelected: controller.setThemeColor,
                   ),
                 ),
-                const SizedBox(height: ForUI.spacing),
-
-                // Theme mode selection
-                Obx(
-                  () => RadioListTile<ThemeMode>(
-                    title: const Text('Light Theme'),
-                    subtitle: const Text('Bright colors and white background'),
-                    value: ThemeMode.light,
-                    groupValue: appController.themeMode.value,
-                    onChanged: (ThemeMode? value) {
-                      if (value != null) {
-                        controller.setThemeMode(value);
-                      }
-                    },
-                  ),
-                ),
-                Obx(
-                  () => RadioListTile<ThemeMode>(
-                    title: const Text('Dark Theme'),
-                    subtitle: const Text(
-                      'Dark colors for low-light environments',
-                    ),
-                    value: ThemeMode.dark,
-                    groupValue: appController.themeMode.value,
-                    onChanged: (ThemeMode? value) {
-                      if (value != null) {
-                        controller.setThemeMode(value);
-                      }
-                    },
-                  ),
-                ),
-                Obx(
-                  () => RadioListTile<ThemeMode>(
-                    title: const Text('System Theme'),
-                    subtitle: const Text(
-                      'Follow system dark/light mode settings',
-                    ),
-                    value: ThemeMode.system,
-                    groupValue: appController.themeMode.value,
-                    onChanged: (ThemeMode? value) {
-                      if (value != null) {
-                        controller.setThemeMode(value);
-                      }
-                    },
-                  ),
-                ),
               ],
             ),
           ),

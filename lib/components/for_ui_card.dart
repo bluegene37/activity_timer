@@ -22,20 +22,22 @@ class ForUICard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Card(
-      elevation: elevation ?? ForUI.cardElevation,
+      elevation: elevation ?? theme.cardTheme.elevation ?? ForUI.cardElevation,
       color: backgroundColor ?? theme.cardTheme.color,
       shape: RoundedRectangleBorder(
         borderRadius: borderRadius ?? BorderRadius.circular(ForUI.cardRadius),
+        side:
+            theme.cardTheme.shape is RoundedRectangleBorder
+                ? (theme.cardTheme.shape as RoundedRectangleBorder).side
+                : BorderSide.none,
       ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         borderRadius: borderRadius ?? BorderRadius.circular(ForUI.cardRadius),
-        child: Padding(
-          padding: padding,
-          child: child,
-        ),
+        child: Padding(padding: padding, child: child),
       ),
     );
   }

@@ -15,7 +15,20 @@ class TimerListScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Obx(() => Text(controller.sequence.value.name)),
+        title: Obx(
+          () => Hero(
+            tag: 'sequence_name_${controller.sequence.value.id}',
+            child: Material(
+              type: MaterialType.transparency,
+              child: Text(
+                controller.sequence.value.name,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ),
+          ),
+        ),
         centerTitle: true,
         actions: [
           Obx(

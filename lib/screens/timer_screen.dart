@@ -4,6 +4,7 @@ import 'dart:async';
 import '../models/activity_timer.dart';
 import '../models/settings.dart';
 import 'package:audioplayers/audioplayers.dart';
+import '../components/glowing_timer_ring.dart';
 
 class TimerScreen extends StatefulWidget {
   final TimerSequence sequence;
@@ -348,33 +349,35 @@ class _TimerScreenState extends State<TimerScreen>
         // Timer circle
         Expanded(
           child: Center(
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 250,
-                  height: 250,
-                  child: CircularProgressIndicator(
-                    value: 1 - progress,
-                    strokeWidth: 15, // Thicker stroke
-                    backgroundColor: const Color(0xFF333333),
-                    color: _getTimerColor(progress),
-                  ),
-                ),
-                Column(
+            child: Center(
+              child: GlowingTimerRing(
+                progress: progress,
+                color: _getTimerColor(progress),
+                backgroundColor:
+                    Theme.of(context).colorScheme.surfaceContainerHighest,
+                size: 280, // Slightly larger for premium feel
+                strokeWidth: 18,
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       _formatTime(_remainingSeconds),
-                      style: Theme.of(context).textTheme.displayLarge,
+                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 2,
+                      ),
                     ),
                     Text(
                       'remaining',
-                      style: Theme.of(context).textTheme.bodyLarge,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

@@ -56,10 +56,11 @@ class MyApp extends StatelessWidget {
         title: 'Activity Timer',
         theme: ForUI.getLightTheme(appController.themeColor.value),
         darkTheme: ForUI.getDarkTheme(appController.themeColor.value),
-        themeMode: appController.themeMode.value,
-        initialRoute: AppPages.INITIAL,
-        getPages: AppPages.routes,
-        defaultTransition: Transition.cupertino,
+        themeMode: ThemeMode.system, // Always follow system or force dark/light
+        initialRoute: '/home',
+        getPages:
+            AppPages
+                .routes, // Assuming AppRoutes.pages is a typo and should be AppPages.routes
       ),
     );
   }
