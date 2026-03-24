@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/activity_timer.dart';
-import '../components/for_ui_button.dart';
-import '../components/for_ui_text_field.dart';
-import '../theme/for_ui.dart';
+import '../theme/app_theme.dart';
 
 class EditTimerScreen extends StatefulWidget {
   final ActivityTimer timer;
@@ -243,9 +241,16 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(widget.timer.id.isEmpty ? 'Add Timer' : 'Edit Timer'),
         centerTitle: true,
         actions: [
@@ -254,7 +259,7 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
             child: Text(
               'SAVE',
               style: TextStyle(
-                color: theme.colorScheme.primary,
+                color: colorScheme.primary,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1,
               ),
@@ -263,73 +268,105 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(ForUI.spacing),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ForUITextField(
-              label: 'Timer Name',
+            Text('Timer Name', style: textTheme.titleSmall),
+            const SizedBox(height: 8),
+            TextField(
               controller: _nameController,
-              hint: 'Enter timer name',
+              decoration: InputDecoration(
+                hintText: 'Enter timer name',
+                filled: true,
+                fillColor: colorScheme.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              ),
             ),
-            const SizedBox(height: ForUI.spacingLarge),
+            const SizedBox(height: 32),
 
-            Text('Duration', style: theme.textTheme.titleMedium),
-            const SizedBox(height: ForUI.spacingSmall),
+            Text('Duration', style: textTheme.titleSmall),
+            const SizedBox(height: 8),
             InkWell(
               onTap: _showTimePickerDialog,
-              borderRadius: BorderRadius.circular(ForUI.borderRadius),
+              borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 decoration: BoxDecoration(
-                  border: Border.all(color: theme.colorScheme.outline),
-                  borderRadius: BorderRadius.circular(ForUI.borderRadius),
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Duration: ${_formatDuration()}',
-                      style: theme.textTheme.titleMedium,
+                      _formatDuration(),
+                      style: textTheme.titleMedium,
                     ),
-                    Icon(Icons.access_time, color: theme.colorScheme.primary),
+                    Icon(Icons.access_time, color: colorScheme.primary),
                   ],
                 ),
               ),
             ),
+            const SizedBox(height: 32),
 
-            const SizedBox(height: ForUI.spacingLarge),
-
-            Text('Quick Presets', style: theme.textTheme.titleMedium),
-            const SizedBox(height: ForUI.spacingSmall),
+            Text('Quick Presets', style: textTheme.titleSmall),
+            const SizedBox(height: 12),
 
             // Quick duration buttons
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                _buildQuickDurationButton(15),
-                _buildQuickDurationButton(30),
-                _buildQuickDurationButton(45),
-                _buildQuickDurationButton(60),
-                _buildQuickDurationButton(120),
-                _buildQuickDurationButton(300),
-                _buildQuickDurationButton(600),
-                _buildQuickDurationButton(1800),
-                _buildQuickDurationButton(3600),
+                _buildQuickDurationButton(15, colorScheme, textTheme),
+                _buildQuickDurationButton(30, colorScheme, textTheme),
+                _buildQuickDurationButton(45, colorScheme, textTheme),
+                _buildQuickDurationButton(60, colorScheme, textTheme),
+                _buildQuickDurationButton(120, colorScheme, textTheme),
+                _buildQuickDurationButton(300, colorScheme, textTheme),
+                _buildQuickDurationButton(600, colorScheme, textTheme),
+                _buildQuickDurationButton(1800, colorScheme, textTheme),
+                _buildQuickDurationButton(3600, colorScheme, textTheme),
               ],
             ),
+            const SizedBox(height: 32),
 
-            const SizedBox(height: ForUI.spacingLarge),
-
-            ForUITextField(
-              label: 'Description (optional)',
+            Text('Description (optional)', style: textTheme.titleSmall),
+            const SizedBox(height: 8),
+            TextField(
               controller: _descriptionController,
-              hint: 'e.g., Push-ups, Rest, Stretching',
               maxLines: 2,
+              decoration: InputDecoration(
+                hintText: 'e.g., Push-ups, Rest, Stretching',
+                filled: true,
+                fillColor: colorScheme.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              ),
+            ),
+            const SizedBox(height: 40),
+            
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: _saveTimer,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text('Save Timer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
             ),
           ],
         ),
@@ -337,23 +374,21 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
     );
   }
 
-  Widget _buildQuickDurationButton(int seconds) {
+  Widget _buildQuickDurationButton(int seconds, ColorScheme colorScheme, TextTheme textTheme) {
     final hours = seconds ~/ 3600;
     final minutes = (seconds % 3600) ~/ 60;
     final remainingSeconds = seconds % 60;
 
     String label;
     if (hours > 0) {
-      label =
-          '$hours:${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+      label = '$hours:${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
     } else if (minutes > 0) {
       label = '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
     } else {
       label = '$seconds sec';
     }
 
-    return ForUIButton(
-      text: label,
+    return OutlinedButton(
       onPressed: () {
         setState(() {
           _hours = hours;
@@ -361,8 +396,17 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
           _seconds = remainingSeconds;
         });
       },
-      isPrimary: false,
-      isSmall: true,
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(color: colorScheme.outlineVariant),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      ),
+      child: Text(
+        label,
+        style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface),
+      ),
     );
   }
 }

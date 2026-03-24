@@ -59,11 +59,15 @@ class TimerSequence extends HiveObject {
   @HiveField(5)
   DateTime updatedAt;
 
+  @HiveField(6)
+  String? description;
+
   TimerSequence({
     String? id,
     required this.name,
     required this.timers,
     this.defaultLoopEnabled = false,
+    this.description,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) : 

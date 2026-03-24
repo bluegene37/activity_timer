@@ -8,7 +8,7 @@ import 'models/interval_timer.dart';
 import 'models/alarm_sound.dart';
 import 'services/database_service.dart';
 import 'routes/app_pages.dart';
-import 'theme/for_ui.dart';
+import 'theme/app_theme.dart';
 import 'controllers/app_controller.dart';
 
 void main() async {
@@ -39,7 +39,11 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  runApp(MyApp());
+  // Inject the app controller strictly after settings have fully loaded from DB 
+  // so the UI immediately draws using the saved theme color, avoiding flashes of defaults.
+  Get.put(AppController());
+
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -47,23 +51,19 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Initialize the app controller
-    final appController = Get.put(AppController());
+    // Find the app controller that was injected during main()
+    final appController = Get.find<AppController>();
 
     return Obx(
       () => GetMaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Activity Timer',
-        theme: ForUI.getLightTheme(appController.themeColor.value),
-        darkTheme: ForUI.getDarkTheme(appController.themeColor.value),
-        themeMode: ThemeMode.system, // Always follow system or force dark/light
+        theme: AppTheme.getLightTheme(appController.themeColor.value),
+        darkTheme: AppTheme.getDarkTheme(appController.themeColor.value),
+        themeMode: appController.themeMode.value, // Follow exactly what's chosen in settings
         initialRoute: '/home',
-        getPages:
-            AppPages
-                .routes, // Assuming AppRoutes.pages is a typo and should be AppPages.routes
+        getPages: AppPages.routes,
       ),
     );
   }
 }
-
-

@@ -46,6 +46,7 @@ class TimerListController extends GetxController {
         sequence.value = TimerSequence(
           id: sequence.value.id,
           name: sequence.value.name,
+          description: sequence.value.description,
           timers: updatedTimers,
           defaultLoopEnabled: sequence.value.defaultLoopEnabled,
           createdAt: sequence.value.createdAt,
@@ -55,6 +56,9 @@ class TimerListController extends GetxController {
         await _databaseService.addTimerToSequence(sequence.value.id, result);
       } catch (e) {
         await _reloadSequence(); // Revert on failure
+        
+        // Ensure no other navigation is active before showing snackbar
+        await Future.delayed(const Duration(milliseconds: 100));
         Get.snackbar('Error', 'Failed to add timer: $e');
       }
     }
@@ -77,6 +81,7 @@ class TimerListController extends GetxController {
         sequence.value = TimerSequence(
           id: sequence.value.id,
           name: sequence.value.name,
+          description: sequence.value.description,
           timers: updatedTimers,
           defaultLoopEnabled: sequence.value.defaultLoopEnabled,
           createdAt: sequence.value.createdAt,
@@ -86,6 +91,8 @@ class TimerListController extends GetxController {
         await _databaseService.updateTimerInSequence(sequence.value.id, result);
       } catch (e) {
         await _reloadSequence(); // Revert on failure
+        
+        await Future.delayed(const Duration(milliseconds: 100));
         Get.snackbar('Error', 'Failed to update timer: $e');
       }
     }
@@ -95,45 +102,29 @@ class TimerListController extends GetxController {
     if (index < 0 || index >= sequence.value.timers.length) return;
     final timer = sequence.value.timers[index];
 
-    final confirmed = await Get.dialog<bool>(
-      AlertDialog(
-        title: const Text('Delete Timer'),
-        content: Text('Are you sure you want to delete "${timer.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Get.back(result: true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
+    try {
+      // Optimistic update with a fresh list copy
+      final updatedTimers = List<ActivityTimer>.from(sequence.value.timers)
+        ..removeAt(index);
+      sequence.value = TimerSequence(
+        id: sequence.value.id,
+        name: sequence.value.name,
+        description: sequence.value.description,
+        timers: updatedTimers,
+        defaultLoopEnabled: sequence.value.defaultLoopEnabled,
+        createdAt: sequence.value.createdAt,
+        updatedAt: DateTime.now(),
+      );
 
-    if (confirmed == true) {
-      try {
-        // Optimistic update with a fresh list copy
-        final updatedTimers = List<ActivityTimer>.from(sequence.value.timers)
-          ..removeAt(index);
-        sequence.value = TimerSequence(
-          id: sequence.value.id,
-          name: sequence.value.name,
-          timers: updatedTimers,
-          defaultLoopEnabled: sequence.value.defaultLoopEnabled,
-          createdAt: sequence.value.createdAt,
-          updatedAt: DateTime.now(),
-        );
-
-        await _databaseService.deleteTimerFromSequence(
-          sequence.value.id,
-          timer.id,
-        );
-      } catch (e) {
-        await _reloadSequence(); // Revert on failure
-        Get.snackbar('Error', 'Failed to delete timer: $e');
-      }
+      await _databaseService.deleteTimerFromSequence(
+        sequence.value.id,
+        timer.id,
+      );
+    } catch (e) {
+      await _reloadSequence(); // Revert on failure
+      
+      await Future.delayed(const Duration(milliseconds: 100));
+      Get.snackbar('Error', 'Failed to delete timer: $e');
     }
   }
 
@@ -155,6 +146,7 @@ class TimerListController extends GetxController {
     sequence.value = TimerSequence(
       id: sequence.value.id,
       name: sequence.value.name,
+      description: sequence.value.description,
       timers: updatedTimers,
       defaultLoopEnabled: sequence.value.defaultLoopEnabled,
       createdAt: sequence.value.createdAt,
@@ -170,6 +162,8 @@ class TimerListController extends GetxController {
     } catch (e) {
       // Revert on error
       await _reloadSequence();
+      
+      await Future.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Error', 'Failed to reorder timers: $e');
     }
   }
@@ -178,6 +172,7 @@ class TimerListController extends GetxController {
     final updatedSequence = TimerSequence(
       id: sequence.value.id,
       name: sequence.value.name,
+      description: sequence.value.description,
       timers: sequence.value.timers,
       defaultLoopEnabled: !sequence.value.defaultLoopEnabled,
       createdAt: sequence.value.createdAt,
@@ -188,6 +183,7 @@ class TimerListController extends GetxController {
       await _databaseService.updateActivitySequence(updatedSequence);
       sequence.value = updatedSequence;
     } catch (e) {
+      await Future.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Error', 'Failed to update loop setting: $e');
     }
   }

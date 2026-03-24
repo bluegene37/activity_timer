@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/settings_controller.dart';
 import '../controllers/app_controller.dart';
-import '../theme/for_ui.dart';
-import '../components/for_ui_card.dart';
+import '../theme/app_theme.dart';
 import '../components/color_selector.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -14,183 +13,286 @@ class SettingsScreen extends StatelessWidget {
     final controller = Get.put(SettingsController());
     final appController = Get.find<AppController>();
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings'), centerTitle: true),
-      body: ListView(
-        padding: const EdgeInsets.all(ForUI.spacing),
-        children: [
-          ForUICard(
-            padding: const EdgeInsets.all(ForUI.spacing),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Appearance',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: ForUI.spacingSmall),
-                const Divider(),
-
-                // Theme color selector
-                const SizedBox(height: ForUI.spacingSmall),
-                Obx(
-                  () => ColorSelector(
-                    selectedColor: appController.themeColor.value,
-                    onColorSelected: controller.setThemeColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: ForUI.spacing),
-
-          ForUICard(
-            padding: const EdgeInsets.all(ForUI.spacing),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Notifications',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: ForUI.spacingSmall),
-                const Divider(),
-                Obx(
-                  () => SwitchListTile(
-                    title: const Text('Sound Alerts'),
-                    subtitle: const Text('Play sound when timer completes'),
-                    value: appController.soundEnabled.value,
-                    onChanged: controller.toggleSound,
-                  ),
-                ),
-                Obx(
-                  () => SwitchListTile(
-                    title: const Text('Vibration'),
-                    subtitle: const Text('Vibrate when timer completes'),
-                    value: appController.vibrationEnabled.value,
-                    onChanged: controller.toggleVibration,
-                  ),
-                ),
-                Obx(
-                  () => ListTile(
-                    title: const Text('Default Alarm Sound'),
-                    subtitle: Text(
-                      appController.defaultAlarmSound.value.displayName,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Header
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary, // Changed to strictly adhere to primary theme color
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    child: Icon(
+                      Icons.settings,
+                      color: colorScheme.onPrimary,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.play_arrow),
-                          onPressed:
-                              () => controller.previewAlarmSound(
-                                appController.defaultAlarmSound.value,
-                              ),
-                          tooltip: 'Preview sound',
+                        Text(
+                          'Settings',
+                          style: textTheme.headlineSmall,
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: controller.selectDefaultAlarmSound,
-                          tooltip: 'Change sound',
+                        Text(
+                          'Configure your app',
+                          style: textTheme.bodyMedium,
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
+                ],
+              ),
+              const SizedBox(height: 32),
 
-          const SizedBox(height: ForUI.spacing),
-
-          ForUICard(
-            padding: const EdgeInsets.all(ForUI.spacing),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'About',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: ForUI.spacingSmall),
-                const Divider(),
-                ListTile(
-                  title: const Text('Version'),
-                  trailing: const Text('1.0.0'),
-                ),
-                ListTile(
-                  title: const Text('Developer'),
-                  trailing: const Text('ForUI Team'),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: ForUI.spacingLarge),
-
-          // Theme preview
-          ForUICard(
-            padding: const EdgeInsets.all(ForUI.spacing),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Theme Preview',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: ForUI.spacingSmall),
-                const Divider(),
-                Container(
-                  padding: const EdgeInsets.all(ForUI.spacing),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(ForUI.borderRadius),
-                    border: Border.all(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.2),
+              _buildSectionHeader('Appearance', textTheme),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Theme Sample', style: theme.textTheme.titleLarge),
-                      const SizedBox(height: ForUI.spacingSmall),
-                      Text(
-                        'This is how your app will look with the selected theme.',
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: ForUI.spacing),
-                      Row(
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Obx(() {
+                      final isDark = appController.themeMode.value == ThemeMode.dark;
+                      return SwitchListTile(
+                        title: Text('Dark Mode', style: textTheme.titleSmall),
+                        subtitle: Text('Use a high-contrast minimalist dark theme', style: textTheme.bodyMedium),
+                        value: isDark,
+                        onChanged: (value) {
+                          appController.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
+                        },
+                        activeColor: colorScheme.primary,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        secondary: Icon(
+                          isDark ? Icons.dark_mode : Icons.light_mode, 
+                          color: isDark ? Colors.white : colorScheme.primary
+                        ),
+                      );
+                    }),
+                    
+                    Obx(() {
+                      final isDark = appController.themeMode.value == ThemeMode.dark;
+                      if (isDark) {
+                        return const SizedBox.shrink();
+                      }
+                      
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ElevatedButton(
-                            onPressed: () {},
-                            child: const Text('Primary Button'),
+                          Divider(height: 1, color: colorScheme.surfaceContainerHighest),
+                          Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Theme Color',
+                                  style: textTheme.titleSmall,
+                                ),
+                                const SizedBox(height: 16),
+                                ColorSelector(
+                                  selectedColor: appController.themeColor.value,
+                                  onColorSelected: controller.setThemeColor,
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(width: ForUI.spacingSmall),
-                          TextButton(
-                            onPressed: () {},
-                            child: const Text('Text Button'),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+              _buildSectionHeader('Notifications', textTheme),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Obx(() => SwitchListTile(
+                      title: Text('Sound Alerts', style: textTheme.titleSmall),
+                      subtitle: Text('Play sound when timer completes', style: textTheme.bodyMedium),
+                      value: appController.soundEnabled.value,
+                      onChanged: controller.toggleSound,
+                      activeColor: colorScheme.primary,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    )),
+                    Divider(height: 1, color: colorScheme.surfaceContainerHighest),
+                    Obx(() => SwitchListTile(
+                      title: Text('Vibration', style: textTheme.titleSmall),
+                      subtitle: Text('Vibrate when timer completes', style: textTheme.bodyMedium),
+                      value: appController.vibrationEnabled.value,
+                      onChanged: controller.toggleVibration,
+                      activeColor: colorScheme.primary,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    )),
+                    Divider(height: 1, color: colorScheme.surfaceContainerHighest),
+                    Obx(() => ListTile(
+                      title: Text('Default Alarm Sound', style: textTheme.titleSmall),
+                      subtitle: Text(appController.defaultAlarmSound.value.displayName, style: textTheme.bodyMedium),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.play_circle_fill, color: colorScheme.primary, size: 32),
+                            onPressed: () => controller.previewAlarmSound(appController.defaultAlarmSound.value),
+                            tooltip: 'Preview sound',
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: Icon(Icons.edit, color: colorScheme.onSurfaceVariant),
+                            onPressed: controller.selectDefaultAlarmSound,
+                            tooltip: 'Change sound',
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    )),
+                  ],
                 ),
-              ],
-            ),
+              ),
+
+              const SizedBox(height: 32),
+              _buildSectionHeader('About', textTheme),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    ListTile(
+                      title: Text('Version', style: textTheme.titleSmall),
+                      trailing: Text('1.0.0', style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                    ),
+                    Divider(height: 1, color: colorScheme.surfaceContainerHighest),
+                    ListTile(
+                      title: Text('Developer', style: textTheme.titleSmall),
+                      trailing: Text('CodeGenexis', style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+              _buildSectionHeader('Theme Preview', textTheme),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Theme Sample', style: textTheme.titleLarge),
+                    const SizedBox(height: 8),
+                    Text(
+                      'This is how your app will look with the selected theme. You can see your primary color highlighted below.',
+                      style: textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {},
+                            child: const Text('Primary Button'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {},
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: colorScheme.primary, width: 1.5),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              'Outlined Button',
+                              style: textTheme.titleSmall?.copyWith(color: colorScheme.primary),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 40),
+            ],
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, TextTheme textTheme) {
+    return Text(
+      title,
+      style: textTheme.titleLarge,
     );
   }
 }

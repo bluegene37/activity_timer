@@ -1,61 +1,69 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import '../screens/activity_list_screen.dart';
 import '../screens/interval_timer_list_screen.dart';
 import '../screens/settings_screen.dart';
 
-class MainNavigation extends StatelessWidget {
+class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final RxInt currentIndex = 0.obs;
-    
-    final List<Widget> screens = [
-      ActivityListScreen(),
-      IntervalTimerListScreen(),
-      SettingsScreen(),
-    ];
+  State<MainNavigation> createState() => _MainNavigationState();
+}
 
+class _MainNavigationState extends State<MainNavigation> {
+  int _currentIndex = 0;
+
+  final List<Widget> _screens = [
+    const ActivityListScreen(),
+    const IntervalTimerListScreen(),
+    const SettingsScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      body: Obx(() => IndexedStack(
-        index: currentIndex.value,
-        children: screens,
-      )),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
             ),
           ],
         ),
-        child: Obx(() => BottomNavigationBar(
-          currentIndex: currentIndex.value,
-          onTap: (index) => currentIndex.value = index,
+        child: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
           backgroundColor: Theme.of(context).colorScheme.surface,
-          selectedItemColor: Theme.of(context).colorScheme.primary,
-          unselectedItemColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-          items: const [
-            BottomNavigationBarItem(
+          elevation: 0,
+          indicatorColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+          destinations: const [
+            NavigationDestination(
               icon: Icon(Icons.timer_outlined),
-              activeIcon: Icon(Icons.timer),
+              selectedIcon: Icon(Icons.timer),
               label: 'Activities',
             ),
-            BottomNavigationBarItem(
+            NavigationDestination(
               icon: Icon(Icons.schedule_outlined),
-              activeIcon: Icon(Icons.schedule),
+              selectedIcon: Icon(Icons.schedule),
               label: 'Intervals',
             ),
-            BottomNavigationBarItem(
+            NavigationDestination(
               icon: Icon(Icons.settings_outlined),
-              activeIcon: Icon(Icons.settings),
+              selectedIcon: Icon(Icons.settings),
               label: 'Settings',
             ),
           ],
-        )),
+        ),
       ),
     );
   }

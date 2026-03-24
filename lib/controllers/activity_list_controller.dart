@@ -29,35 +29,64 @@ class ActivityListController extends GetxController {
   }
 
   Future<void> addNewSequence() async {
-    final textController = TextEditingController();
-    final result = await Get.dialog<String>(
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+    
+    final result = await Get.dialog<Map<String, String>>(
       AlertDialog(
         title: const Text('New Activity'),
-        content: TextField(
-          controller: textController,
-          decoration: const InputDecoration(
-            labelText: 'Activity Name',
-            hintText: 'Enter activity name',
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Activity Name',
+                  hintText: 'Enter activity name',
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description (Optional)',
+                  hintText: 'Enter description',
+                ),
+                maxLines: 2,
+              ),
+            ],
           ),
-          autofocus: true,
-          onSubmitted: (value) => Get.back(result: value),
         ),
         actions: [
           TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
           TextButton(
             onPressed: () {
-              final name = textController.text.trim();
-              Get.back(result: name.isNotEmpty ? name : 'New Activity');
+              final name = nameController.text.trim();
+              final desc = descriptionController.text.trim();
+              Get.back(result: {
+                'name': name.isNotEmpty ? name : 'New Activity',
+                'description': desc,
+              });
             },
             child: const Text('Create'),
           ),
         ],
       ),
     );
-    textController.dispose();
 
-    if (result != null && result.isNotEmpty) {
-      final newSequence = TimerSequence(name: result, timers: []);
+    // Give dialog time to animate out fully before disposing controllers to avoid exceptions
+    await Future.delayed(const Duration(milliseconds: 300));
+    nameController.dispose();
+    descriptionController.dispose();
+
+    if (result != null && result['name']!.isNotEmpty) {
+      final newSequence = TimerSequence(
+        name: result['name']!, 
+        description: result['description']!.isEmpty ? null : result['description'],
+        timers: []
+      );
 
       try {
         await _databaseService.createActivitySequence(newSequence);
@@ -71,13 +100,14 @@ class ActivityListController extends GetxController {
     }
   }
 
-  Future<void> editSequenceName(int index, String newName) async {
+  Future<void> editSequence(int index, String newName, String newDescription) async {
     if (newName.isEmpty) return;
 
     final sequence = sequences[index];
     final updatedSequence = TimerSequence(
       id: sequence.id,
       name: newName,
+      description: newDescription.isEmpty ? null : newDescription,
       timers: sequence.timers,
       defaultLoopEnabled: sequence.defaultLoopEnabled,
       createdAt: sequence.createdAt,
@@ -98,8 +128,12 @@ class ActivityListController extends GetxController {
     try {
       await _databaseService.deleteActivitySequence(sequence.id);
       sequences.removeAt(index);
+      
+      // Add slight delay to safely show snackbar
+      await Future.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Success', 'Activity deleted');
     } catch (e) {
+      await Future.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Error', 'Failed to delete activity: $e');
     }
   }
@@ -109,6 +143,7 @@ class ActivityListController extends GetxController {
     final updatedSequence = TimerSequence(
       id: sequence.id,
       name: sequence.name,
+      description: sequence.description,
       timers: sequence.timers,
       defaultLoopEnabled: !sequence.defaultLoopEnabled,
       createdAt: sequence.createdAt,

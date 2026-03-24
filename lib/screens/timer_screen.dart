@@ -5,6 +5,7 @@ import '../models/activity_timer.dart';
 import '../models/settings.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../components/glowing_timer_ring.dart';
+import '../theme/app_theme.dart';
 
 class TimerScreen extends StatefulWidget {
   final TimerSequence sequence;
@@ -214,12 +215,17 @@ class _TimerScreenState extends State<TimerScreen>
             ? 1 - (_remainingSeconds / currentTimer.durationInSeconds)
             : 0.0;
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(widget.sequence.name),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: Icon(Icons.close, color: colorScheme.onSurface),
           onPressed: () {
             showDialog(
               context: context,
@@ -247,14 +253,10 @@ class _TimerScreenState extends State<TimerScreen>
           },
         ),
         actions: [
-          // Sound toggle button
           IconButton(
             icon: Icon(
               _settings.soundEnabled ? Icons.volume_up : Icons.volume_off,
-              color:
-                  _settings.soundEnabled
-                      ? Theme.of(context).colorScheme.primary
-                      : null,
+              color: _settings.soundEnabled ? colorScheme.primary : colorScheme.onSurfaceVariant,
             ),
             onPressed: () async {
               bool newValue = !_settings.soundEnabled;
@@ -263,218 +265,148 @@ class _TimerScreenState extends State<TimerScreen>
             },
             tooltip: _settings.soundEnabled ? 'Mute sound' : 'Enable sound',
           ),
-          // Loop toggle button
           IconButton(
             icon: Icon(
               _loopEnabled ? Icons.repeat_on : Icons.repeat,
-              color:
-                  _loopEnabled ? Theme.of(context).colorScheme.primary : null,
+              color: _loopEnabled ? colorScheme.primary : colorScheme.onSurfaceVariant,
             ),
             onPressed: _toggleLoop,
             tooltip: _loopEnabled ? 'Disable loop' : 'Enable loop',
           ),
         ],
       ),
-      body:
-          _isCompleted
-              ? _buildCompletedView()
-              : _buildTimerView(currentTimer, progress),
+      body: _isCompleted
+              ? _buildCompletedView(textTheme, colorScheme)
+              : _buildTimerView(currentTimer, progress, textTheme, colorScheme),
     );
   }
 
-  Widget _buildTimerView(ActivityTimer currentTimer, double progress) {
-    return Column(
-      children: [
-        // Progress indicator for the entire sequence
-        LinearProgressIndicator(
-          value: (_currentTimerIndex + progress) / _timers.length,
-          minHeight: 8,
-        ),
+  Widget _buildTimerView(ActivityTimer currentTimer, double progress, TextTheme textTheme, ColorScheme colorScheme) {
+    return SafeArea(
+      child: Column(
+        children: [
+          // Progress indicator for the entire sequence
+          LinearProgressIndicator(
+            value: (_currentTimerIndex + progress) / _timers.length,
+            minHeight: 6,
+            backgroundColor: colorScheme.onSurface.withOpacity(0.08),
+            color: colorScheme.primary,
+          ),
+          const SizedBox(height: 24),
 
-        // Timer info
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Timer ${_currentTimerIndex + 1} of ${_timers.length}',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  if (_loopEnabled && _loopCount > 0) ...[
-                    const SizedBox(width: 8),
+          // Timer info
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        borderRadius: BorderRadius.circular(12),
+                        color: colorScheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        'Loop ${_loopCount + 1}',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
+                        'Timer ${_currentTimerIndex + 1} of ${_timers.length}',
+                        style: textTheme.bodySmall?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold),
                       ),
                     ),
+                    if (_loopEnabled && _loopCount > 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary.withOpacity(0.2), // Matched to uniform theme
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Loop ${_loopCount + 1}',
+                          style: textTheme.bodySmall?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                currentTimer.name,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              if (currentTimer.description != null) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
                 Text(
-                  currentTimer.description!,
-                  style: Theme.of(context).textTheme.bodyLarge,
+                  currentTimer.name,
+                  style: textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
+                if (currentTimer.description != null && currentTimer.description!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    currentTimer.description!,
+                    style: textTheme.bodyLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
 
-        // Timer circle
-        Expanded(
-          child: Center(
+          // Timer circle
+          Expanded(
             child: Center(
               child: GlowingTimerRing(
                 progress: progress,
-                color: _getTimerColor(progress),
-                backgroundColor:
-                    Theme.of(context).colorScheme.surfaceContainerHighest,
-                size: 280, // Slightly larger for premium feel
-                strokeWidth: 18,
+                color: _getTimerColor(progress, colorScheme),
+                backgroundColor: colorScheme.onSurface.withOpacity(0.05), // Clean non-brown background track
+                size: 300,
+                strokeWidth: 20,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       _formatTime(_remainingSeconds),
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                      style: TextStyle(
+                        fontSize: 64,
                         fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
                         letterSpacing: 2,
                       ),
                     ),
                     Text(
                       'remaining',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
+                      style: textTheme.titleSmall?.copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
               ),
             ),
           ),
-        ),
 
-        // Notification indicators
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (_settings.soundEnabled) ...[
-                Icon(
-                  Icons.volume_up,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.primary,
+          // Next timer preview
+          if (_currentTimerIndex < _timers.length - 1) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+                  ],
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  'Sound',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
-              if (_settings.vibrationEnabled) ...[
-                Icon(
-                  Icons.vibration,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Vibration',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
-              if (_loopEnabled) ...[
-                Icon(
-                  Icons.repeat,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Loop',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                if (_loopCount > 0) ...[
-                  const SizedBox(width: 4),
-                  Text(
-                    '($_loopCount)',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                ],
-              ],
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        // Next timer preview
-        if (_currentTimerIndex < _timers.length - 1) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Card(
-              child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
                   children: [
-                    const Icon(Icons.arrow_forward),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest, shape: BoxShape.circle),
+                      child: Icon(Icons.arrow_forward, color: colorScheme.onSurfaceVariant, size: 20),
+                    ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Text('Next: ${_timers[_currentTimerIndex + 1].name}', style: textTheme.titleSmall),
                           Text(
-                            'Next: ${_timers[_currentTimerIndex + 1].name}',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          Text(
-                            _formatTime(
-                              _timers[_currentTimerIndex + 1].durationInSeconds,
-                            ),
-                            style: Theme.of(context).textTheme.bodyLarge,
+                            _formatTime(_timers[_currentTimerIndex + 1].durationInSeconds),
+                            style: textTheme.bodyMedium,
                           ),
                         ],
                       ),
@@ -483,29 +415,34 @@ class _TimerScreenState extends State<TimerScreen>
                 ),
               ),
             ),
-          ),
-        ] else if (_loopEnabled) ...[
-          // Show first timer as next if we're on the last timer and looping
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Card(
-              child: Padding(
+          ] else if (_loopEnabled) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+                  ],
+                ),
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
                   children: [
-                    const Icon(Icons.loop),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: colorScheme.primary.withOpacity(0.1), shape: BoxShape.circle),
+                      child: Icon(Icons.loop, color: colorScheme.primary, size: 20),
+                    ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Next Loop: ${_timers[0].name}',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
+                          Text('Next Loop: ${_timers[0].name}', style: textTheme.titleSmall),
                           Text(
                             _formatTime(_timers[0].durationInSeconds),
-                            style: Theme.of(context).textTheme.bodyLarge,
+                            style: textTheme.bodyMedium,
                           ),
                         ],
                       ),
@@ -513,80 +450,115 @@ class _TimerScreenState extends State<TimerScreen>
                   ],
                 ),
               ),
+            ),
+          ],
+          
+          const SizedBox(height: 24),
+
+          // Control buttons
+          Padding(
+            padding: const EdgeInsets.only(bottom: 40.0, left: 24, right: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.skip_previous),
+                  onPressed: _goToPreviousTimer,
+                  iconSize: 32,
+                  color: colorScheme.onSurfaceVariant,
+                  style: IconButton.styleFrom(
+                    backgroundColor: colorScheme.surface,
+                    padding: const EdgeInsets.all(16),
+                  ),
+                ),
+                const SizedBox(width: 24),
+                FloatingActionButton.large(
+                  onPressed: _isRunning ? _pauseTimer : _resumeTimer,
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  elevation: 4,
+                  shape: const CircleBorder(),
+                  child: Icon(_isRunning ? Icons.pause : Icons.play_arrow, size: 40),
+                ),
+                const SizedBox(width: 24),
+                IconButton(
+                  icon: const Icon(Icons.skip_next),
+                  onPressed: _skipToNextTimer,
+                  iconSize: 32,
+                  color: colorScheme.onSurfaceVariant,
+                  style: IconButton.styleFrom(
+                    backgroundColor: colorScheme.surface,
+                    padding: const EdgeInsets.all(16),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
-
-        // Control buttons
-        Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.skip_previous),
-                onPressed: _goToPreviousTimer,
-                iconSize: 36,
-              ),
-              FloatingActionButton(
-                onPressed: _isRunning ? _pauseTimer : _resumeTimer,
-                child: Icon(_isRunning ? Icons.pause : Icons.play_arrow),
-              ),
-              IconButton(
-                icon: const Icon(Icons.skip_next),
-                onPressed: _skipToNextTimer,
-                iconSize: 36,
-              ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildCompletedView() {
+  Widget _buildCompletedView(TextTheme textTheme, ColorScheme colorScheme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.fitness_center, // Change to fitness icon
-            size: 100,
-            color: Theme.of(context).colorScheme.primary,
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: colorScheme.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.emoji_events,
+              size: 100,
+              color: colorScheme.primary,
+            ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           Text(
             'Activity Complete!',
-            style: Theme.of(context).textTheme.headlineMedium,
+            style: textTheme.headlineLarge,
           ),
           const SizedBox(height: 16),
           Text(
-            'You completed ${_timers.length} timers',
-            style: Theme.of(context).textTheme.titleMedium,
+            'Great job! You completed ${_timers.length} timers.',
+            style: textTheme.titleMedium?.copyWith(color: colorScheme.onSurfaceVariant),
           ),
           if (_loopCount > 0) ...[
             const SizedBox(height: 8),
-            Text(
-              'Loops completed: $_loopCount',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.bold,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Loops completed: $_loopCount',
+                style: textTheme.titleSmall?.copyWith(color: colorScheme.primary),
               ),
             ),
           ],
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: _resetTimer,
-            icon: const Icon(Icons.replay),
-            label: const Text('Restart Activity'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          const SizedBox(height: 48),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: ElevatedButton.icon(
+              onPressed: _resetTimer,
+              icon: const Icon(Icons.replay),
+              label: const Text('Restart Activity'),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(56),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 16),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Back to Activities'),
+            child: Text('Back to Activities', style: textTheme.titleSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
           ),
         ],
       ),
@@ -605,15 +577,16 @@ class _TimerScreenState extends State<TimerScreen>
     }
   }
 
-  Color _getTimerColor(double progress) {
-    if (progress < 0.5) {
-      return Theme.of(
-        context,
-      ).colorScheme.primary; // Primary color for first half
-    } else if (progress < 0.75) {
-      return Colors.orange; // Orange for next quarter
-    } else {
-      return Colors.red; // Red for last quarter
-    }
+  Color _getTimerColor(double progress, ColorScheme colorScheme) {
+    final HSLColor baseColor = HSLColor.fromColor(colorScheme.primary);
+    
+    // Calculate lightness transitioning from lighter to darker.
+    // E.g., from (base + 0.15) down to (base - 0.15) over the duration.
+    double targetLightness = (baseColor.lightness + 0.15) - (progress * 0.30);
+    
+    // Safety clamp to keep it visible and aesthetically pleasing.
+    targetLightness = targetLightness.clamp(0.2, 0.85);
+    
+    return baseColor.withLightness(targetLightness).toColor();
   }
 }

@@ -171,6 +171,7 @@ class DatabaseService {
       // HIIT Activity
       final hiitActivity = TimerSequence(
         name: 'HIIT Activity',
+        description: 'Cardio Focus',
         timers: [
           ActivityTimer(
             name: 'Warm Up',
@@ -208,6 +209,7 @@ class DatabaseService {
       // Strength Training
       final strengthTraining = TimerSequence(
         name: 'Strength Activity',
+        description: 'High Intensity',
         timers: [
           ActivityTimer(
             name: 'Warm Up',

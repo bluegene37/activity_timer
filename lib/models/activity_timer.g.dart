@@ -66,13 +66,14 @@ class TimerSequenceAdapter extends TypeAdapter<TimerSequence> {
       defaultLoopEnabled: fields[3] == null ? false : fields[3] as bool,
       createdAt: fields[4] as DateTime?,
       updatedAt: fields[5] as DateTime?,
+      description: fields[6] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TimerSequence obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -84,7 +85,9 @@ class TimerSequenceAdapter extends TypeAdapter<TimerSequence> {
       ..writeByte(4)
       ..write(obj.createdAt)
       ..writeByte(5)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(6)
+      ..write(obj.description);
   }
 
   @override

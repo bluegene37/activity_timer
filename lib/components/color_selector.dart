@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/for_ui.dart';
+import '../theme/app_theme.dart';
 
 class ColorSelector extends StatefulWidget {
   final Color selectedColor;
@@ -88,17 +88,10 @@ class _ColorSelectorState extends State<ColorSelector> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Theme Color',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: ForUI.spacingSmall),
         Container(
           height: 60,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(ForUI.borderRadius),
+            borderRadius: BorderRadius.circular(AppTheme.borderRadius),
             border: Border.all(
               color: Theme.of(
                 context,
@@ -164,7 +157,7 @@ class _ColorSelectorState extends State<ColorSelector> {
             },
           ),
         ),
-        const SizedBox(height: ForUI.spacingSmall),
+        const SizedBox(height: AppTheme.spacingSmall),
         Text(
           'Swipe horizontally to see more colors',
           style: Theme.of(context).textTheme.bodySmall,

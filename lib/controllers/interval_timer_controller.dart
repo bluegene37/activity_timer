@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/interval_timer.dart';
 import '../services/database_service.dart';
@@ -31,8 +32,12 @@ class IntervalTimerController extends GetxController {
     try {
       await _databaseService.deleteIntervalTimer(id);
       intervalTimers.removeWhere((timer) => timer.id == id);
+      
+      // Delay snackbar slightly to ensure any dialog has closed
+      await Future.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Success', 'Interval timer deleted');
     } catch (e) {
+      await Future.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Error', 'Failed to delete interval timer: $e');
     }
   }
