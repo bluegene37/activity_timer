@@ -34,7 +34,7 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController.text = widget.timer.name;
+    _nameController.text = widget.timer.name == 'New Interval Timer' ? '' : widget.timer.name;
     _startTime = widget.timer.startTime;
     _endTime = widget.timer.endTime;
     _intervalValue = widget.timer.intervalValue;
@@ -108,9 +108,13 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
       return;
     }
 
+    final finalName = _nameController.text.trim().isEmpty 
+        ? 'New Interval Timer' 
+        : _nameController.text.trim();
+
     final updatedTimer = IntervalTimer(
       id: widget.timer.id,
-      name: _nameController.text,
+      name: finalName,
       startTime: _startTime,
       endTime: _endTime,
       intervalValue: _intervalValue,
@@ -213,7 +217,7 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
             TextFormField(
               controller: _nameController,
               decoration: InputDecoration(
-                hintText: 'Enter timer name',
+                hintText: 'New Interval Timer',
                 filled: true,
                 fillColor: colorScheme.surface,
                 border: OutlineInputBorder(
@@ -223,9 +227,6 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
               validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a name';
-                }
                 return null;
               },
             ),

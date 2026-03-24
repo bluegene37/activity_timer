@@ -20,6 +20,7 @@ class IntervalTimerController extends GetxController {
     isLoading.value = true;
     try {
       final timers = await _databaseService.getAllIntervalTimers();
+      timers.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       intervalTimers.assignAll(timers);
     } catch (e) {
       Get.snackbar('Error', 'Failed to load interval timers: $e');
