@@ -65,7 +65,7 @@ class AppTheme {
         surfaceContainerLow: scaffoldBg,
         surfaceContainer: Colors.white,
         surfaceContainerHighest: const Color(0xFFE9ECEF),
-        outlineVariant: Colors.grey.withOpacity(0.1),
+        outlineVariant: Colors.grey.withValues(alpha: 0.1),
       ),
       textTheme: _getTextTheme(onSurface, onSurfaceVariant),
       cardTheme: CardThemeData(
@@ -110,34 +110,36 @@ class AppTheme {
     );
   }
 
-  // Pure Monochrome Dark Theme 
-  static ThemeData getDarkTheme(Color ignoredColor) {
-    const primaryColor = Colors.white;
-    const onPrimary = Colors.black;
+  // Modern Dark Theme with accent color support
+  static ThemeData getDarkTheme(Color primaryColor) {
     const scaffoldBg = Color(0xFF121212);
     const surfaceColor = Color(0xFF1E1E1E);
     const onSurface = Color(0xFFF8F9FA);
     const onSurfaceVariant = Color(0xFFAAB4BE);
-    const secondaryColor = Color(0xFFB0B0B0); // Light gray for secondary elements
+
+    final darkColorScheme = ColorScheme.fromSeed(
+      seedColor: primaryColor,
+      brightness: Brightness.dark,
+      surface: surfaceColor,
+    );
+
+    final effectivePrimary = primaryColor;
 
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      primaryColor: primaryColor,
+      primaryColor: effectivePrimary,
       scaffoldBackgroundColor: scaffoldBg,
-      colorScheme: const ColorScheme.dark(
-        primary: primaryColor,
-        onPrimary: onPrimary,
-        secondary: secondaryColor,
-        onSecondary: onPrimary,
+      colorScheme: darkColorScheme.copyWith(
+        primary: effectivePrimary,
+        onPrimary: Colors.white,
         surface: surfaceColor,
         onSurface: onSurface,
         onSurfaceVariant: onSurfaceVariant,
-      ).copyWith(
         surfaceContainerLow: scaffoldBg,
         surfaceContainer: surfaceColor,
         surfaceContainerHighest: const Color(0xFF2C2C2C),
-        outlineVariant: Colors.white.withOpacity(0.1),
+        outlineVariant: Colors.white.withValues(alpha: 0.1),
       ),
       textTheme: _getTextTheme(onSurface, onSurfaceVariant),
       cardTheme: CardThemeData(
@@ -167,13 +169,13 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(borderRadius),
           ),
-          backgroundColor: primaryColor,
-          foregroundColor: onPrimary,
+          backgroundColor: effectivePrimary,
+          foregroundColor: Colors.white,
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: primaryColor, // Use white in monochrome
-        foregroundColor: onPrimary, // Black icon
+        backgroundColor: effectivePrimary,
+        foregroundColor: Colors.white,
         elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),

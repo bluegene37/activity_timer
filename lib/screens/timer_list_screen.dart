@@ -52,7 +52,7 @@ class TimerListScreen extends StatelessWidget {
                         border: Border.all(color: colorScheme.outlineVariant),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
+                            color: Colors.black.withValues(alpha: 0.02),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -148,7 +148,7 @@ class TimerListScreen extends StatelessWidget {
                                 Icon(
                                   Icons.timer_off_outlined,
                                   size: 64,
-                                  color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
@@ -167,7 +167,7 @@ class TimerListScreen extends StatelessWidget {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: controller.sequence.value.timers.length,
-                        onReorder: controller.reorderTimers,
+                        onReorderItem: controller.reorderTimers,
                         proxyDecorator: (child, index, animation) {
                           return Material(
                             color: Colors.transparent,
@@ -190,7 +190,7 @@ class TimerListScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.02),
+                                  color: Colors.black.withValues(alpha: 0.02),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
@@ -204,7 +204,7 @@ class TimerListScreen extends StatelessWidget {
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: colorScheme.primary.withOpacity(0.1),
+                                    color: colorScheme.primary.withValues(alpha: 0.1),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Center(

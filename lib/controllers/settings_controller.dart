@@ -45,27 +45,30 @@ class SettingsController extends GetxController {
         title: const Text('Select Default Alarm Sound'),
         content: SizedBox(
           width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: AlarmSound.values.length,
-            itemBuilder: (context, index) {
-              final sound = AlarmSound.values[index];
-              return Obx(() => RadioListTile<AlarmSound>(
-                title: Text(sound.displayName),
-                value: sound,
-                groupValue: _appController.defaultAlarmSound.value,
-                onChanged: (AlarmSound? value) {
-                  if (value != null) {
-                    Get.back(result: value);
-                  }
-                },
-                secondary: IconButton(
-                  icon: const Icon(Icons.play_arrow),
-                  onPressed: () => previewAlarmSound(sound),
-                ),
-              ));
+          child: Obx(() => RadioGroup<AlarmSound>(
+            groupValue: _appController.defaultAlarmSound.value,
+            onChanged: (AlarmSound? value) {
+              if (value != null) {
+                Get.back(result: value);
+              }
             },
-          ),
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: AlarmSound.values.length,
+              itemBuilder: (context, index) {
+                final sound = AlarmSound.values[index];
+                return ListTile(
+                  leading: Radio<AlarmSound>(value: sound),
+                  title: Text(sound.displayName),
+                  onTap: () => Get.back(result: sound),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.play_arrow),
+                    onPressed: () => previewAlarmSound(sound),
+                  ),
+                );
+              },
+            ),
+          )),
         ),
         actions: [
           TextButton(

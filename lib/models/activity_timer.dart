@@ -1,5 +1,6 @@
 import 'package:hive_ce/hive.dart';
 import 'package:uuid/uuid.dart';
+import 'alarm_sound.dart';
 
 part 'activity_timer.g.dart';
 
@@ -17,24 +18,37 @@ class ActivityTimer extends HiveObject {
   @HiveField(3)
   String? description;
 
+  @HiveField(4)
+  String? alarmSoundName;
+
   ActivityTimer({
     String? id,
     required this.name,
     required this.durationInSeconds,
     this.description,
+    this.alarmSoundName,
   }) : id = id ?? const Uuid().v4();
+
+  AlarmSound? get alarmSound =>
+      alarmSoundName != null ? AlarmSound.fromString(alarmSoundName!) : null;
+
+  void setAlarmSound(AlarmSound? sound) {
+    alarmSoundName = sound?.name;
+  }
 
   // Create a copy with updated fields
   ActivityTimer copyWith({
     String? name,
     int? durationInSeconds,
     String? description,
+    String? alarmSoundName,
   }) {
     return ActivityTimer(
       id: id,
       name: name ?? this.name,
       durationInSeconds: durationInSeconds ?? this.durationInSeconds,
       description: description ?? this.description,
+      alarmSoundName: alarmSoundName ?? this.alarmSoundName,
     );
   }
 }

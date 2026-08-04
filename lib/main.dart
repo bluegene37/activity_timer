@@ -6,6 +6,7 @@ import 'models/settings.dart';
 import 'models/activity_timer.dart';
 import 'models/interval_timer.dart';
 import 'models/alarm_sound.dart';
+import 'models/session_history.dart';
 import 'services/database_service.dart';
 import 'routes/app_pages.dart';
 import 'theme/app_theme.dart';
@@ -24,6 +25,7 @@ void main() async {
   Hive.registerAdapter(IntervalTimerAdapter());
   Hive.registerAdapter(IntervalTypeAdapter());
   Hive.registerAdapter(AlarmSoundAdapter());
+  Hive.registerAdapter(SessionHistoryAdapter());
 
   // Initialize database service
   final databaseService = DatabaseService();

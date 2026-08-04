@@ -64,68 +64,94 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 16),
               Container(
                 decoration: BoxDecoration(
-                  color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
+                      color: Colors.black.withValues(alpha: 0.02),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Obx(() {
-                      final isDark = appController.themeMode.value == ThemeMode.dark;
-                      return SwitchListTile(
-                        title: Text('Dark Mode', style: textTheme.titleSmall),
-                        subtitle: Text('Use a high-contrast minimalist dark theme', style: textTheme.bodyMedium),
-                        value: isDark,
-                        onChanged: (value) {
-                          appController.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
-                        },
-                        activeColor: colorScheme.primary,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        secondary: Icon(
-                          isDark ? Icons.dark_mode : Icons.light_mode, 
-                          color: isDark ? Colors.white : colorScheme.primary
-                        ),
-                      );
-                    }),
-                    
-                    Obx(() {
-                      final isDark = appController.themeMode.value == ThemeMode.dark;
-                      if (isDark) {
-                        return const SizedBox.shrink();
-                      }
-                      
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Divider(height: 1, color: colorScheme.surfaceContainerHighest),
-                          Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Theme Color',
-                                  style: textTheme.titleSmall,
-                                ),
-                                const SizedBox(height: 16),
-                                ColorSelector(
-                                  selectedColor: appController.themeColor.value,
-                                  onColorSelected: controller.setThemeColor,
-                                ),
-                              ],
-                            ),
+                child: Material(
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Obx(() {
+                        final isDark = appController.themeMode.value == ThemeMode.dark;
+                        return SwitchListTile(
+                          title: Text('Dark Mode', style: textTheme.titleSmall),
+                          subtitle: Text('Use a high-contrast minimalist dark theme', style: textTheme.bodyMedium),
+                          value: isDark,
+                          onChanged: (value) {
+                            appController.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
+                          },
+                          activeTrackColor: colorScheme.primary,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          secondary: Icon(
+                            isDark ? Icons.dark_mode : Icons.light_mode, 
+                            color: isDark ? Colors.white : colorScheme.primary
                           ),
-                        ],
-                      );
-                    }),
-                  ],
+                        );
+                      }),
+                      
+                      Obx(() {
+                        final isDark = appController.themeMode.value == ThemeMode.dark;
+                        if (isDark) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Divider(height: 1, color: colorScheme.surfaceContainerHighest),
+                              Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Dark Theme Accent Color',
+                                      style: textTheme.titleSmall,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ColorSelector(
+                                      selectedColor: appController.themeColor.value,
+                                      onColorSelected: controller.setThemeColor,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                        
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Divider(height: 1, color: colorScheme.surfaceContainerHighest),
+                            Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Theme Color',
+                                    style: textTheme.titleSmall,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ColorSelector(
+                                    selectedColor: appController.themeColor.value,
+                                    onColorSelected: controller.setThemeColor,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
+                    ],
+                  ),
                 ),
               ),
 
@@ -134,58 +160,62 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 16),
               Container(
                 decoration: BoxDecoration(
-                  color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
+                      color: Colors.black.withValues(alpha: 0.02),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                child: Column(
-                  children: [
-                    Obx(() => SwitchListTile(
-                      title: Text('Sound Alerts', style: textTheme.titleSmall),
-                      subtitle: Text('Play sound when timer completes', style: textTheme.bodyMedium),
-                      value: appController.soundEnabled.value,
-                      onChanged: controller.toggleSound,
-                      activeColor: colorScheme.primary,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    )),
-                    Divider(height: 1, color: colorScheme.surfaceContainerHighest),
-                    Obx(() => SwitchListTile(
-                      title: Text('Vibration', style: textTheme.titleSmall),
-                      subtitle: Text('Vibrate when timer completes', style: textTheme.bodyMedium),
-                      value: appController.vibrationEnabled.value,
-                      onChanged: controller.toggleVibration,
-                      activeColor: colorScheme.primary,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    )),
-                    Divider(height: 1, color: colorScheme.surfaceContainerHighest),
-                    Obx(() => ListTile(
-                      title: Text('Default Alarm Sound', style: textTheme.titleSmall),
-                      subtitle: Text(appController.defaultAlarmSound.value.displayName, style: textTheme.bodyMedium),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.play_circle_fill, color: colorScheme.primary, size: 32),
-                            onPressed: () => controller.previewAlarmSound(appController.defaultAlarmSound.value),
-                            tooltip: 'Preview sound',
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: Icon(Icons.edit, color: colorScheme.onSurfaceVariant),
-                            onPressed: controller.selectDefaultAlarmSound,
-                            tooltip: 'Change sound',
-                          ),
-                        ],
-                      ),
-                    )),
-                  ],
+                child: Material(
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      Obx(() => SwitchListTile(
+                        title: Text('Sound Alerts', style: textTheme.titleSmall),
+                        subtitle: Text('Play sound when timer completes', style: textTheme.bodyMedium),
+                        value: appController.soundEnabled.value,
+                        onChanged: controller.toggleSound,
+                        activeTrackColor: colorScheme.primary,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      )),
+                      Divider(height: 1, color: colorScheme.surfaceContainerHighest),
+                      Obx(() => SwitchListTile(
+                        title: Text('Vibration', style: textTheme.titleSmall),
+                        subtitle: Text('Vibrate when timer completes', style: textTheme.bodyMedium),
+                        value: appController.vibrationEnabled.value,
+                        onChanged: controller.toggleVibration,
+                        activeTrackColor: colorScheme.primary,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      )),
+                      Divider(height: 1, color: colorScheme.surfaceContainerHighest),
+                      Obx(() => ListTile(
+                        title: Text('Default Alarm Sound', style: textTheme.titleSmall),
+                        subtitle: Text(appController.defaultAlarmSound.value.displayName, style: textTheme.bodyMedium),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.play_circle_fill, color: colorScheme.primary, size: 32),
+                              onPressed: () => controller.previewAlarmSound(appController.defaultAlarmSound.value),
+                              tooltip: 'Preview sound',
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: Icon(Icons.edit, color: colorScheme.onSurfaceVariant),
+                              onPressed: controller.selectDefaultAlarmSound,
+                              tooltip: 'Change sound',
+                            ),
+                          ],
+                        ),
+                      )),
+                    ],
+                  ),
                 ),
               ),
 
@@ -194,30 +224,34 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 16),
               Container(
                 decoration: BoxDecoration(
-                  color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
+                      color: Colors.black.withValues(alpha: 0.02),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                child: Column(
-                  children: [
-                    ListTile(
-                      title: Text('Version', style: textTheme.titleSmall),
-                      trailing: Text('1.0.0', style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                    ),
-                    Divider(height: 1, color: colorScheme.surfaceContainerHighest),
-                    ListTile(
-                      title: Text('Developer', style: textTheme.titleSmall),
-                      trailing: Text('CodeGenexis', style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                    ),
-                  ],
+                child: Material(
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      ListTile(
+                        title: Text('Version', style: textTheme.titleSmall),
+                        trailing: Text('1.0.0', style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                      ),
+                      Divider(height: 1, color: colorScheme.surfaceContainerHighest),
+                      ListTile(
+                        title: Text('Developer', style: textTheme.titleSmall),
+                        trailing: Text('CodeGenexis', style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
@@ -231,7 +265,7 @@ class SettingsScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
+                      color: Colors.black.withValues(alpha: 0.02),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),

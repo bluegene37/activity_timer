@@ -123,7 +123,7 @@ class IntervalTimerListScreen extends StatelessWidget {
                           Icon(
                             Icons.schedule_outlined,
                             size: 64,
-                            color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -153,7 +153,7 @@ class IntervalTimerListScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
+                            color: Colors.black.withValues(alpha: 0.04),
                             blurRadius: 15,
                             offset: const Offset(0, 5),
                           ),
@@ -219,7 +219,7 @@ class IntervalTimerListScreen extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: colorScheme.primary.withOpacity(0.1),
+                                    color: colorScheme.primary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Row(
@@ -237,7 +237,7 @@ class IntervalTimerListScreen extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: colorScheme.primary.withOpacity(0.1),
+                                    color: colorScheme.primary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Row(
@@ -255,7 +255,7 @@ class IntervalTimerListScreen extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: colorScheme.primary.withOpacity(0.1),
+                                    color: colorScheme.primary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Row(
@@ -281,7 +281,7 @@ class IntervalTimerListScreen extends StatelessWidget {
                               child: ElevatedButton(
                                 onPressed: () => _startIntervalTimer(timer),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: colorScheme.primary.withOpacity(0.1),
+                                  backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
                                   foregroundColor: colorScheme.primary,
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(

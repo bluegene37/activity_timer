@@ -1,30 +1,57 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:activity_timer/main.dart';
+import 'package:activity_timer/components/glowing_timer_ring.dart';
+import 'package:activity_timer/components/color_selector.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('GlowingTimerRing Widget tests', () {
+    testWidgets('renders GlowingTimerRing with child content', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: GlowingTimerRing(
+                progress: 0.5,
+                color: Colors.blue,
+                backgroundColor: Colors.grey,
+                size: 200,
+                child: Text('05:00'),
+              ),
+            ),
+          ),
+        ),
+      );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+      expect(find.text('05:00'), findsOneWidget);
+    });
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  group('ColorSelector Widget tests', () {
+    testWidgets('renders ColorSelector and allows tapping options', (WidgetTester tester) async {
+      Color? tappedColor;
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: ColorSelector(
+                selectedColor: Colors.blue,
+                onColorSelected: (color) {
+                  tappedColor = color;
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(GestureDetector), findsWidgets);
+      
+      // Tap the second color option
+      await tester.tap(find.byType(GestureDetector).at(1));
+      await tester.pump();
+
+      expect(tappedColor, isNotNull);
+    });
   });
 }

@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/activity_timer.dart';
 import '../services/database_service.dart';

@@ -6,6 +6,7 @@ import 'package:hive_ce/hive_ce.dart';
 import 'package:activity_timer/models/activity_timer.dart';
 import 'package:activity_timer/models/alarm_sound.dart';
 import 'package:activity_timer/models/interval_timer.dart';
+import 'package:activity_timer/models/session_history.dart';
 import 'package:activity_timer/models/settings.dart';
 
 extension HiveRegistrar on HiveInterface {
@@ -15,6 +16,7 @@ extension HiveRegistrar on HiveInterface {
     registerAdapter(AppSettingsDataAdapter());
     registerAdapter(IntervalTimerAdapter());
     registerAdapter(IntervalTypeAdapter());
+    registerAdapter(SessionHistoryAdapter());
     registerAdapter(TimerSequenceAdapter());
   }
 }
@@ -26,6 +28,7 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
     registerAdapter(AppSettingsDataAdapter());
     registerAdapter(IntervalTimerAdapter());
     registerAdapter(IntervalTypeAdapter());
+    registerAdapter(SessionHistoryAdapter());
     registerAdapter(TimerSequenceAdapter());
   }
 }

@@ -4,8 +4,9 @@ import 'package:intl/intl.dart';
 import 'dart:async';
 import '../models/interval_timer.dart';
 import '../models/settings.dart';
+import '../models/session_history.dart';
+import '../services/database_service.dart';
 import 'package:audioplayers/audioplayers.dart';
-import '../theme/app_theme.dart';
 import '../components/glowing_timer_ring.dart';
 
 class IntervalTimerScreen extends StatefulWidget {
@@ -163,7 +164,6 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
     // Vibrate if enabled
     if (_settings.vibrationEnabled) {
       HapticFeedback.heavyImpact();
-      // For longer vibration on supported devices
       Future.delayed(const Duration(milliseconds: 200), () {
         HapticFeedback.heavyImpact();
       });
@@ -179,8 +179,22 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
         // All alarms completed
         _isCompleted = true;
         _timer.cancel();
+        _logSessionCompletion();
       }
     });
+  }
+
+  void _logSessionCompletion() {
+    final durationInSeconds = _allAlarmTimes.last.difference(_allAlarmTimes.first).inSeconds;
+    DatabaseService().logSessionHistory(
+      SessionHistory(
+        title: widget.timer.name,
+        totalDurationInSeconds: durationInSeconds > 0 ? durationInSeconds : 60,
+        itemCount: _allAlarmTimes.length,
+        loopCount: 0,
+        sessionType: 'interval',
+      ),
+    );
   }
 
   void _toggleTimer() {
@@ -196,7 +210,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
   }
 
   void _resetTimer() {
-    _timer.cancel(); // Fix: Cancel before starting over
+    _timer.cancel();
     setState(() {
       _isCompleted = false;
       _isRunning = true;
@@ -217,14 +231,8 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
 
   Color _getTimerColor(double progress, ColorScheme colorScheme) {
     final HSLColor baseColor = HSLColor.fromColor(colorScheme.primary);
-    
-    // Map progress from 0.0 to 1.0 to a lightness range: lighter to darker
-    // Example: Start at lightness + 0.15, end at lightness - 0.15
     double targetLightness = (baseColor.lightness + 0.15) - (progress * 0.3);
-    
-    // Clamp to ensure it doesn't become too white or completely black
     targetLightness = targetLightness.clamp(0.2, 0.8);
-    
     return baseColor.withLightness(targetLightness).toColor();
   }
 
@@ -313,7 +321,6 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
     final totalSeconds = _getTotalIntervalSeconds();
     final remainingSeconds = timeDifference.inSeconds;
     
-    // Progress goes from 0 (just started interval) to 1.0 (about to trigger alarm)
     double progress = totalSeconds > 0 ? 1.0 - (remainingSeconds / totalSeconds) : 0.0;
     progress = progress.clamp(0.0, 1.0);
 
@@ -324,7 +331,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
           LinearProgressIndicator(
             value: _currentAlarmIndex / (_allAlarmTimes.length - 1),
             minHeight: 6,
-            backgroundColor: colorScheme.onSurface.withOpacity(0.08),
+            backgroundColor: colorScheme.onSurface.withValues(alpha: 0.08),
             color: colorScheme.primary,
           ),
 
@@ -343,7 +350,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: colorScheme.primary.withOpacity(0.1),
+                    color: colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -383,7 +390,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
               child: GlowingTimerRing(
                 progress: progress,
                 color: _getTimerColor(progress, colorScheme),
-                backgroundColor: colorScheme.onSurface.withOpacity(0.05),
+                backgroundColor: colorScheme.onSurface.withValues(alpha: 0.05),
                 size: 300,
                 strokeWidth: 20,
                 child: Column(
@@ -453,7 +460,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                         margin: const EdgeInsets.symmetric(horizontal: 8),
                         decoration: BoxDecoration(
                           color: isCurrentAlarm
-                                  ? colorScheme.primary.withOpacity(0.1)
+                                  ? colorScheme.primary.withValues(alpha: 0.1)
                                   : colorScheme.surface,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
@@ -565,7 +572,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(0.1),
+              color: colorScheme.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.task_alt, size: 100, color: colorScheme.primary),

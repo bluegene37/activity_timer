@@ -3,9 +3,10 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import '../models/activity_timer.dart';
 import '../models/settings.dart';
+import '../models/session_history.dart';
+import '../services/database_service.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../components/glowing_timer_ring.dart';
-import '../theme/app_theme.dart';
 
 class TimerScreen extends StatefulWidget {
   final TimerSequence sequence;
@@ -42,11 +43,14 @@ class _TimerScreenState extends State<TimerScreen>
     );
     _startTimer();
 
-    // Load the alarm sound — use the user's selected default alarm sound
-    _audioPlayer.setSource(
-      AssetSource('sounds/${_settings.defaultAlarmSound.fileName}'),
-    );
+    // Load initial alarm sound
+    _updateAudioSource();
     _audioPlayer.setReleaseMode(ReleaseMode.stop);
+  }
+
+  void _updateAudioSource() {
+    final sound = _timers[_currentTimerIndex].alarmSound ?? _settings.defaultAlarmSound;
+    _audioPlayer.setSource(AssetSource('sounds/${sound.fileName}'));
   }
 
   @override
@@ -68,6 +72,9 @@ class _TimerScreenState extends State<TimerScreen>
       setState(() {
         if (_remainingSeconds > 0) {
           _remainingSeconds--;
+          if (_remainingSeconds <= 3 && _remainingSeconds > 0 && _settings.vibrationEnabled) {
+            HapticFeedback.selectionClick();
+          }
         } else {
           _playAlarm();
           _moveToNextTimer();
@@ -77,12 +84,15 @@ class _TimerScreenState extends State<TimerScreen>
   }
 
   Future<void> _playAlarm() async {
+    final currentTimer = _timers[_currentTimerIndex];
+    final sound = currentTimer.alarmSound ?? _settings.defaultAlarmSound;
+
     // Play sound if enabled
     if (_settings.soundEnabled) {
       try {
         await _audioPlayer.stop();
         await _audioPlayer.setSource(
-          AssetSource('sounds/${_settings.defaultAlarmSound.fileName}'),
+          AssetSource('sounds/${sound.fileName}'),
         );
         await _audioPlayer.resume();
       } catch (_) {}
@@ -91,7 +101,6 @@ class _TimerScreenState extends State<TimerScreen>
     // Vibrate if enabled
     if (_settings.vibrationEnabled) {
       HapticFeedback.heavyImpact();
-      // For longer vibration on supported devices
       Future.delayed(const Duration(milliseconds: 200), () {
         HapticFeedback.heavyImpact();
       });
@@ -119,8 +128,20 @@ class _TimerScreenState extends State<TimerScreen>
       _isRunning = false;
       _isCompleted = false;
       _loopCount = 0;
-      // Keep loop setting as is
     });
+    _updateAudioSource();
+  }
+
+  void _logSessionCompletion() {
+    DatabaseService().logSessionHistory(
+      SessionHistory(
+        title: widget.sequence.name,
+        totalDurationInSeconds: widget.sequence.totalDuration * (_loopCount + 1),
+        itemCount: _timers.length,
+        loopCount: _loopCount,
+        sessionType: 'activity',
+      ),
+    );
   }
 
   void _moveToNextTimer() {
@@ -134,10 +155,14 @@ class _TimerScreenState extends State<TimerScreen>
         _animationController.duration = Duration(seconds: _remainingSeconds);
         _animationController.forward(from: 0);
       });
+      _updateAudioSource();
       _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
         setState(() {
           if (_remainingSeconds > 0) {
             _remainingSeconds--;
+            if (_remainingSeconds <= 3 && _remainingSeconds > 0 && _settings.vibrationEnabled) {
+              HapticFeedback.selectionClick();
+            }
           } else {
             _playAlarm();
             _moveToNextTimer();
@@ -155,10 +180,14 @@ class _TimerScreenState extends State<TimerScreen>
           _animationController.duration = Duration(seconds: _remainingSeconds);
           _animationController.forward(from: 0);
         });
+        _updateAudioSource();
         _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
           setState(() {
             if (_remainingSeconds > 0) {
               _remainingSeconds--;
+              if (_remainingSeconds <= 3 && _remainingSeconds > 0 && _settings.vibrationEnabled) {
+                HapticFeedback.selectionClick();
+              }
             } else {
               _playAlarm();
               _moveToNextTimer();
@@ -171,6 +200,7 @@ class _TimerScreenState extends State<TimerScreen>
           _isRunning = false;
           _isCompleted = true;
         });
+        _logSessionCompletion();
       }
     }
   }
@@ -179,7 +209,6 @@ class _TimerScreenState extends State<TimerScreen>
     if (_currentTimerIndex < _timers.length - 1) {
       _moveToNextTimer();
     } else if (_loopEnabled) {
-      // On last timer with loop — wrap around
       _moveToNextTimer();
     }
   }
@@ -194,6 +223,7 @@ class _TimerScreenState extends State<TimerScreen>
         _remainingSeconds = _timers[_currentTimerIndex].durationInSeconds;
         _isRunning = false;
       });
+      _updateAudioSource();
       if (wasRunning) {
         _startTimer();
       }
@@ -282,6 +312,8 @@ class _TimerScreenState extends State<TimerScreen>
   }
 
   Widget _buildTimerView(ActivityTimer currentTimer, double progress, TextTheme textTheme, ColorScheme colorScheme) {
+    final timerSound = currentTimer.alarmSound ?? _settings.defaultAlarmSound;
+
     return SafeArea(
       child: Column(
         children: [
@@ -289,7 +321,7 @@ class _TimerScreenState extends State<TimerScreen>
           LinearProgressIndicator(
             value: (_currentTimerIndex + progress) / _timers.length,
             minHeight: 6,
-            backgroundColor: colorScheme.onSurface.withOpacity(0.08),
+            backgroundColor: colorScheme.onSurface.withValues(alpha: 0.08),
             color: colorScheme.primary,
           ),
           const SizedBox(height: 24),
@@ -305,7 +337,7 @@ class _TimerScreenState extends State<TimerScreen>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: colorScheme.primary.withOpacity(0.1),
+                        color: colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -313,12 +345,31 @@ class _TimerScreenState extends State<TimerScreen>
                         style: textTheme.bodySmall?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.music_note, size: 12, color: colorScheme.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            timerSound.displayName,
+                            style: textTheme.bodySmall?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
                     if (_loopEnabled && _loopCount > 0) ...[
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: colorScheme.primary.withOpacity(0.2), // Matched to uniform theme
+                          color: colorScheme.primary.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -353,7 +404,7 @@ class _TimerScreenState extends State<TimerScreen>
               child: GlowingTimerRing(
                 progress: progress,
                 color: _getTimerColor(progress, colorScheme),
-                backgroundColor: colorScheme.onSurface.withOpacity(0.05), // Clean non-brown background track
+                backgroundColor: colorScheme.onSurface.withValues(alpha: 0.05),
                 size: 300,
                 strokeWidth: 20,
                 child: Column(
@@ -387,7 +438,7 @@ class _TimerScreenState extends State<TimerScreen>
                   color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
                   ],
                 ),
                 padding: const EdgeInsets.all(16.0),
@@ -423,7 +474,7 @@ class _TimerScreenState extends State<TimerScreen>
                   color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
                   ],
                 ),
                 padding: const EdgeInsets.all(16.0),
@@ -431,7 +482,7 @@ class _TimerScreenState extends State<TimerScreen>
                   children: [
                     Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: colorScheme.primary.withOpacity(0.1), shape: BoxShape.circle),
+                      decoration: BoxDecoration(color: colorScheme.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
                       child: Icon(Icons.loop, color: colorScheme.primary, size: 20),
                     ),
                     const SizedBox(width: 16),
@@ -507,7 +558,7 @@ class _TimerScreenState extends State<TimerScreen>
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(0.1),
+              color: colorScheme.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -531,7 +582,7 @@ class _TimerScreenState extends State<TimerScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: colorScheme.primary.withOpacity(0.1),
+                color: colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -581,10 +632,7 @@ class _TimerScreenState extends State<TimerScreen>
     final HSLColor baseColor = HSLColor.fromColor(colorScheme.primary);
     
     // Calculate lightness transitioning from lighter to darker.
-    // E.g., from (base + 0.15) down to (base - 0.15) over the duration.
     double targetLightness = (baseColor.lightness + 0.15) - (progress * 0.30);
-    
-    // Safety clamp to keep it visible and aesthetically pleasing.
     targetLightness = targetLightness.clamp(0.2, 0.85);
     
     return baseColor.withLightness(targetLightness).toColor();

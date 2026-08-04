@@ -1,6 +1,7 @@
 import 'package:hive_ce/hive.dart';
 import '../models/activity_timer.dart';
 import '../models/interval_timer.dart';
+import '../models/session_history.dart';
 
 class DatabaseService {
   // Singleton pattern
@@ -15,11 +16,13 @@ class DatabaseService {
   // Box names
   static const String _sequencesBoxName = 'activity_sequences';
   static const String _intervalTimersBoxName = 'interval_timers';
+  static const String _historyBoxName = 'session_history';
 
   // Initialize Hive and register adapters
   Future<void> init() async {
     await Hive.openBox<TimerSequence>(_sequencesBoxName);
     await Hive.openBox<IntervalTimer>(_intervalTimersBoxName);
+    await Hive.openBox<SessionHistory>(_historyBoxName);
   }
 
   // Get all activity sequences
@@ -164,6 +167,81 @@ class DatabaseService {
     await box.delete(id);
   }
 
+  // SESSION HISTORY METHODS
+
+  Future<void> logSessionHistory(SessionHistory history) async {
+    final box = await Hive.openBox<SessionHistory>(_historyBoxName);
+    await box.put(history.id, history);
+  }
+
+  Future<List<SessionHistory>> getSessionHistory() async {
+    final box = await Hive.openBox<SessionHistory>(_historyBoxName);
+    final list = box.values.toList();
+    list.sort((a, b) => b.completedAt.compareTo(a.completedAt));
+    return list;
+  }
+
+  Future<void> clearSessionHistory() async {
+    final box = await Hive.openBox<SessionHistory>(_historyBoxName);
+    await box.clear();
+  }
+
+  // PRESET TEMPLATE METHODS
+
+  List<TimerSequence> getPresetTemplates() {
+    return [
+      TimerSequence(
+        name: 'Pomodoro 25/5',
+        description: 'Focus & Break Technique',
+        timers: [
+          ActivityTimer(name: 'Focus Block 1', durationInSeconds: 1500, description: 'Deep work'),
+          ActivityTimer(name: 'Short Break', durationInSeconds: 300, description: 'Rest & stretch'),
+          ActivityTimer(name: 'Focus Block 2', durationInSeconds: 1500, description: 'Deep work'),
+          ActivityTimer(name: 'Long Break', durationInSeconds: 900, description: 'Full recovery'),
+        ],
+      ),
+      TimerSequence(
+        name: 'Tabata Protocol',
+        description: '4-Minute High-Intensity Interval Training',
+        defaultLoopEnabled: true,
+        timers: [
+          ActivityTimer(name: 'Work', durationInSeconds: 20, description: 'Maximum effort'),
+          ActivityTimer(name: 'Rest', durationInSeconds: 10, description: 'Pause'),
+        ],
+      ),
+      TimerSequence(
+        name: 'Box Breathing',
+        description: 'Calm & Focus Technique',
+        defaultLoopEnabled: true,
+        timers: [
+          ActivityTimer(name: 'Inhale', durationInSeconds: 4, description: 'Breathe in through nose'),
+          ActivityTimer(name: 'Hold', durationInSeconds: 4, description: 'Hold breath in lungs'),
+          ActivityTimer(name: 'Exhale', durationInSeconds: 4, description: 'Breathe out slowly'),
+          ActivityTimer(name: 'Hold Empty', durationInSeconds: 4, description: 'Hold with empty lungs'),
+        ],
+      ),
+      TimerSequence(
+        name: '7-Minute Workout',
+        description: 'Full Body Circuit',
+        timers: [
+          ActivityTimer(name: 'Jumping Jacks', durationInSeconds: 30),
+          ActivityTimer(name: 'Rest', durationInSeconds: 10),
+          ActivityTimer(name: 'Wall Sit', durationInSeconds: 30),
+          ActivityTimer(name: 'Rest', durationInSeconds: 10),
+          ActivityTimer(name: 'Push-ups', durationInSeconds: 30),
+          ActivityTimer(name: 'Rest', durationInSeconds: 10),
+          ActivityTimer(name: 'Abdominal Crunches', durationInSeconds: 30),
+          ActivityTimer(name: 'Rest', durationInSeconds: 10),
+          ActivityTimer(name: 'Step-up onto Chair', durationInSeconds: 30),
+          ActivityTimer(name: 'Rest', durationInSeconds: 10),
+          ActivityTimer(name: 'Squats', durationInSeconds: 30),
+          ActivityTimer(name: 'Rest', durationInSeconds: 10),
+          ActivityTimer(name: 'Plank', durationInSeconds: 30),
+        ],
+      ),
+    ];
+  }
+
   // Insert demo data if the box is empty
   Future<void> insertDemoDataIfEmpty() async {
     final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
@@ -275,3 +353,4 @@ class DatabaseService {
     await Hive.close();
   }
 }
+

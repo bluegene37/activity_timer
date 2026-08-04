@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/activity_timer.dart';
-import '../theme/app_theme.dart';
+import '../models/alarm_sound.dart';
 
 class EditTimerScreen extends StatefulWidget {
   final ActivityTimer timer;
@@ -17,6 +17,7 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
   late int _hours;
   late int _minutes;
   late int _seconds;
+  AlarmSound? _selectedAlarmSound;
 
   @override
   void initState() {
@@ -25,6 +26,7 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
     _descriptionController = TextEditingController(
       text: widget.timer.description ?? '',
     );
+    _selectedAlarmSound = widget.timer.alarmSound;
 
     // Convert total seconds to hours, minutes, seconds
     int totalSeconds = widget.timer.durationInSeconds;
@@ -211,6 +213,56 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
     );
   }
 
+  void _selectAlarmSound() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Alarm Sound'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: RadioGroup<AlarmSound?>(
+            groupValue: _selectedAlarmSound,
+            onChanged: (AlarmSound? value) {
+              setState(() => _selectedAlarmSound = value);
+              Navigator.pop(context);
+            },
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: AlarmSound.values.length + 1,
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return ListTile(
+                    leading: const Radio<AlarmSound?>(value: null),
+                    title: const Text('Use Default App Sound'),
+                    onTap: () {
+                      setState(() => _selectedAlarmSound = null);
+                      Navigator.pop(context);
+                    },
+                  );
+                }
+                final sound = AlarmSound.values[index - 1];
+                return ListTile(
+                  leading: Radio<AlarmSound?>(value: sound),
+                  title: Text(sound.displayName),
+                  onTap: () {
+                    setState(() => _selectedAlarmSound = sound);
+                    Navigator.pop(context);
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _formatTimeValue(int value) {
     return value.toString().padLeft(2, '0');
   }
@@ -233,6 +285,7 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
           _descriptionController.text.isEmpty
               ? null
               : _descriptionController.text,
+      alarmSoundName: _selectedAlarmSound?.name,
     );
 
     Navigator.pop(context, updatedTimer);
@@ -332,6 +385,31 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                 _buildQuickDurationButton(1800, colorScheme, textTheme),
                 _buildQuickDurationButton(3600, colorScheme, textTheme),
               ],
+            ),
+            const SizedBox(height: 32),
+
+            Text('Custom Alarm Sound', style: textTheme.titleSmall),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: _selectAlarmSound,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _selectedAlarmSound != null ? _selectedAlarmSound!.displayName : 'Default App Sound',
+                      style: textTheme.titleMedium,
+                    ),
+                    Icon(Icons.music_note, color: colorScheme.primary),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 32),
 

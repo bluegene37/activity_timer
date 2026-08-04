@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/activity_timer.dart';
+import '../models/session_history.dart';
 import '../services/database_service.dart';
 
 class ActivityListController extends GetxController {
@@ -8,12 +9,14 @@ class ActivityListController extends GetxController {
 
   // Reactive variables
   final RxList<TimerSequence> sequences = <TimerSequence>[].obs;
+  final RxList<SessionHistory> sessionHistory = <SessionHistory>[].obs;
   final RxBool isLoading = true.obs;
 
   @override
   void onInit() {
     super.onInit();
     loadSequences();
+    loadSessionHistory();
   }
 
   Future<void> loadSequences() async {
@@ -25,6 +28,37 @@ class ActivityListController extends GetxController {
       Get.snackbar('Error', 'Failed to load activities: $e');
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<void> loadSessionHistory() async {
+    try {
+      final history = await _databaseService.getSessionHistory();
+      sessionHistory.assignAll(history);
+    } catch (_) {}
+  }
+
+  Future<void> addPresetTemplate(TimerSequence template) async {
+    final newSequence = TimerSequence(
+      name: template.name,
+      description: template.description,
+      defaultLoopEnabled: template.defaultLoopEnabled,
+      timers: template.timers
+          .map((t) => ActivityTimer(
+                name: t.name,
+                durationInSeconds: t.durationInSeconds,
+                description: t.description,
+                alarmSoundName: t.alarmSoundName,
+              ))
+          .toList(),
+    );
+
+    try {
+      await _databaseService.createActivitySequence(newSequence);
+      sequences.add(newSequence);
+      Get.snackbar('Success', 'Added "${newSequence.name}" preset');
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to add preset: $e');
     }
   }
 

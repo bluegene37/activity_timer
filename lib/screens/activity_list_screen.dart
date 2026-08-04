@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import '../controllers/activity_list_controller.dart';
+import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 
 class ActivityListScreen extends StatelessWidget {
@@ -53,6 +55,11 @@ class ActivityListScreen extends StatelessWidget {
                       ],
                     ),
                   ),
+                  IconButton(
+                    icon: Icon(Icons.bar_chart, color: colorScheme.primary),
+                    onPressed: () => _showStatsBottomSheet(context, controller),
+                    tooltip: 'Session History & Stats',
+                  ),
                 ],
               ),
               const SizedBox(height: 32),
@@ -62,8 +69,19 @@ class ActivityListScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Your Routine',
+                    'Your Routines',
                     style: textTheme.titleLarge,
+                  ),
+                  TextButton.icon(
+                    onPressed: () => _showPresetsBottomSheet(context, controller),
+                    icon: Icon(Icons.dashboard_outlined, size: 18, color: colorScheme.primary),
+                    label: Text(
+                      'Presets',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -84,7 +102,7 @@ class ActivityListScreen extends StatelessWidget {
                           Icon(
                             Icons.timer_off_outlined,
                             size: 64,
-                            color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -92,6 +110,12 @@ class ActivityListScreen extends StatelessWidget {
                             style: textTheme.titleMedium?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: () => _showPresetsBottomSheet(context, controller),
+                            icon: const Icon(Icons.auto_awesome),
+                            label: const Text('Explore Presets'),
                           ),
                         ],
                       ),
@@ -114,7 +138,7 @@ class ActivityListScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
+                            color: Colors.black.withValues(alpha: 0.04),
                             blurRadius: 15,
                             offset: const Offset(0, 5),
                           ),
@@ -196,7 +220,7 @@ class ActivityListScreen extends StatelessWidget {
                                   child: ElevatedButton(
                                     onPressed: () => Get.toNamed('/timer-list', arguments: sequence),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: colorScheme.primary.withOpacity(0.1),
+                                      backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
                                       foregroundColor: colorScheme.primary,
                                       elevation: 0,
                                       shape: RoundedRectangleBorder(
@@ -207,7 +231,7 @@ class ActivityListScreen extends StatelessWidget {
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         Text(
-                                          'Open',
+                                          'Open Routine',
                                           style: textTheme.titleSmall?.copyWith(color: colorScheme.primary),
                                         ),
                                         const SizedBox(width: 8),
@@ -235,6 +259,239 @@ class ActivityListScreen extends StatelessWidget {
         backgroundColor: colorScheme.primary,
         child: const Icon(Icons.add, size: 28),
       ),
+    );
+  }
+
+  void _showPresetsBottomSheet(BuildContext context, ActivityListController controller) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final presets = DatabaseService().getPresetTemplates();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.7,
+        maxChildSize: 0.9,
+        builder: (context, scrollController) => Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: ListView(
+            controller: scrollController,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Preset Routine Library', style: theme.textTheme.titleLarge),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '1-Click add pre-built activity sequences for work, fitness, and relaxation.',
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 20),
+              ...presets.map(
+                (preset) => Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: colorScheme.outlineVariant),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.auto_awesome, color: colorScheme.primary),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(preset.name, style: theme.textTheme.titleSmall),
+                            if (preset.description != null)
+                              Text(preset.description!, style: theme.textTheme.bodyMedium),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${preset.timers.length} steps • ${controller.formatTotalDuration(preset.totalDuration)}',
+                              style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.primary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          controller.addPresetTemplate(preset);
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(80, 40),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                        child: const Text('Add'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showStatsBottomSheet(BuildContext context, ActivityListController controller) {
+    controller.loadSessionHistory();
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final dateFormat = DateFormat('MMM d, h:mm a');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => Obx(() {
+        final historyList = controller.sessionHistory;
+        int totalSeconds = historyList.fold(0, (sum, s) => sum + s.totalDurationInSeconds);
+        final formattedTotalTime = controller.formatTotalDuration(totalSeconds);
+
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.75,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) => Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: ListView(
+              controller: scrollController,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Activity Stats & History', style: theme.textTheme.titleLarge),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: colorScheme.outlineVariant),
+                        ),
+                        child: Column(
+                          children: [
+                            Text('Completed', style: theme.textTheme.bodySmall),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${historyList.length}',
+                              style: theme.textTheme.headlineMedium?.copyWith(color: colorScheme.primary),
+                            ),
+                            Text('Sessions', style: theme.textTheme.bodyMedium),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: colorScheme.outlineVariant),
+                        ),
+                        child: Column(
+                          children: [
+                            Text('Total Time', style: theme.textTheme.bodySmall),
+                            const SizedBox(height: 4),
+                            Text(
+                              formattedTotalTime,
+                              style: theme.textTheme.headlineMedium?.copyWith(color: colorScheme.primary),
+                            ),
+                            Text('Active', style: theme.textTheme.bodyMedium),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text('Recent History', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 12),
+                if (historyList.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    child: Center(
+                      child: Text(
+                        'No completed sessions logged yet.\nComplete an activity or interval timer to see it here!',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ),
+                  )
+                else
+                  ...historyList.map(
+                    (session) => Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            session.sessionType == 'interval' ? Icons.schedule : Icons.task_alt,
+                            color: colorScheme.primary,
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(session.title, style: theme.textTheme.titleSmall),
+                                Text(
+                                  '${controller.formatTotalDuration(session.totalDurationInSeconds)} • ${dateFormat.format(session.completedAt)}',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      }),
     );
   }
 
