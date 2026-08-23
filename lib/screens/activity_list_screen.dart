@@ -1,4 +1,7 @@
+import 'dart:async';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controllers/activity_list_controller.dart';
@@ -15,90 +18,126 @@ class ActivityListScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
+        bottom: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: const EdgeInsets.only(left: 20.0, right: 20.0, top: 12.0, bottom: 100.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Header
+              // iOS Large Header
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: colorScheme.primary,
-                      borderRadius: BorderRadius.circular(16),
+                      gradient: LinearGradient(
+                        colors: [
+                          colorScheme.primary,
+                          colorScheme.primary.withValues(alpha: 0.8),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colorScheme.primary.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: Icon(
-                      Icons.timer,
-                      color: colorScheme.onPrimary,
-                      size: 28,
+                    child: const Icon(
+                      CupertinoIcons.flame_fill,
+                      color: Colors.white,
+                      size: 26,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Activity Timer',
-                          style: textTheme.headlineSmall,
+                          style: textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.8,
+                          ),
                         ),
+                        const SizedBox(height: 1),
                         Text(
                           'For Athletes & Focused Workers',
-                          style: textTheme.bodyMedium,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.file_download_outlined, color: colorScheme.onSurfaceVariant),
+                    icon: Icon(CupertinoIcons.square_arrow_down, color: colorScheme.onSurfaceVariant, size: 22),
                     onPressed: () => _showImportDialog(context, controller),
                     tooltip: 'Import Routine JSON',
                   ),
                   IconButton(
-                    icon: Icon(Icons.bar_chart, color: colorScheme.primary),
+                    icon: Icon(CupertinoIcons.chart_bar_alt_fill, color: colorScheme.primary, size: 22),
                     onPressed: () => _showStatsBottomSheet(context, controller),
                     tooltip: 'Session History & Stats',
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Search Bar
-              TextField(
-                onChanged: controller.setSearchQuery,
-                decoration: InputDecoration(
-                  hintText: 'Search routines...',
-                  prefixIcon: Icon(Icons.search, color: colorScheme.onSurfaceVariant, size: 20),
-                  filled: true,
-                  fillColor: colorScheme.surface,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: colorScheme.outlineVariant),
+              // iOS Styled Search Bar
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                    width: 0.8,
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: colorScheme.outlineVariant),
+                ),
+                child: TextField(
+                  onChanged: controller.setSearchQuery,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: colorScheme.onSurface,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Search routines...',
+                    hintStyle: TextStyle(
+                      fontSize: 15,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    prefixIcon: Icon(CupertinoIcons.search, color: colorScheme.onSurfaceVariant, size: 18),
+                    filled: false,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
-              // Category Filter Bar
+              // Category Filter Bar (iOS Pill Tabs)
               Obx(() => SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
                     _buildCategoryChip(
                       label: 'All Routines',
-                      icon: Icons.apps,
+                      icon: CupertinoIcons.square_grid_2x2,
                       value: 'all',
                       selected: controller.selectedCategory.value == 'all',
                       onTap: () => controller.setCategory('all'),
@@ -107,7 +146,7 @@ class ActivityListScreen extends StatelessWidget {
                     const SizedBox(width: 8),
                     _buildCategoryChip(
                       label: '⚡ Fitness & Sports',
-                      icon: Icons.fitness_center,
+                      icon: CupertinoIcons.bolt_fill,
                       value: 'fitness',
                       selected: controller.selectedCategory.value == 'fitness',
                       onTap: () => controller.setCategory('fitness'),
@@ -116,7 +155,7 @@ class ActivityListScreen extends StatelessWidget {
                     const SizedBox(width: 8),
                     _buildCategoryChip(
                       label: '💼 Work & Focus',
-                      icon: Icons.work_outline,
+                      icon: CupertinoIcons.briefcase_fill,
                       value: 'work',
                       selected: controller.selectedCategory.value == 'work',
                       onTap: () => controller.setCategory('work'),
@@ -125,7 +164,7 @@ class ActivityListScreen extends StatelessWidget {
                   ],
                 ),
               )),
-              const SizedBox(height: 24),
+              const SizedBox(height: 22),
 
               // Routines Section Header
               Row(
@@ -134,29 +173,37 @@ class ActivityListScreen extends StatelessWidget {
                   Flexible(
                     child: Text(
                       'Your Routines',
-                      style: textTheme.titleLarge,
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   TextButton.icon(
                     onPressed: () => _showPresetsBottomSheet(context, controller),
-                    icon: Icon(Icons.auto_awesome, size: 18, color: colorScheme.primary),
+                    icon: Icon(CupertinoIcons.sparkles, size: 16, color: colorScheme.primary),
                     label: Text(
                       'Explore Presets',
                       style: textTheme.bodyMedium?.copyWith(
                         color: colorScheme.primary,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
-              // Activity List
+              // Activity List (iOS Inset Grouped style)
               Obx(() {
                 if (controller.isLoading.value) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: CupertinoActivityIndicator(radius: 14),
+                    ),
+                  );
                 }
 
                 final list = controller.filteredSequences;
@@ -168,11 +215,11 @@ class ActivityListScreen extends StatelessWidget {
                       child: Column(
                         children: [
                           Icon(
-                            Icons.timer_off_outlined,
-                            size: 64,
-                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                            CupertinoIcons.timer,
+                            size: 56,
+                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 14),
                           Text(
                             controller.sequences.isEmpty
                                 ? 'No routines created yet'
@@ -184,7 +231,7 @@ class ActivityListScreen extends StatelessWidget {
                           const SizedBox(height: 16),
                           ElevatedButton.icon(
                             onPressed: () => _showPresetsBottomSheet(context, controller),
-                            icon: const Icon(Icons.auto_awesome),
+                            icon: const Icon(CupertinoIcons.sparkles, size: 18),
                             label: const Text('Add from Preset Library'),
                           ),
                         ],
@@ -197,7 +244,7 @@ class ActivityListScreen extends StatelessWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: list.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 16),
+                  separatorBuilder: (context, index) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final sequence = list[index];
                     final originalIndex = controller.sequences.indexOf(sequence);
@@ -205,21 +252,23 @@ class ActivityListScreen extends StatelessWidget {
                     final isFitness = sequence.category == 'fitness';
                     final isWork = sequence.category == 'work';
 
-                    return Container(
+                    final categoryColor = isFitness
+                        ? AppTheme.iosOrange
+                        : isWork
+                            ? AppTheme.iosBlue
+                            : colorScheme.primary;
+
+                    return DecoratedBox(
                       decoration: BoxDecoration(
-                        color: colorScheme.surface,
+                        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
                         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                        border: Border.all(color: colorScheme.outlineVariant),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                          width: 0.8,
+                        ),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(18),
+                        padding: const EdgeInsets.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -232,34 +281,34 @@ class ActivityListScreen extends StatelessWidget {
                                       Flexible(
                                         child: Text(
                                           sequence.name,
-                                          style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                          style: textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: -0.2,
+                                          ),
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                       const SizedBox(width: 8),
                                       _buildSmallCategoryBadge(
                                         isFitness ? 'FITNESS' : isWork ? 'WORK' : 'CUSTOM',
-                                        isFitness ? const Color(0xFFFF6D00) : isWork ? const Color(0xFF00B0FF) : colorScheme.primary,
+                                        categoryColor,
                                       ),
                                     ],
                                   ),
                                 ),
                                 PopupMenuButton<String>(
-                                  icon: Icon(Icons.more_vert, size: 20, color: colorScheme.onSurfaceVariant),
+                                  icon: Icon(CupertinoIcons.ellipsis, size: 18, color: colorScheme.onSurfaceVariant),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                   onSelected: (value) {
                                     switch (value) {
                                       case 'edit':
                                         _showEditDialog(context, controller, originalIndex);
-                                        break;
                                       case 'duplicate':
                                         controller.duplicateSequence(originalIndex);
-                                        break;
                                       case 'share':
                                         controller.exportSequenceToClipboard(sequence);
-                                        break;
                                       case 'delete':
                                         _showDeleteDialog(context, controller, originalIndex, sequence.name);
-                                        break;
                                     }
                                   },
                                   itemBuilder: (context) => [
@@ -267,8 +316,8 @@ class ActivityListScreen extends StatelessWidget {
                                       value: 'edit',
                                       child: Row(
                                         children: [
-                                          Icon(Icons.edit, size: 18),
-                                          SizedBox(width: 8),
+                                          Icon(CupertinoIcons.pencil, size: 18),
+                                          SizedBox(width: 10),
                                           Text('Edit Name'),
                                         ],
                                       ),
@@ -277,8 +326,8 @@ class ActivityListScreen extends StatelessWidget {
                                       value: 'duplicate',
                                       child: Row(
                                         children: [
-                                          Icon(Icons.copy, size: 18),
-                                          SizedBox(width: 8),
+                                          Icon(CupertinoIcons.doc_on_doc, size: 18),
+                                          SizedBox(width: 10),
                                           Text('Duplicate Routine'),
                                         ],
                                       ),
@@ -287,8 +336,8 @@ class ActivityListScreen extends StatelessWidget {
                                       value: 'share',
                                       child: Row(
                                         children: [
-                                          Icon(Icons.share, size: 18),
-                                          SizedBox(width: 8),
+                                          Icon(CupertinoIcons.share, size: 18),
+                                          SizedBox(width: 10),
                                           Text('Copy JSON to Share'),
                                         ],
                                       ),
@@ -297,8 +346,8 @@ class ActivityListScreen extends StatelessWidget {
                                       value: 'delete',
                                       child: Row(
                                         children: [
-                                          Icon(Icons.delete, size: 18, color: Colors.red),
-                                          SizedBox(width: 8),
+                                          Icon(CupertinoIcons.trash, size: 18, color: Colors.red),
+                                          SizedBox(width: 10),
                                           Text('Delete', style: TextStyle(color: Colors.red)),
                                         ],
                                       ),
@@ -318,70 +367,76 @@ class ActivityListScreen extends StatelessWidget {
                               ),
                             ],
 
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 12),
 
                             // Meta Info Row
                             Row(
                               children: [
-                                Icon(Icons.timer_outlined, size: 14, color: colorScheme.onSurfaceVariant),
+                                Icon(CupertinoIcons.stopwatch, size: 14, color: colorScheme.onSurfaceVariant),
                                 const SizedBox(width: 4),
                                 Text(
                                   totalDuration,
-                                  style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+                                  style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
                                 ),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: 10),
                                 Text('•', style: textTheme.bodySmall),
-                                const SizedBox(width: 12),
-                                Icon(Icons.format_list_numbered, size: 14, color: colorScheme.onSurfaceVariant),
+                                const SizedBox(width: 10),
+                                Icon(CupertinoIcons.list_number, size: 14, color: colorScheme.onSurfaceVariant),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${sequence.timers.length} steps',
                                   style: textTheme.bodySmall,
                                 ),
                                 if (sequence.defaultLoopEnabled) ...[
-                                  const SizedBox(width: 12),
+                                  const SizedBox(width: 10),
                                   Text('•', style: textTheme.bodySmall),
-                                  const SizedBox(width: 12),
-                                  Icon(Icons.loop, size: 14, color: colorScheme.primary),
+                                  const SizedBox(width: 10),
+                                  Icon(CupertinoIcons.repeat, size: 14, color: colorScheme.primary),
                                   const SizedBox(width: 4),
                                   Text(
                                     'Loop',
-                                    style: textTheme.bodySmall?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold),
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.primary,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ],
                               ],
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 14),
 
                             // Open & Start Buttons
                             Row(
                               children: [
                                 Expanded(
                                   child: OutlinedButton.icon(
-                                    onPressed: () => Get.toNamed('/timer-list', arguments: sequence),
-                                    icon: const Icon(Icons.tune, size: 16),
+                                    onPressed: () => Get.toNamed<dynamic>('/timer-list', arguments: sequence),
+                                    icon: const Icon(CupertinoIcons.slider_horizontal_3, size: 15),
                                     label: const Text('Customize'),
                                     style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: 10),
                                 Expanded(
                                   child: ElevatedButton.icon(
                                     onPressed: () {
+                                      unawaited(HapticFeedback.selectionClick());
                                       if (sequence.timers.isEmpty) {
-                                        Get.toNamed('/timer-list', arguments: sequence);
+                                        Get.toNamed<dynamic>('/timer-list', arguments: sequence);
                                       } else {
-                                        Get.toNamed('/timer', arguments: sequence);
+                                        Get.toNamed<dynamic>('/timer', arguments: sequence);
                                       }
                                     },
-                                    icon: const Icon(Icons.play_arrow, size: 18),
+                                    icon: const Icon(CupertinoIcons.play_fill, size: 15),
                                     label: const Text('Start'),
                                     style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      backgroundColor: colorScheme.primary,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                     ),
                                   ),
                                 ),
@@ -394,18 +449,24 @@ class ActivityListScreen extends StatelessWidget {
                   },
                 );
               }),
-              const SizedBox(height: 40),
             ],
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'activity_list_fab',
-        onPressed: () => controller.addNewSequence(),
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
-        icon: const Icon(Icons.add),
-        label: const Text('New Routine', style: TextStyle(fontWeight: FontWeight.bold)),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 50.0),
+        child: FloatingActionButton.extended(
+          heroTag: 'activity_list_fab',
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            controller.addNewSequence();
+          },
+          backgroundColor: colorScheme.primary,
+          foregroundColor: Colors.white,
+          elevation: 4,
+          icon: const Icon(CupertinoIcons.plus, size: 18),
+          label: const Text('New Routine', style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.2)),
+        ),
       ),
     );
   }
@@ -419,31 +480,36 @@ class ActivityListScreen extends StatelessWidget {
     required ColorScheme colorScheme,
   }) {
     return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      borderRadius: BorderRadius.circular(AppTheme.pillRadius),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: selected ? colorScheme.primary : colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppTheme.pillRadius),
           border: Border.all(
             color: selected ? colorScheme.primary : colorScheme.outlineVariant,
+            width: 0.8,
           ),
         ),
         child: Row(
           children: [
             Icon(
               icon,
-              size: 16,
-              color: selected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+              size: 15,
+              color: selected ? Colors.white : colorScheme.onSurfaceVariant,
             ),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
                 fontSize: 13,
-                fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-                color: selected ? colorScheme.onPrimary : colorScheme.onSurface,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? Colors.white : colorScheme.onSurface,
+                letterSpacing: -0.1,
               ),
             ),
           ],
@@ -454,7 +520,7 @@ class ActivityListScreen extends StatelessWidget {
 
   Widget _buildSmallCategoryBadge(String label, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(6),
@@ -473,9 +539,10 @@ class ActivityListScreen extends StatelessWidget {
 
   void _showImportDialog(BuildContext context, ActivityListController controller) {
     final textController = TextEditingController();
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: const Text('Import Routine JSON'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -486,9 +553,9 @@ class ActivityListScreen extends StatelessWidget {
             TextField(
               controller: textController,
               maxLines: 5,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: '{\n  "name": "My Shared Workout",\n  ...\n}',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
@@ -519,12 +586,12 @@ class ActivityListScreen extends StatelessWidget {
     final db = DatabaseService();
     final allPresets = db.getPresetTemplates();
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: theme.scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => DraggableScrollableSheet(
         expand: false,
@@ -533,26 +600,38 @@ class ActivityListScreen extends StatelessWidget {
         builder: (context, scrollController) => DefaultTabController(
           length: 3,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // iOS modal drag bar
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Preset Library', style: theme.textTheme.titleLarge),
+                    Text('Preset Library', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                     IconButton(
-                      icon: const Icon(Icons.close),
+                      icon: const Icon(CupertinoIcons.xmark_circle_fill, size: 22),
+                      color: colorScheme.onSurfaceVariant,
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
                 Text(
                   '1-Click add tested templates for athletes and productivity.',
                   style: theme.textTheme.bodyMedium,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 TabBar(
                   labelColor: colorScheme.primary,
                   indicatorColor: colorScheme.primary,
@@ -563,7 +642,7 @@ class ActivityListScreen extends StatelessWidget {
                     Tab(text: '💼 Work'),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Expanded(
                   child: TabBarView(
                     children: [
@@ -589,6 +668,7 @@ class ActivityListScreen extends StatelessWidget {
   ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return ListView.builder(
       controller: scrollController,
@@ -596,15 +676,18 @@ class ActivityListScreen extends StatelessWidget {
       itemBuilder: (context, index) {
         final preset = presets[index];
         final isFitness = preset.category == 'fitness';
-        final badgeColor = isFitness ? const Color(0xFFFF6D00) : const Color(0xFF00B0FF);
+        final badgeColor = isFitness ? AppTheme.iosOrange : AppTheme.iosBlue;
 
         return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: colorScheme.outlineVariant),
+            color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+              width: 0.8,
+            ),
           ),
           child: Row(
             children: [
@@ -615,17 +698,17 @@ class ActivityListScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  isFitness ? Icons.fitness_center : Icons.work_outline,
+                  isFitness ? CupertinoIcons.bolt_fill : CupertinoIcons.briefcase_fill,
                   color: badgeColor,
-                  size: 22,
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(preset.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                    Text(preset.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                     if (preset.description != null)
                       Text(
                         preset.description!,
@@ -633,10 +716,10 @@ class ActivityListScreen extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       '${preset.timers.length} intervals • ${controller.formatTotalDuration(preset.totalDuration)}',
-                      style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold),
+                      style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
@@ -644,12 +727,14 @@ class ActivityListScreen extends StatelessWidget {
               const SizedBox(width: 8),
               ElevatedButton(
                 onPressed: () {
+                  HapticFeedback.selectionClick();
                   controller.addPresetTemplate(preset);
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(64, 38),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  minimumSize: const Size(60, 36),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 child: const Text('Add'),
               ),
@@ -664,18 +749,19 @@ class ActivityListScreen extends StatelessWidget {
     controller.loadSessionHistory();
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final dateFormat = DateFormat('MMM d, h:mm a');
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: theme.scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => Obx(() {
         final historyList = controller.sessionHistory;
-        int totalSeconds = historyList.fold(0, (sum, s) => sum + s.totalDurationInSeconds);
+        final int totalSeconds = historyList.fold(0, (sum, s) => sum + s.totalDurationInSeconds);
         final formattedTotalTime = controller.formatTotalDuration(totalSeconds);
 
         final fitnessSeconds = historyList
@@ -690,30 +776,45 @@ class ActivityListScreen extends StatelessWidget {
           initialChildSize: 0.75,
           maxChildSize: 0.9,
           builder: (context, scrollController) => Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(20.0),
             child: ListView(
               controller: scrollController,
               children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Activity Stats & History', style: theme.textTheme.titleLarge),
+                    Text('Activity Stats & History', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                     IconButton(
-                      icon: const Icon(Icons.close),
+                      icon: const Icon(CupertinoIcons.xmark_circle_fill, size: 22),
+                      color: colorScheme.onSurfaceVariant,
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Row(
                   children: [
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: colorScheme.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: colorScheme.outlineVariant),
+                          color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                            width: 0.8,
+                          ),
                         ),
                         child: Column(
                           children: [
@@ -721,21 +822,27 @@ class ActivityListScreen extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               '${historyList.length}',
-                              style: theme.textTheme.headlineMedium?.copyWith(color: colorScheme.primary),
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                             Text('Sessions', style: theme.textTheme.bodyMedium),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: colorScheme.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: colorScheme.outlineVariant),
+                          color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                            width: 0.8,
+                          ),
                         ),
                         child: Column(
                           children: [
@@ -743,7 +850,10 @@ class ActivityListScreen extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               formattedTotalTime,
-                              style: theme.textTheme.headlineMedium?.copyWith(color: colorScheme.primary),
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                             Text('Active Logged', style: theme.textTheme.bodyMedium),
                           ],
@@ -752,40 +862,40 @@ class ActivityListScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
-                // Category Time Breakdown
+                // Category Time Breakdown (Apple Activity Style)
                 Row(
                   children: [
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF6D00).withValues(alpha: 0.1),
+                          color: AppTheme.iosOrange.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
                           children: [
-                            const Text('⚡ Fitness Time', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFFF6D00))),
+                            const Text('⚡ Fitness Time', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.iosOrange)),
                             const SizedBox(height: 2),
-                            Text(controller.formatTotalDuration(fitnessSeconds), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF6D00))),
+                            Text(controller.formatTotalDuration(fitnessSeconds), style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.iosOrange)),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF00B0FF).withValues(alpha: 0.1),
+                          color: AppTheme.iosBlue.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
                           children: [
-                            const Text('💼 Work Time', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF00B0FF))),
+                            const Text('💼 Work Time', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.iosBlue)),
                             const SizedBox(height: 2),
-                            Text(controller.formatTotalDuration(workSeconds), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00B0FF))),
+                            Text(controller.formatTotalDuration(workSeconds), style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.iosBlue)),
                           ],
                         ),
                       ),
@@ -793,9 +903,9 @@ class ActivityListScreen extends StatelessWidget {
                   ],
                 ),
 
-                const SizedBox(height: 24),
-                Text('Recent History', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 12),
+                const SizedBox(height: 20),
+                Text('Recent History', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 10),
                 if (historyList.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 32),
@@ -810,25 +920,29 @@ class ActivityListScreen extends StatelessWidget {
                 else
                   ...historyList.map(
                     (session) => Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: colorScheme.surface,
+                        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: colorScheme.outlineVariant),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                          width: 0.8,
+                        ),
                       ),
                       child: Row(
                         children: [
                           Icon(
-                            session.sessionType == 'interval' ? Icons.schedule : Icons.task_alt,
+                            session.sessionType == 'interval' ? CupertinoIcons.stopwatch : CupertinoIcons.check_mark_circled_solid,
                             color: colorScheme.primary,
+                            size: 20,
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(session.title, style: theme.textTheme.titleSmall),
+                                Text(session.title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
                                 Text(
                                   '${controller.formatTotalDuration(session.totalDurationInSeconds)} • ${dateFormat.format(session.completedAt)}',
                                   style: theme.textTheme.bodySmall,
@@ -858,8 +972,7 @@ class ActivityListScreen extends StatelessWidget {
     
     final result = await Get.dialog<Map<String, String>>(
       AlertDialog(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: const Text('Edit Activity'),
         content: SingleChildScrollView(
           child: Column(
@@ -870,21 +983,21 @@ class ActivityListScreen extends StatelessWidget {
                 decoration: InputDecoration(
                   labelText: 'Activity Name',
                   filled: true,
-                  fillColor: colorScheme.surface,
+                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                 ),
                 autofocus: true,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               TextField(
                 controller: descController,
                 decoration: InputDecoration(
                   labelText: 'Description (Optional)',
                   filled: true,
-                  fillColor: colorScheme.surface,
+                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                 ),
                 maxLines: 2,
               ),
@@ -893,17 +1006,17 @@ class ActivityListScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Get.back<Map<String, String>>(),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
-              Get.back(result: {
+              Get.back<Map<String, String>>(result: {
                 'name': nameController.text.trim(),
                 'description': descController.text.trim(),
               });
             },
-            child: const Text('Save'),
+            child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -915,27 +1028,28 @@ class ActivityListScreen extends StatelessWidget {
     });
 
     if (result != null && result['name'] != null) {
-      controller.editSequence(index, result['name']!, result['description']!);
+      unawaited(controller.editSequence(index, result['name']!, result['description']!));
     }
   }
 
   void _showDeleteDialog(BuildContext context, ActivityListController controller, int index, String name) async {
     final confirm = await Get.dialog<bool>(
       AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: const Text('Delete Activity'),
         content: Text('Are you sure you want to delete "$name"?'),
         actions: [
-          TextButton(onPressed: () => Get.back(result: false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Get.back<bool>(result: false), child: const Text('Cancel')),
           TextButton(
-            onPressed: () => Get.back(result: true),
-            child: const Text('Delete'),
+            onPressed: () => Get.back<bool>(result: true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
 
     if (confirm == true) {
-      controller.deleteSequence(index);
+      unawaited(controller.deleteSequence(index));
     }
   }
 }

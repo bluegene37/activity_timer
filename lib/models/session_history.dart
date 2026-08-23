@@ -5,6 +5,18 @@ part 'session_history.g.dart';
 
 @HiveType(typeId: 6)
 class SessionHistory extends HiveObject {
+  SessionHistory({
+    String? id,
+    required this.title,
+    DateTime? completedAt,
+    required this.totalDurationInSeconds,
+    this.itemCount = 1,
+    this.loopCount = 0,
+    this.sessionType = 'activity',
+    this.category = 'custom',
+  }) : id = id ?? const Uuid().v4(),
+       completedAt = completedAt ?? DateTime.now();
+
   @HiveField(0)
   final String id;
 
@@ -28,16 +40,4 @@ class SessionHistory extends HiveObject {
 
   @HiveField(7)
   final String category; // 'fitness', 'work', 'custom'
-
-  SessionHistory({
-    String? id,
-    required this.title,
-    DateTime? completedAt,
-    required this.totalDurationInSeconds,
-    this.itemCount = 1,
-    this.loopCount = 0,
-    this.sessionType = 'activity',
-    this.category = 'custom',
-  })  : id = id ?? const Uuid().v4(),
-        completedAt = completedAt ?? DateTime.now();
 }

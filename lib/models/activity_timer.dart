@@ -1,5 +1,6 @@
 import 'package:hive_ce/hive.dart';
 import 'package:uuid/uuid.dart';
+
 import 'alarm_sound.dart';
 import 'interval_phase.dart';
 
@@ -7,6 +8,24 @@ part 'activity_timer.g.dart';
 
 @HiveType(typeId: 1)
 class ActivityTimer extends HiveObject {
+  ActivityTimer({
+    String? id,
+    required this.name,
+    required this.durationInSeconds,
+    this.description,
+    this.alarmSoundName,
+    this.phase = IntervalPhase.work,
+  }) : id = id ?? const Uuid().v4();
+
+  factory ActivityTimer.fromJson(Map<String, dynamic> json) => ActivityTimer(
+    id: json['id'] as String?,
+    name: json['name'] as String? ?? 'Timer',
+    durationInSeconds: json['durationInSeconds'] as int? ?? 30,
+    description: json['description'] as String?,
+    alarmSoundName: json['alarmSoundName'] as String?,
+    phase: IntervalPhase.fromString(json['phase'] as String?),
+  );
+
   @HiveField(0)
   final String id;
 
@@ -25,17 +44,10 @@ class ActivityTimer extends HiveObject {
   @HiveField(5)
   IntervalPhase phase;
 
-  ActivityTimer({
-    String? id,
-    required this.name,
-    required this.durationInSeconds,
-    this.description,
-    this.alarmSoundName,
-    this.phase = IntervalPhase.work,
-  }) : id = id ?? const Uuid().v4();
-
-  AlarmSound? get alarmSound =>
-      alarmSoundName != null ? AlarmSound.fromString(alarmSoundName!) : null;
+  AlarmSound? get alarmSound {
+    final name = alarmSoundName;
+    return name == null ? null : AlarmSound.fromString(name);
+  }
 
   void setAlarmSound(AlarmSound? sound) {
     alarmSoundName = sound?.name;
@@ -46,49 +58,62 @@ class ActivityTimer extends HiveObject {
   bool get isPrepare => phase == IntervalPhase.prepare;
   bool get isCooldown => phase == IntervalPhase.cooldown;
 
-  // Create a copy with updated fields
   ActivityTimer copyWith({
     String? name,
     int? durationInSeconds,
     String? description,
     String? alarmSoundName,
     IntervalPhase? phase,
-  }) {
-    return ActivityTimer(
-      id: id,
-      name: name ?? this.name,
-      durationInSeconds: durationInSeconds ?? this.durationInSeconds,
-      description: description ?? this.description,
-      alarmSoundName: alarmSoundName ?? this.alarmSoundName,
-      phase: phase ?? this.phase,
-    );
-  }
+  }) => ActivityTimer(
+    id: id,
+    name: name ?? this.name,
+    durationInSeconds: durationInSeconds ?? this.durationInSeconds,
+    description: description ?? this.description,
+    alarmSoundName: alarmSoundName ?? this.alarmSoundName,
+    phase: phase ?? this.phase,
+  );
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'durationInSeconds': durationInSeconds,
-      'description': description,
-      'alarmSoundName': alarmSoundName,
-      'phase': phase.name,
-    };
-  }
-
-  factory ActivityTimer.fromJson(Map<String, dynamic> json) {
-    return ActivityTimer(
-      id: json['id'] as String?,
-      name: json['name'] as String? ?? 'Timer',
-      durationInSeconds: json['durationInSeconds'] as int? ?? 30,
-      description: json['description'] as String?,
-      alarmSoundName: json['alarmSoundName'] as String?,
-      phase: IntervalPhase.fromString(json['phase'] as String?),
-    );
-  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'durationInSeconds': durationInSeconds,
+    'description': description,
+    'alarmSoundName': alarmSoundName,
+    'phase': phase.name,
+  };
 }
 
 @HiveType(typeId: 2)
 class TimerSequence extends HiveObject {
+  TimerSequence({
+    String? id,
+    required this.name,
+    required this.timers,
+    this.defaultLoopEnabled = false,
+    this.description,
+    this.category = 'custom',
+    this.preparationSeconds = 5,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) : id = id ?? const Uuid().v4(),
+       createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? DateTime.now();
+
+  factory TimerSequence.fromJson(Map<String, dynamic> json) => TimerSequence(
+    id: json['id'] as String?,
+    name: json['name'] as String? ?? 'Routine',
+    description: json['description'] as String?,
+    defaultLoopEnabled: json['defaultLoopEnabled'] as bool? ?? false,
+    category: json['category'] as String? ?? 'custom',
+    preparationSeconds: json['preparationSeconds'] as int? ?? 5,
+    createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
+    updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
+    timers: [
+      for (final timer in json['timers'] as List<dynamic>? ?? const [])
+        ActivityTimer.fromJson(timer as Map<String, dynamic>),
+    ],
+  );
+
   @HiveField(0)
   final String id;
 
@@ -116,25 +141,9 @@ class TimerSequence extends HiveObject {
   @HiveField(8)
   int preparationSeconds; // 0, 3, 5, 10 seconds lead-in
 
-  TimerSequence({
-    String? id,
-    required this.name,
-    required this.timers,
-    this.defaultLoopEnabled = false,
-    this.description,
-    this.category = 'custom',
-    this.preparationSeconds = 5,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) : 
-    id = id ?? const Uuid().v4(),
-    createdAt = createdAt ?? DateTime.now(),
-    updatedAt = updatedAt ?? DateTime.now();
-
-  // Calculate total duration
-  int get totalDuration {
-    return timers.fold(0, (sum, timer) => sum + timer.durationInSeconds);
-  }
+  /// Combined length of every step, ignoring loops and the lead-in.
+  int get totalDuration =>
+      timers.fold(0, (sum, timer) => sum + timer.durationInSeconds);
 
   TimerSequence copyWith({
     String? name,
@@ -143,48 +152,27 @@ class TimerSequence extends HiveObject {
     String? description,
     String? category,
     int? preparationSeconds,
-  }) {
-    return TimerSequence(
-      id: id,
-      name: name ?? this.name,
-      timers: timers ?? this.timers.map((t) => t.copyWith()).toList(),
-      defaultLoopEnabled: defaultLoopEnabled ?? this.defaultLoopEnabled,
-      description: description ?? this.description,
-      category: category ?? this.category,
-      preparationSeconds: preparationSeconds ?? this.preparationSeconds,
-      createdAt: createdAt,
-      updatedAt: DateTime.now(),
-    );
-  }
+  }) => TimerSequence(
+    id: id,
+    name: name ?? this.name,
+    timers: timers ?? [for (final timer in this.timers) timer.copyWith()],
+    defaultLoopEnabled: defaultLoopEnabled ?? this.defaultLoopEnabled,
+    description: description ?? this.description,
+    category: category ?? this.category,
+    preparationSeconds: preparationSeconds ?? this.preparationSeconds,
+    createdAt: createdAt,
+    updatedAt: DateTime.now(),
+  );
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'description': description,
-      'defaultLoopEnabled': defaultLoopEnabled,
-      'category': category,
-      'preparationSeconds': preparationSeconds,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'timers': timers.map((t) => t.toJson()).toList(),
-    };
-  }
-
-  factory TimerSequence.fromJson(Map<String, dynamic> json) {
-    return TimerSequence(
-      id: json['id'] as String?,
-      name: json['name'] as String? ?? 'Routine',
-      description: json['description'] as String?,
-      defaultLoopEnabled: json['defaultLoopEnabled'] as bool? ?? false,
-      category: json['category'] as String? ?? 'custom',
-      preparationSeconds: json['preparationSeconds'] as int? ?? 5,
-      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'] as String) : null,
-      updatedAt: json['updatedAt'] != null ? DateTime.tryParse(json['updatedAt'] as String) : null,
-      timers: (json['timers'] as List<dynamic>?)
-              ?.map((t) => ActivityTimer.fromJson(t as Map<String, dynamic>))
-              .toList() ??
-          [],
-    );
-  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'description': description,
+    'defaultLoopEnabled': defaultLoopEnabled,
+    'category': category,
+    'preparationSeconds': preparationSeconds,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+    'timers': [for (final timer in timers) timer.toJson()],
+  };
 }

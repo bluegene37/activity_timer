@@ -1,33 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:get/get.dart';
-import 'models/interval_phase.dart';
-import 'models/settings.dart';
-import 'models/activity_timer.dart';
-import 'models/interval_timer.dart';
-import 'models/alarm_sound.dart';
-import 'models/session_history.dart';
-import 'services/database_service.dart';
-import 'routes/app_pages.dart';
-import 'theme/app_theme.dart';
-import 'controllers/app_controller.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
 
-void main() async {
+import 'controllers/app_controller.dart';
+import 'hive_registrar.g.dart';
+import 'models/settings.dart';
+import 'routes/app_pages.dart';
+import 'services/database_service.dart';
+import 'theme/app_theme.dart';
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Hive
   await Hive.initFlutter();
-
-  // Register adapters
-  Hive.registerAdapter(AppSettingsDataAdapter());
-  Hive.registerAdapter(ActivityTimerAdapter());
-  Hive.registerAdapter(TimerSequenceAdapter());
-  Hive.registerAdapter(IntervalTimerAdapter());
-  Hive.registerAdapter(IntervalTypeAdapter());
-  Hive.registerAdapter(AlarmSoundAdapter());
-  Hive.registerAdapter(SessionHistoryAdapter());
-  Hive.registerAdapter(IntervalPhaseAdapter());
+  Hive.registerAdapters();
 
   // Initialize database service
   final databaseService = DatabaseService();
@@ -38,14 +25,14 @@ void main() async {
   final settings = AppSettings();
   await settings.loadSettings();
 
-  SystemChrome.setPreferredOrientations([
+  await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
 
-  // Inject the app controller strictly after settings have fully loaded from DB 
+  // Inject the app controller strictly after settings have fully loaded from DB
   // so the UI immediately draws using the saved theme color, avoiding flashes of defaults.
   Get.put(AppController());
 
@@ -66,8 +53,11 @@ class MyApp extends StatelessWidget {
         title: 'Activity Timer',
         theme: AppTheme.getLightTheme(appController.themeColor.value),
         darkTheme: AppTheme.getDarkTheme(appController.themeColor.value),
-        themeMode: appController.themeMode.value, // Follow exactly what's chosen in settings
-        initialRoute: '/home',
+        themeMode:
+            appController
+                .themeMode
+                .value, // Follow exactly what's chosen in settings
+        initialRoute: AppPages.initial,
         getPages: AppPages.routes,
       ),
     );

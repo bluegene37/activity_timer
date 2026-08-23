@@ -34,10 +34,10 @@ class IntervalTimerController extends GetxController {
       intervalTimers.removeWhere((timer) => timer.id == id);
       
       // Delay snackbar slightly to ensure any dialog has closed
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Success', 'Interval timer deleted');
     } catch (e) {
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Error', 'Failed to delete interval timer: $e');
     }
   }

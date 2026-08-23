@@ -1,6 +1,6 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:activity_timer/services/database_service.dart';
 import 'package:activity_timer/models/interval_phase.dart';
+import 'package:activity_timer/services/database_service.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('DatabaseService Preset Templates tests', () {

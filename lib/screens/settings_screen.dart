@@ -1,9 +1,12 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import '../controllers/settings_controller.dart';
-import '../controllers/app_controller.dart';
-import '../theme/app_theme.dart';
+
 import '../components/color_selector.dart';
+import '../controllers/app_controller.dart';
+import '../controllers/settings_controller.dart';
+import '../theme/app_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -15,266 +18,317 @@ class SettingsScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
+        bottom: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: const EdgeInsets.only(left: 20.0, right: 20.0, top: 12.0, bottom: 100.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Top Header
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: colorScheme.primary, // Changed to strictly adhere to primary theme color
-                      borderRadius: BorderRadius.circular(16),
+                      gradient: LinearGradient(
+                        colors: [
+                          colorScheme.primary,
+                          colorScheme.primary.withValues(alpha: 0.8),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colorScheme.primary.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: Icon(
-                      Icons.settings,
-                      color: colorScheme.onPrimary,
-                      size: 28,
+                    child: const Icon(
+                      CupertinoIcons.gear_alt_fill,
+                      color: Colors.white,
+                      size: 26,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Settings',
-                          style: textTheme.headlineSmall,
+                          style: textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.8,
+                          ),
                         ),
+                        const SizedBox(height: 1),
                         Text(
                           'Configure your app',
-                          style: textTheme.bodyMedium,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
+              // APPEARANCE SECTION
               _buildSectionHeader('Appearance', textTheme),
-              const SizedBox(height: 16),
-              Container(
+              const SizedBox(height: 10),
+              DecoratedBox(
                 decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
                   borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: colorScheme.surface,
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  clipBehavior: Clip.antiAlias,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Theme Mode', style: textTheme.titleSmall),
-                            const SizedBox(height: 4),
-                            Text(
-                              'System follows your device setting',
-                              style: textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: 16),
-                            Obx(() => SizedBox(
-                              width: double.infinity,
-                              child: SegmentedButton<ThemeMode>(
-                                segments: const [
-                                  ButtonSegment(
-                                    value: ThemeMode.system,
-                                    label: Text('System'),
-                                    icon: Icon(Icons.brightness_auto),
-                                  ),
-                                  ButtonSegment(
-                                    value: ThemeMode.light,
-                                    label: Text('Light'),
-                                    icon: Icon(Icons.light_mode),
-                                  ),
-                                  ButtonSegment(
-                                    value: ThemeMode.dark,
-                                    label: Text('Dark'),
-                                    icon: Icon(Icons.dark_mode),
-                                  ),
-                                ],
-                                selected: {appController.themeMode.value},
-                                onSelectionChanged: (selection) {
-                                  appController.setThemeMode(selection.first);
-                                },
-                                style: SegmentedButton.styleFrom(
-                                  selectedBackgroundColor:
-                                      colorScheme.primary.withValues(alpha: 0.15),
-                                  selectedForegroundColor: colorScheme.primary,
-                                ),
-                              ),
-                            )),
-                          ],
-                        ),
-                      ),
-                      Divider(height: 1, color: colorScheme.surfaceContainerHighest),
-                      Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Accent Color',
-                              style: textTheme.titleSmall,
-                            ),
-                            const SizedBox(height: 16),
-                            Obx(() => ColorSelector(
-                              selectedColor: appController.themeColor.value,
-                              onColorSelected: controller.setThemeColor,
-                            )),
-                          ],
-                        ),
-                      ),
-                    ],
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                    width: 0.8,
                   ),
-                ),
-              ),
-
-              const SizedBox(height: 32),
-              _buildSectionHeader('Notifications', textTheme),
-              const SizedBox(height: 16),
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: colorScheme.surface,
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  clipBehavior: Clip.antiAlias,
-                  child: Column(
-                    children: [
-                      Obx(() => SwitchListTile(
-                        title: Text('Sound Alerts', style: textTheme.titleSmall),
-                        subtitle: Text('Play sound when timer completes', style: textTheme.bodyMedium),
-                        value: appController.soundEnabled.value,
-                        onChanged: controller.toggleSound,
-                        activeTrackColor: colorScheme.primary,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                      )),
-                      Divider(height: 1, color: colorScheme.surfaceContainerHighest),
-                      Obx(() => SwitchListTile(
-                        title: Text('Vibration', style: textTheme.titleSmall),
-                        subtitle: Text('Vibrate when timer completes', style: textTheme.bodyMedium),
-                        value: appController.vibrationEnabled.value,
-                        onChanged: controller.toggleVibration,
-                        activeTrackColor: colorScheme.primary,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                      )),
-                      Divider(height: 1, color: colorScheme.surfaceContainerHighest),
-                      Obx(() => ListTile(
-                        title: Text('Default Alarm Sound', style: textTheme.titleSmall),
-                        subtitle: Text(appController.defaultAlarmSound.value.displayName, style: textTheme.bodyMedium),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.play_circle_fill, color: colorScheme.primary, size: 32),
-                              onPressed: () => controller.previewAlarmSound(appController.defaultAlarmSound.value),
-                              tooltip: 'Preview sound',
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: Icon(Icons.edit, color: colorScheme.onSurfaceVariant),
-                              onPressed: controller.selectDefaultAlarmSound,
-                              tooltip: 'Change sound',
-                            ),
-                          ],
-                        ),
-                      )),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 32),
-              _buildSectionHeader('About', textTheme),
-              const SizedBox(height: 16),
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: colorScheme.surface,
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  clipBehavior: Clip.antiAlias,
-                  child: Column(
-                    children: [
-                      ListTile(
-                        title: Text('Version', style: textTheme.titleSmall),
-                        trailing: Text('1.0.0', style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                      ),
-                      Divider(height: 1, color: colorScheme.surfaceContainerHighest),
-                      ListTile(
-                        title: Text('Developer', style: textTheme.titleSmall),
-                        trailing: Text('CodeGenexis', style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 32),
-              _buildSectionHeader('Theme Preview', textTheme),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: colorScheme.surface,
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Theme Sample', style: textTheme.titleLarge),
-                    const SizedBox(height: 8),
-                    Text(
-                      'This is how your app will look with the selected theme. You can see your primary color highlighted below.',
-                      style: textTheme.bodyMedium,
+                    Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Theme Mode', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 3),
+                          Text(
+                            'System follows your device setting',
+                            style: textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 14),
+                          Obx(() => SizedBox(
+                            width: double.infinity,
+                            child: SegmentedButton<ThemeMode>(
+                              segments: const [
+                                ButtonSegment(
+                                  value: ThemeMode.system,
+                                  label: Text('System'),
+                                  icon: Icon(CupertinoIcons.device_phone_portrait, size: 16),
+                                ),
+                                ButtonSegment(
+                                  value: ThemeMode.light,
+                                  label: Text('Light'),
+                                  icon: Icon(CupertinoIcons.sun_max_fill, size: 16),
+                                ),
+                                ButtonSegment(
+                                  value: ThemeMode.dark,
+                                  label: Text('Dark'),
+                                  icon: Icon(CupertinoIcons.moon_fill, size: 16),
+                                ),
+                              ],
+                              selected: {appController.themeMode.value},
+                              onSelectionChanged: (selection) {
+                                HapticFeedback.selectionClick();
+                                appController.setThemeMode(selection.first);
+                              },
+                              style: SegmentedButton.styleFrom(
+                                selectedBackgroundColor: colorScheme.primary.withValues(alpha: 0.18),
+                                selectedForegroundColor: colorScheme.primary,
+                                side: BorderSide(
+                                  color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                                  width: 0.8,
+                                ),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          )),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 24),
+                    Divider(height: 1, color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA)),
+                    Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Accent Color',
+                            style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 12),
+                          Obx(() => ColorSelector(
+                            selectedColor: appController.themeColor.value,
+                            onColorSelected: controller.setThemeColor,
+                          )),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // NOTIFICATIONS SECTION
+              _buildSectionHeader('Notifications', textTheme),
+              const SizedBox(height: 10),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                    width: 0.8,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Obx(() => Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Sound Alerts', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 2),
+                                Text('Play sound when timer completes', style: textTheme.bodySmall),
+                              ],
+                            ),
+                          ),
+                          CupertinoSwitch(
+                            value: appController.soundEnabled.value,
+                            activeTrackColor: colorScheme.primary,
+                            onChanged: (value) {
+                              HapticFeedback.selectionClick();
+                              controller.toggleSound(value);
+                            },
+                          ),
+                        ],
+                      ),
+                    )),
+                    Divider(height: 1, color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA)),
+                    Obx(() => Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Vibration', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 2),
+                                Text('Vibrate when timer completes', style: textTheme.bodySmall),
+                              ],
+                            ),
+                          ),
+                          CupertinoSwitch(
+                            value: appController.vibrationEnabled.value,
+                            activeTrackColor: colorScheme.primary,
+                            onChanged: (value) {
+                              HapticFeedback.selectionClick();
+                              controller.toggleVibration(value);
+                            },
+                          ),
+                        ],
+                      ),
+                    )),
+                    Divider(height: 1, color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA)),
+                    Obx(() => ListTile(
+                      title: Text('Default Alarm Sound', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                      subtitle: Text(appController.defaultAlarmSound.value.displayName, style: textTheme.bodySmall),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(CupertinoIcons.play_circle_fill, color: colorScheme.primary, size: 28),
+                            onPressed: () {
+                              HapticFeedback.selectionClick();
+                              controller.previewAlarmSound(appController.defaultAlarmSound.value);
+                            },
+                            tooltip: 'Preview sound',
+                          ),
+                          IconButton(
+                            icon: Icon(CupertinoIcons.pencil, color: colorScheme.onSurfaceVariant, size: 20),
+                            onPressed: () {
+                              HapticFeedback.selectionClick();
+                              controller.selectDefaultAlarmSound();
+                            },
+                            tooltip: 'Change sound',
+                          ),
+                        ],
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // ABOUT SECTION
+              _buildSectionHeader('About', textTheme),
+              const SizedBox(height: 10),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                    width: 0.8,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    ListTile(
+                      title: Text('Version', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                      trailing: Text('1.0.0', style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
+                    ),
+                    Divider(height: 1, color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA)),
+                    ListTile(
+                      title: Text('Developer', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                      trailing: Text('CodeGenexis', style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // THEME PREVIEW SECTION
+              _buildSectionHeader('Theme Preview', textTheme),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                    width: 0.8,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Theme Sample', style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    Text(
+                      'This is how your app buttons and highlights look with your chosen accent color.',
+                      style: textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 18),
                     Row(
                       children: [
                         Expanded(
@@ -285,23 +339,13 @@ class SettingsScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () {},
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: colorScheme.primary, width: 1.5),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              'Outlined Button',
-                              style: textTheme.titleSmall?.copyWith(color: colorScheme.primary),
-                            ),
+                            child: const Text('Outlined Button'),
                           ),
                         ),
                       ],
@@ -309,7 +353,7 @@ class SettingsScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -320,7 +364,10 @@ class SettingsScreen extends StatelessWidget {
   Widget _buildSectionHeader(String title, TextTheme textTheme) {
     return Text(
       title,
-      style: textTheme.titleLarge,
+      style: textTheme.titleSmall?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.2,
+      ),
     );
   }
 }

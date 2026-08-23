@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -191,12 +192,12 @@ class ActivityListController extends GetxController {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Get.back<Map<String, String>>(), child: const Text('Cancel')),
           TextButton(
             onPressed: () {
               final name = nameController.text.trim();
               final desc = descriptionController.text.trim();
-              Get.back(result: {
+              Get.back<Map<String, String>>(result: {
                 'name': name.isNotEmpty ? name : 'New Activity',
                 'description': desc,
               });
@@ -207,7 +208,7 @@ class ActivityListController extends GetxController {
       ),
     );
 
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future<void>.delayed(const Duration(milliseconds: 300));
     nameController.dispose();
     descriptionController.dispose();
 
@@ -224,7 +225,7 @@ class ActivityListController extends GetxController {
         await _databaseService.createActivitySequence(newSequence);
         sequences.add(newSequence);
 
-        Get.toNamed('/timer-list', arguments: newSequence);
+        unawaited(Get.toNamed<dynamic>('/timer-list', arguments: newSequence));
       } catch (e) {
         Get.snackbar('Error', 'Failed to create activity: $e');
       }
@@ -262,10 +263,10 @@ class ActivityListController extends GetxController {
       await _databaseService.deleteActivitySequence(sequence.id);
       sequences.removeAt(index);
       
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Success', 'Activity deleted');
     } catch (e) {
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Error', 'Failed to delete activity: $e');
     }
   }

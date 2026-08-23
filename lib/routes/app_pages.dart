@@ -1,92 +1,67 @@
-// ignore_for_file: constant_identifier_names
-
 import 'package:get/get.dart';
+
+import '../controllers/activity_list_controller.dart';
+import '../controllers/interval_timer_controller.dart';
+import '../controllers/settings_controller.dart';
+import '../controllers/timer_list_controller.dart';
+import '../models/activity_timer.dart';
+import '../models/interval_timer.dart';
 import '../navigation/main_navigation.dart';
-import '../screens/timer_list_screen.dart';
-import '../screens/timer_screen.dart';
+import '../screens/edit_interval_timer_screen.dart';
 import '../screens/edit_timer_screen.dart';
 import '../screens/interval_timer_screen.dart';
-import '../screens/edit_interval_timer_screen.dart';
 import '../screens/settings_screen.dart';
-import '../controllers/activity_list_controller.dart';
-import '../controllers/timer_list_controller.dart';
-import '../controllers/settings_controller.dart';
-import '../controllers/interval_timer_controller.dart';
+import '../screens/timer_list_screen.dart';
+import '../screens/timer_screen.dart';
 import 'app_routes.dart';
 
-class AppPages {
-  AppPages._();
+abstract final class AppPages {
+  static const initial = Routes.home;
 
-  static const INITIAL = Routes.HOME;
-
-  static final routes = [
-    GetPage(
-      name: _Paths.HOME,
+  static final List<GetPage<dynamic>> routes = [
+    GetPage<void>(
+      name: Routes.home,
       page: () => const MainNavigation(),
       bindings: [
-        BindingsBuilder(() {
-          Get.lazyPut<ActivityListController>(() => ActivityListController());
-          Get.lazyPut<IntervalTimerController>(() => IntervalTimerController());
-          Get.lazyPut<SettingsController>(() => SettingsController());
+        BindingsBuilder<void>(() {
+          Get.lazyPut<ActivityListController>(ActivityListController.new);
+          Get.lazyPut<IntervalTimerController>(IntervalTimerController.new);
+          Get.lazyPut<SettingsController>(SettingsController.new);
         }),
       ],
     ),
-    GetPage(
-      name: _Paths.TIMER_LIST,
+    GetPage<void>(
+      name: Routes.timerList,
       page: () => const TimerListScreen(),
-      binding: BindingsBuilder(() {
-        Get.lazyPut<TimerListController>(() => TimerListController());
+      binding: BindingsBuilder<void>(() {
+        Get.lazyPut<TimerListController>(TimerListController.new);
       }),
     ),
-    GetPage(
-      name: _Paths.TIMER,
+    GetPage<void>(
+      name: Routes.timer,
+      page: () => TimerScreen(sequence: Get.arguments as TimerSequence),
+    ),
+    GetPage<ActivityTimer>(
+      name: Routes.editTimer,
+      page: () => EditTimerScreen(timer: Get.arguments as ActivityTimer),
+    ),
+    GetPage<void>(
+      name: Routes.intervalTimer,
+      page: () => IntervalTimerScreen(timer: Get.arguments as IntervalTimer),
+    ),
+    GetPage<bool>(
+      name: Routes.editIntervalTimer,
       page: () {
-        final sequence = Get.arguments;
-        return TimerScreen(sequence: sequence);
+        final args = Get.arguments as EditIntervalTimerArgs;
+        return EditIntervalTimerScreen(timer: args.timer, isNew: args.isNew);
       },
     ),
-    GetPage(
-      name: _Paths.EDIT_TIMER,
-      page: () {
-        final timer = Get.arguments;
-        return EditTimerScreen(timer: timer);
-      },
-    ),
-    GetPage(
-      name: _Paths.INTERVAL_TIMER,
-      page: () {
-        final timer = Get.arguments;
-        return IntervalTimerScreen(timer: timer);
-      },
-    ),
-    GetPage(
-      name: _Paths.EDIT_INTERVAL_TIMER,
-      page: () {
-        final args = Get.arguments as Map<String, dynamic>;
-        return EditIntervalTimerScreen(
-          timer: args['timer'],
-          isNew: args['isNew'],
-        );
-      },
-    ),
-    GetPage(
-      name: _Paths.SETTINGS,
+    GetPage<void>(
+      name: Routes.settings,
       page: () => const SettingsScreen(),
-      binding: BindingsBuilder(() {
-        Get.lazyPut<SettingsController>(() => SettingsController());
+      binding: BindingsBuilder<void>(() {
+        Get.lazyPut<SettingsController>(SettingsController.new);
       }),
     ),
   ];
-}
-
-abstract class _Paths {
-  _Paths._();
-  
-  static const HOME = '/home';
-  static const TIMER_LIST = '/timer-list';
-  static const TIMER = '/timer';
-  static const EDIT_TIMER = '/edit-timer';
-  static const INTERVAL_TIMER = '/interval-timer';
-  static const EDIT_INTERVAL_TIMER = '/edit-interval-timer';
-  static const SETTINGS = '/settings';
 }

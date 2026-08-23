@@ -1,25 +1,15 @@
-// ignore_for_file: constant_identifier_names
+import '../models/interval_timer.dart';
 
-abstract class Routes {
-  Routes._();
-  
-  static const HOME = _Paths.HOME;
-  static const TIMER_LIST = _Paths.TIMER_LIST;
-  static const TIMER = _Paths.TIMER;
-  static const EDIT_TIMER = _Paths.EDIT_TIMER;
-  static const INTERVAL_TIMER = _Paths.INTERVAL_TIMER;
-  static const EDIT_INTERVAL_TIMER = _Paths.EDIT_INTERVAL_TIMER;
-  static const SETTINGS = _Paths.SETTINGS;
+/// Named routes served by `AppPages.routes`.
+abstract final class Routes {
+  static const home = '/home';
+  static const timerList = '/timer-list';
+  static const timer = '/timer';
+  static const editTimer = '/edit-timer';
+  static const intervalTimer = '/interval-timer';
+  static const editIntervalTimer = '/edit-interval-timer';
+  static const settings = '/settings';
 }
 
-abstract class _Paths {
-  _Paths._();
-  
-  static const HOME = '/home';
-  static const TIMER_LIST = '/timer-list';
-  static const TIMER = '/timer';
-  static const EDIT_TIMER = '/edit-timer';
-  static const INTERVAL_TIMER = '/interval-timer';
-  static const EDIT_INTERVAL_TIMER = '/edit-interval-timer';
-  static const SETTINGS = '/settings';
-}
+/// Arguments accepted by [Routes.editIntervalTimer].
+typedef EditIntervalTimerArgs = ({IntervalTimer timer, bool isNew});

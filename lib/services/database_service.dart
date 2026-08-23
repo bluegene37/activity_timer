@@ -1,195 +1,104 @@
+import 'dart:async';
+
 import 'package:hive_ce/hive.dart';
-import '../models/interval_phase.dart';
+
 import '../models/activity_timer.dart';
+import '../models/interval_phase.dart';
 import '../models/interval_timer.dart';
 import '../models/session_history.dart';
 
 class DatabaseService {
-  // Singleton pattern
-  static final DatabaseService _instance = DatabaseService._internal();
-
-  factory DatabaseService() {
-    return _instance;
-  }
+  factory DatabaseService() => _instance;
 
   DatabaseService._internal();
+
+  static final DatabaseService _instance = DatabaseService._internal();
 
   // Box names
   static const String _sequencesBoxName = 'activity_sequences';
   static const String _intervalTimersBoxName = 'interval_timers';
   static const String _historyBoxName = 'session_history';
 
-  // Initialize Hive and register adapters
+  // `Hive.openBox` returns the already-open box on subsequent calls, so these
+  // double as cheap accessors once `init()` has run.
+  Future<Box<TimerSequence>> get _sequences =>
+      Hive.openBox<TimerSequence>(_sequencesBoxName);
+  Future<Box<IntervalTimer>> get _intervalTimers =>
+      Hive.openBox<IntervalTimer>(_intervalTimersBoxName);
+  Future<Box<SessionHistory>> get _history =>
+      Hive.openBox<SessionHistory>(_historyBoxName);
+
+  /// Open every box the app reads from.
   Future<void> init() async {
-    await Hive.openBox<TimerSequence>(_sequencesBoxName);
-    await Hive.openBox<IntervalTimer>(_intervalTimersBoxName);
-    await Hive.openBox<SessionHistory>(_historyBoxName);
+    await (_sequences, _intervalTimers, _history).wait;
   }
 
-  // Get all activity sequences
-  Future<List<TimerSequence>> getAllActivitySequences() async {
-    final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
-    return box.values.toList();
-  }
+  // ACTIVITY SEQUENCE METHODS
 
-  // Get an activity sequence by ID
-  Future<TimerSequence?> getActivitySequence(String id) async {
-    final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
-    try {
-      return box.values.firstWhere((sequence) => sequence.id == id);
-    } catch (_) {
-      return null;
-    }
-  }
+  Future<List<TimerSequence>> getAllActivitySequences() async =>
+      (await _sequences).values.toList();
 
-  // Create a new activity sequence
+  Future<TimerSequence?> getActivitySequence(String id) async =>
+      (await _sequences).values
+          .where((sequence) => sequence.id == id)
+          .firstOrNull;
+
   Future<String> createActivitySequence(TimerSequence sequence) async {
-    final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
-    await box.put(sequence.id, sequence);
+    await (await _sequences).put(sequence.id, sequence);
     return sequence.id;
   }
 
-  // Update an activity sequence
   Future<void> updateActivitySequence(TimerSequence sequence) async {
-    final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
     sequence.updatedAt = DateTime.now();
-    await box.put(sequence.id, sequence);
+    await (await _sequences).put(sequence.id, sequence);
   }
 
-  // Delete an activity sequence
-  Future<void> deleteActivitySequence(String id) async {
-    final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
-    await box.delete(id);
-  }
+  Future<void> deleteActivitySequence(String id) async =>
+      (await _sequences).delete(id);
 
-  // Add a timer to a sequence
-  Future<void> addTimerToSequence(
+  /// Apply [change] to the stored sequence [sequenceId], then persist it with a
+  /// refreshed `updatedAt`. Does nothing when the sequence no longer exists.
+  Future<void> _editSequence(
     String sequenceId,
-    ActivityTimer timer,
+    void Function(TimerSequence sequence) change,
   ) async {
-    final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
-    try {
-      final sequence = box.values.firstWhere((s) => s.id == sequenceId);
-      sequence.timers.add(timer);
-      sequence.updatedAt = DateTime.now();
-      await box.put(sequenceId, sequence);
-    } catch (_) {}
+    final box = await _sequences;
+    final sequence = box.values.where((s) => s.id == sequenceId).firstOrNull;
+    if (sequence == null) return;
+
+    change(sequence);
+    sequence.updatedAt = DateTime.now();
+    await box.put(sequenceId, sequence);
   }
 
-  // Update a timer in a sequence
-  Future<void> updateTimerInSequence(
-    String sequenceId,
-    ActivityTimer timer,
-  ) async {
-    final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
-    try {
-      final sequence = box.values.firstWhere((s) => s.id == sequenceId);
-      final index = sequence.timers.indexWhere((t) => t.id == timer.id);
-      if (index != -1) {
-        sequence.timers[index] = timer;
-        sequence.updatedAt = DateTime.now();
-        await box.put(sequenceId, sequence);
-      }
-    } catch (_) {}
-  }
+  Future<void> addTimerToSequence(String sequenceId, ActivityTimer timer) =>
+      _editSequence(sequenceId, (sequence) => sequence.timers.add(timer));
 
-  // Delete a timer from a sequence
-  Future<void> deleteTimerFromSequence(
-    String sequenceId,
-    String timerId,
-  ) async {
-    final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
-    try {
-      final sequence = box.values.firstWhere((s) => s.id == sequenceId);
-      sequence.timers.removeWhere((t) => t.id == timerId);
-      sequence.updatedAt = DateTime.now();
-      await box.put(sequenceId, sequence);
-    } catch (_) {}
-  }
+  Future<void> updateTimerInSequence(String sequenceId, ActivityTimer timer) =>
+      _editSequence(sequenceId, (sequence) {
+        final index = sequence.timers.indexWhere((t) => t.id == timer.id);
+        if (index != -1) sequence.timers[index] = timer;
+      });
+
+  Future<void> deleteTimerFromSequence(String sequenceId, String timerId) =>
+      _editSequence(
+        sequenceId,
+        (sequence) => sequence.timers.removeWhere((t) => t.id == timerId),
+      );
 
   Future<void> reorderTimersInSequence(
     String sequenceId,
     List<String> timerIds,
-  ) async {
-    final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
-    final sequence = box.values.where((s) => s.id == sequenceId).firstOrNull;
+  ) => _editSequence(sequenceId, (sequence) {
+    final byId = {for (final timer in sequence.timers) timer.id: timer};
+    sequence.timers = [
+      for (final id in timerIds)
+        if (byId[id] case final timer?) timer,
+    ];
+  });
 
-    if (sequence != null) {
-      // Create a new ordered list of timers
-      final orderedTimers = <ActivityTimer>[];
-      for (final id in timerIds) {
-        final timer = sequence.timers.where((t) => t.id == id).firstOrNull;
-        if (timer != null) {
-          orderedTimers.add(timer);
-        }
-      }
-
-      sequence.timers = orderedTimers;
-      sequence.updatedAt = DateTime.now();
-      await box.put(sequenceId, sequence);
-    }
-  }
-
-  // INTERVAL TIMER METHODS
-
-  // Get all interval timers
-  Future<List<IntervalTimer>> getAllIntervalTimers() async {
-    final box = await Hive.openBox<IntervalTimer>(_intervalTimersBoxName);
-    return box.values.toList();
-  }
-
-  // Get an interval timer by ID
-  Future<IntervalTimer?> getIntervalTimer(String id) async {
-    final box = await Hive.openBox<IntervalTimer>(_intervalTimersBoxName);
-    try {
-      return box.values.firstWhere((timer) => timer.id == id);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  // Create a new interval timer
-  Future<String> createIntervalTimer(IntervalTimer timer) async {
-    final box = await Hive.openBox<IntervalTimer>(_intervalTimersBoxName);
-    await box.put(timer.id, timer);
-    return timer.id;
-  }
-
-  // Update an interval timer
-  Future<void> updateIntervalTimer(IntervalTimer timer) async {
-    final box = await Hive.openBox<IntervalTimer>(_intervalTimersBoxName);
-    timer.updatedAt = DateTime.now();
-    await box.put(timer.id, timer);
-  }
-
-  // Delete an interval timer
-  Future<void> deleteIntervalTimer(String id) async {
-    final box = await Hive.openBox<IntervalTimer>(_intervalTimersBoxName);
-    await box.delete(id);
-  }
-
-  // SESSION HISTORY METHODS
-
-  Future<void> logSessionHistory(SessionHistory history) async {
-    final box = await Hive.openBox<SessionHistory>(_historyBoxName);
-    await box.put(history.id, history);
-  }
-
-  Future<List<SessionHistory>> getSessionHistory() async {
-    final box = await Hive.openBox<SessionHistory>(_historyBoxName);
-    final list = box.values.toList();
-    list.sort((a, b) => b.completedAt.compareTo(a.completedAt));
-    return list;
-  }
-
-  Future<void> clearSessionHistory() async {
-    final box = await Hive.openBox<SessionHistory>(_historyBoxName);
-    await box.clear();
-  }
-
-  // Duplicate an activity sequence
   Future<TimerSequence?> duplicateSequence(String id) async {
-    final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
+    final box = await _sequences;
     final original = box.values.where((s) => s.id == id).firstOrNull;
     if (original == null) return null;
 
@@ -199,15 +108,52 @@ class DatabaseService {
       category: original.category,
       preparationSeconds: original.preparationSeconds,
       defaultLoopEnabled: original.defaultLoopEnabled,
-      timers: original.timers.map((t) => t.copyWith()).toList(),
+      timers: [for (final timer in original.timers) timer.copyWith()],
     );
 
     await box.put(duplicate.id, duplicate);
     return duplicate;
   }
 
+  // INTERVAL TIMER METHODS
+
+  Future<List<IntervalTimer>> getAllIntervalTimers() async =>
+      (await _intervalTimers).values.toList();
+
+  Future<IntervalTimer?> getIntervalTimer(String id) async =>
+      (await _intervalTimers).values
+          .where((timer) => timer.id == id)
+          .firstOrNull;
+
+  Future<String> createIntervalTimer(IntervalTimer timer) async {
+    await (await _intervalTimers).put(timer.id, timer);
+    return timer.id;
+  }
+
+  Future<void> updateIntervalTimer(IntervalTimer timer) async {
+    timer.updatedAt = DateTime.now();
+    await (await _intervalTimers).put(timer.id, timer);
+  }
+
+  Future<void> deleteIntervalTimer(String id) async =>
+      (await _intervalTimers).delete(id);
+
+  // SESSION HISTORY METHODS
+
+  Future<void> logSessionHistory(SessionHistory history) async =>
+      (await _history).put(history.id, history);
+
+  Future<List<SessionHistory>> getSessionHistory() async {
+    final list = (await _history).values.toList();
+    list.sort((a, b) => b.completedAt.compareTo(a.completedAt));
+    return list;
+  }
+
+  Future<void> clearSessionHistory() async => (await _history).clear();
+
   // PRESET TEMPLATE METHODS
 
+  /// Built-in routines offered in the "Add preset" sheet.
   List<TimerSequence> getPresetTemplates({String? category}) {
     final all = [
       // ⚡ FITNESS PRESETS
@@ -216,37 +162,32 @@ class DatabaseService {
         description: '8 rounds of 20s Max Effort + 10s Rest',
         category: 'fitness',
         preparationSeconds: 5,
-        defaultLoopEnabled: false,
-        timers: List.generate(
-          8,
-          (i) => [
+        timers: [
+          for (var round = 1; round <= 8; round++) ...[
             ActivityTimer(
-              name: 'Work ${i + 1}',
+              name: 'Work $round',
               durationInSeconds: 20,
-              phase: IntervalPhase.work,
               description: 'All-out effort',
             ),
             ActivityTimer(
-              name: 'Rest ${i + 1}',
+              name: 'Rest $round',
               durationInSeconds: 10,
               phase: IntervalPhase.rest,
               description: 'Catch breath',
             ),
           ],
-        ).expand((e) => e).toList(),
+        ],
       ),
       TimerSequence(
         name: 'EMOM 10-Min',
         description: 'Every Minute On the Minute: 45s Work + 15s Transition',
         category: 'fitness',
         preparationSeconds: 5,
-        timers: List.generate(
-          10,
-          (i) => [
+        timers: [
+          for (var minute = 1; minute <= 10; minute++) ...[
             ActivityTimer(
-              name: 'Minute ${i + 1}',
+              name: 'Minute $minute',
               durationInSeconds: 45,
-              phase: IntervalPhase.work,
               description: 'Complete target reps',
             ),
             ActivityTimer(
@@ -256,7 +197,7 @@ class DatabaseService {
               description: 'Prep next minute',
             ),
           ],
-        ).expand((e) => e).toList(),
+        ],
       ),
       TimerSequence(
         name: 'Boxing Sparring Rounds',
@@ -267,7 +208,6 @@ class DatabaseService {
           ActivityTimer(
             name: 'Round 1',
             durationInSeconds: 180,
-            phase: IntervalPhase.work,
             description: 'Punches & movement',
           ),
           ActivityTimer(
@@ -279,7 +219,6 @@ class DatabaseService {
           ActivityTimer(
             name: 'Round 2',
             durationInSeconds: 180,
-            phase: IntervalPhase.work,
             description: 'Combinations & defense',
           ),
           ActivityTimer(
@@ -291,7 +230,6 @@ class DatabaseService {
           ActivityTimer(
             name: 'Round 3',
             durationInSeconds: 180,
-            phase: IntervalPhase.work,
             description: 'Final round push',
           ),
           ActivityTimer(
@@ -308,20 +246,22 @@ class DatabaseService {
         category: 'fitness',
         preparationSeconds: 5,
         timers: [
-          ActivityTimer(name: 'Jumping Jacks', durationInSeconds: 30, phase: IntervalPhase.work),
-          ActivityTimer(name: 'Rest', durationInSeconds: 10, phase: IntervalPhase.rest),
-          ActivityTimer(name: 'Wall Sit', durationInSeconds: 30, phase: IntervalPhase.work),
-          ActivityTimer(name: 'Rest', durationInSeconds: 10, phase: IntervalPhase.rest),
-          ActivityTimer(name: 'Push-ups', durationInSeconds: 30, phase: IntervalPhase.work),
-          ActivityTimer(name: 'Rest', durationInSeconds: 10, phase: IntervalPhase.rest),
-          ActivityTimer(name: 'Abdominal Crunches', durationInSeconds: 30, phase: IntervalPhase.work),
-          ActivityTimer(name: 'Rest', durationInSeconds: 10, phase: IntervalPhase.rest),
-          ActivityTimer(name: 'Step-ups', durationInSeconds: 30, phase: IntervalPhase.work),
-          ActivityTimer(name: 'Rest', durationInSeconds: 10, phase: IntervalPhase.rest),
-          ActivityTimer(name: 'Squats', durationInSeconds: 30, phase: IntervalPhase.work),
-          ActivityTimer(name: 'Rest', durationInSeconds: 10, phase: IntervalPhase.rest),
-          ActivityTimer(name: 'Plank', durationInSeconds: 30, phase: IntervalPhase.work),
-          ActivityTimer(name: 'Rest', durationInSeconds: 10, phase: IntervalPhase.rest),
+          for (final exercise in const [
+            'Jumping Jacks',
+            'Wall Sit',
+            'Push-ups',
+            'Abdominal Crunches',
+            'Step-ups',
+            'Squats',
+            'Plank',
+          ]) ...[
+            ActivityTimer(name: exercise, durationInSeconds: 30),
+            ActivityTimer(
+              name: 'Rest',
+              durationInSeconds: 10,
+              phase: IntervalPhase.rest,
+            ),
+          ],
         ],
       ),
       TimerSequence(
@@ -329,13 +269,11 @@ class DatabaseService {
         description: '5 sets of 2m Jog/Run + 1m Walking Recovery',
         category: 'fitness',
         preparationSeconds: 5,
-        timers: List.generate(
-          5,
-          (i) => [
+        timers: [
+          for (var set = 1; set <= 5; set++) ...[
             ActivityTimer(
               name: 'Jog / Run',
               durationInSeconds: 120,
-              phase: IntervalPhase.work,
               description: 'Paced running',
             ),
             ActivityTimer(
@@ -345,7 +283,7 @@ class DatabaseService {
               description: 'Active recovery walk',
             ),
           ],
-        ).expand((e) => e).toList(),
+        ],
       ),
 
       // 💼 WORK & PRODUCTIVITY PRESETS
@@ -355,48 +293,25 @@ class DatabaseService {
         category: 'work',
         preparationSeconds: 3,
         timers: [
-          ActivityTimer(
-            name: 'Focus Block 1',
-            durationInSeconds: 1500,
-            phase: IntervalPhase.work,
-            description: 'Deep focus on 1 task',
-          ),
-          ActivityTimer(
-            name: 'Short Break 1',
-            durationInSeconds: 300,
-            phase: IntervalPhase.rest,
-            description: 'Stand up & drink water',
-          ),
-          ActivityTimer(
-            name: 'Focus Block 2',
-            durationInSeconds: 1500,
-            phase: IntervalPhase.work,
-            description: 'Deep focus on 1 task',
-          ),
-          ActivityTimer(
-            name: 'Short Break 2',
-            durationInSeconds: 300,
-            phase: IntervalPhase.rest,
-            description: 'Walk & stretch',
-          ),
-          ActivityTimer(
-            name: 'Focus Block 3',
-            durationInSeconds: 1500,
-            phase: IntervalPhase.work,
-            description: 'Deep focus on 1 task',
-          ),
-          ActivityTimer(
-            name: 'Short Break 3',
-            durationInSeconds: 300,
-            phase: IntervalPhase.rest,
-            description: 'Breathe & reset',
-          ),
-          ActivityTimer(
-            name: 'Focus Block 4',
-            durationInSeconds: 1500,
-            phase: IntervalPhase.work,
-            description: 'Final focus block',
-          ),
+          for (var block = 1; block <= 4; block++) ...[
+            ActivityTimer(
+              name: 'Focus Block $block',
+              durationInSeconds: 1500,
+              description:
+                  block == 4 ? 'Final focus block' : 'Deep focus on 1 task',
+            ),
+            if (block < 4)
+              ActivityTimer(
+                name: 'Short Break $block',
+                durationInSeconds: 300,
+                phase: IntervalPhase.rest,
+                description: switch (block) {
+                  1 => 'Stand up & drink water',
+                  2 => 'Walk & stretch',
+                  _ => 'Breathe & reset',
+                },
+              ),
+          ],
           ActivityTimer(
             name: 'Long Break',
             durationInSeconds: 900,
@@ -415,7 +330,6 @@ class DatabaseService {
           ActivityTimer(
             name: 'Deep Work Block',
             durationInSeconds: 3000,
-            phase: IntervalPhase.work,
             description: 'Uninterrupted creative/analytical flow',
           ),
           ActivityTimer(
@@ -436,7 +350,6 @@ class DatabaseService {
           ActivityTimer(
             name: 'Desk Work',
             durationInSeconds: 3300,
-            phase: IntervalPhase.work,
             description: 'Focused task work',
           ),
           ActivityTimer(
@@ -457,7 +370,6 @@ class DatabaseService {
           ActivityTimer(
             name: 'Screen Work',
             durationInSeconds: 1200,
-            phase: IntervalPhase.work,
             description: 'Working on screen',
           ),
           ActivityTimer(
@@ -484,7 +396,6 @@ class DatabaseService {
           ActivityTimer(
             name: 'Hold In',
             durationInSeconds: 4,
-            phase: IntervalPhase.work,
             description: 'Hold breath in lungs',
           ),
           ActivityTimer(
@@ -507,11 +418,10 @@ class DatabaseService {
     return all.where((s) => s.category == category).toList();
   }
 
-  // Insert demo data if the box is empty
+  /// Seed first-run demo content so the app never opens on an empty list.
   Future<void> insertDemoDataIfEmpty() async {
-    final box = await Hive.openBox<TimerSequence>(_sequencesBoxName);
-    if (box.isEmpty) {
-      // HIIT Activity (Fitness)
+    final sequenceBox = await _sequences;
+    if (sequenceBox.isEmpty) {
       final hiitActivity = TimerSequence(
         name: 'HIIT Cardio Sprint',
         description: 'Cardio interval training',
@@ -527,7 +437,6 @@ class DatabaseService {
           ActivityTimer(
             name: 'High Intensity Sprint',
             durationInSeconds: 30,
-            phase: IntervalPhase.work,
             description: 'Burpees / High Knees',
           ),
           ActivityTimer(
@@ -539,7 +448,6 @@ class DatabaseService {
           ActivityTimer(
             name: 'High Intensity Sprint',
             durationInSeconds: 30,
-            phase: IntervalPhase.work,
             description: 'Mountain climbers',
           ),
           ActivityTimer(
@@ -557,7 +465,6 @@ class DatabaseService {
         ],
       );
 
-      // Pomodoro Work Activity
       final pomodoroActivity = TimerSequence(
         name: 'Pomodoro Focus Block',
         description: '25 min deep focus + 5 min break',
@@ -567,7 +474,6 @@ class DatabaseService {
           ActivityTimer(
             name: 'Deep Work',
             durationInSeconds: 1500,
-            phase: IntervalPhase.work,
             description: 'Single task focus',
           ),
           ActivityTimer(
@@ -579,24 +485,20 @@ class DatabaseService {
         ],
       );
 
-      await box.put(hiitActivity.id, hiitActivity);
-      await box.put(pomodoroActivity.id, pomodoroActivity);
+      await sequenceBox.putAll({
+        hiitActivity.id: hiitActivity,
+        pomodoroActivity.id: pomodoroActivity,
+      });
     }
 
-    // Add demo interval timer
-    final intervalBox = await Hive.openBox<IntervalTimer>(
-      _intervalTimersBoxName,
-    );
+    final intervalBox = await _intervalTimers;
     if (intervalBox.isEmpty) {
-      // Create a workday timer (8am to 5pm, alarm every hour)
+      // A workday timer: 8am to 5pm, alarm every hour.
       final now = DateTime.now();
-      final today8am = DateTime(now.year, now.month, now.day, 8, 0);
-      final today5pm = DateTime(now.year, now.month, now.day, 17, 0);
-
       final workdayTimer = IntervalTimer(
         name: 'Hourly Boss Report / Standup',
-        startTime: today8am,
-        endTime: today5pm,
+        startTime: DateTime(now.year, now.month, now.day, 8),
+        endTime: DateTime(now.year, now.month, now.day, 17),
         intervalValue: 1,
         intervalType: IntervalType.hour,
       );
@@ -605,9 +507,6 @@ class DatabaseService {
     }
   }
 
-  // Close all boxes
-  Future<void> closeBoxes() async {
-    await Hive.close();
-  }
+  /// Close all boxes.
+  Future<void> closeBoxes() => Hive.close();
 }
-

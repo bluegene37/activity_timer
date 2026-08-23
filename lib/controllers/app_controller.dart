@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../models/settings.dart';
+
 import '../models/alarm_sound.dart';
+import '../models/settings.dart';
 
 class AppController extends GetxController {
   final _settings = AppSettings();

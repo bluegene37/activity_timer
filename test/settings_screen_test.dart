@@ -1,13 +1,13 @@
 import 'dart:io';
 
+import 'package:activity_timer/controllers/app_controller.dart';
+import 'package:activity_timer/models/settings.dart';
+import 'package:activity_timer/screens/settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
-import 'package:activity_timer/controllers/app_controller.dart';
-import 'package:activity_timer/models/settings.dart';
-import 'package:activity_timer/screens/settings_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

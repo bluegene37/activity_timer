@@ -1,6 +1,8 @@
+import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:audioplayers/audioplayers.dart';
+
 import '../models/alarm_sound.dart';
 import 'app_controller.dart';
 
@@ -28,7 +30,7 @@ class SettingsController extends GetxController {
   Future<void> setThemeColor(Color color) async {
     await _appController.setThemeColor(color);
     // Force rebuild of the app with new theme
-    Get.forceAppUpdate();
+    unawaited(Get.forceAppUpdate());
   }
 
   Future<void> toggleSound(bool enabled) async {
@@ -49,7 +51,7 @@ class SettingsController extends GetxController {
             groupValue: _appController.defaultAlarmSound.value,
             onChanged: (AlarmSound? value) {
               if (value != null) {
-                Get.back(result: value);
+                Get.back<AlarmSound>(result: value);
               }
             },
             child: ListView.builder(
@@ -60,7 +62,7 @@ class SettingsController extends GetxController {
                 return ListTile(
                   leading: Radio<AlarmSound>(value: sound),
                   title: Text(sound.displayName),
-                  onTap: () => Get.back(result: sound),
+                  onTap: () => Get.back<AlarmSound>(result: sound),
                   trailing: IconButton(
                     icon: const Icon(Icons.play_arrow),
                     onPressed: () => previewAlarmSound(sound),
@@ -72,7 +74,7 @@ class SettingsController extends GetxController {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Get.back<AlarmSound>(),
             child: const Text('Cancel'),
           ),
         ],

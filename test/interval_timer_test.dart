@@ -1,6 +1,6 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:activity_timer/models/interval_timer.dart';
 import 'package:activity_timer/models/alarm_sound.dart';
+import 'package:activity_timer/models/interval_timer.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('IntervalTimer tests for Workplace & Activity scenarios', () {

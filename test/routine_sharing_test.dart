@@ -1,7 +1,7 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'package:activity_timer/controllers/activity_list_controller.dart';
 import 'package:activity_timer/models/activity_timer.dart';
 import 'package:activity_timer/models/interval_phase.dart';
-import 'package:activity_timer/controllers/activity_list_controller.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Routine Sharing & Duplication tests', () {

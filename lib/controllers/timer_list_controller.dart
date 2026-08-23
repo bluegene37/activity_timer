@@ -1,10 +1,11 @@
 import 'package:get/get.dart';
+
 import '../models/activity_timer.dart';
 import '../models/interval_phase.dart';
-import '../services/database_service.dart';
-import '../utils/time_format.dart';
 import '../screens/edit_timer_screen.dart';
 import '../screens/timer_screen.dart';
+import '../services/database_service.dart';
+import '../utils/time_format.dart';
 
 class TimerListController extends GetxController {
   final _databaseService = DatabaseService();
@@ -52,7 +53,7 @@ class TimerListController extends GetxController {
         await _databaseService.addTimerToSequence(sequence.value.id, result);
       } catch (e) {
         await _reloadSequence();
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
         Get.snackbar('Error', 'Failed to add timer: $e');
       }
     }
@@ -76,7 +77,7 @@ class TimerListController extends GetxController {
         await _databaseService.updateTimerInSequence(sequence.value.id, result);
       } catch (e) {
         await _reloadSequence();
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
         Get.snackbar('Error', 'Failed to update timer: $e');
       }
     }
@@ -97,7 +98,7 @@ class TimerListController extends GetxController {
       );
     } catch (e) {
       await _reloadSequence();
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Error', 'Failed to delete timer: $e');
     }
   }
@@ -126,7 +127,7 @@ class TimerListController extends GetxController {
       );
     } catch (e) {
       await _reloadSequence();
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Error', 'Failed to reorder timers: $e');
     }
   }
@@ -140,7 +141,7 @@ class TimerListController extends GetxController {
       await _databaseService.updateActivitySequence(updated);
       sequence.value = updated;
     } catch (e) {
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Error', 'Failed to update loop setting: $e');
     }
   }
@@ -162,7 +163,7 @@ class TimerListController extends GetxController {
       return;
     }
 
-    Get.to(() => TimerScreen(sequence: sequence.value));
+    Get.to<dynamic>(() => TimerScreen(sequence: sequence.value));
   }
 
   String formatDuration(int seconds) => TimeFormat.clock(seconds);

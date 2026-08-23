@@ -1,9 +1,9 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:activity_timer/models/activity_timer.dart';
+import 'package:activity_timer/models/alarm_sound.dart';
 import 'package:activity_timer/models/interval_phase.dart';
 import 'package:activity_timer/models/interval_timer.dart';
-import 'package:activity_timer/models/alarm_sound.dart';
 import 'package:activity_timer/models/session_history.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('IntervalPhase tests', () {

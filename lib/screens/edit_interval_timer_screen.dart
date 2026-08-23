@@ -1,7 +1,11 @@
+import 'dart:async';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import '../models/interval_timer.dart';
+
 import '../models/alarm_sound.dart';
+import '../models/interval_timer.dart';
 import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 
@@ -137,10 +141,11 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
   }
 
   void _selectAlarmSound() {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder:
           (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
             title: const Text('Select Alarm Sound'),
             content: SizedBox(
               width: double.maxFinite,
@@ -160,7 +165,9 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
                   itemBuilder: (context, index) {
                     final sound = AlarmSound.values[index];
                     return ListTile(
-                      leading: Radio<AlarmSound>(value: sound),
+                      leading: Radio<AlarmSound>(
+                        value: sound,
+                      ),
                       title: Text(sound.displayName),
                       onTap: () {
                         setState(() {
@@ -188,28 +195,33 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final isDark = theme.brightness == Brightness.dark;
     final timeFormat = DateFormat('h:mm a');
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
+          icon: Icon(CupertinoIcons.chevron_back, color: colorScheme.onSurface, size: 22),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           widget.isNew ? 'New Interval Timer' : 'Edit Interval Timer',
+          style: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.3),
         ),
         centerTitle: true,
         actions: [
           TextButton(
-            onPressed: _saveTimer,
+            onPressed: () {
+              unawaited(HapticFeedback.selectionClick());
+              _saveTimer();
+            },
             child: Text(
               'SAVE',
               style: TextStyle(
                 color: colorScheme.primary,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
               ),
             ),
           ),
@@ -218,212 +230,219 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           children: [
-            Text('Timer Name', style: textTheme.titleSmall),
+            Text('Timer Name', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
-            TextFormField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                hintText: 'New Interval Timer',
-                filled: true,
-                fillColor: colorScheme.surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              ),
-              validator: (value) {
-                return null;
-              },
-            ),
-            const SizedBox(height: 32),
-
-            _buildSectionHeader('Time Range', textTheme),
-            const SizedBox(height: 16),
-            Container(
+            DecoratedBox(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
-                ],
-              ),
-              child: Material(
-                color: colorScheme.surface,
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: [
-                    ListTile(
-                      title: Text('Start Time', style: textTheme.titleSmall),
-                      subtitle: Text(timeFormat.format(_startTime), style: textTheme.bodyMedium),
-                      trailing: Icon(Icons.access_time, color: colorScheme.onSurfaceVariant),
-                      onTap: _selectStartTime,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    ),
-                    Divider(height: 1, color: colorScheme.surfaceContainerHighest),
-                    ListTile(
-                      title: Text('End Time', style: textTheme.titleSmall),
-                      subtitle: Text(timeFormat.format(_endTime), style: textTheme.bodyMedium),
-                      trailing: Icon(Icons.access_time, color: colorScheme.onSurfaceVariant),
-                      onTap: _selectEndTime,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    ),
-                  ],
+                color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                  width: 0.8,
                 ),
               ),
-            ),
-            const SizedBox(height: 32),
-
-            _buildSectionHeader('Interval Settings', textTheme),
-            const SizedBox(height: 16),
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
-                ],
-              ),
-              child: Material(
-                color: colorScheme.surface,
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: [
-                    ListTile(
-                      title: Text('Interval Type', style: textTheme.titleSmall),
-                      subtitle: Text(_getIntervalTypeText(), style: textTheme.bodyMedium),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                      trailing: DropdownButton<IntervalType>(
-                        value: _intervalType,
-                        onChanged: (IntervalType? newValue) {
-                          if (newValue != null) {
-                            setState(() {
-                              _intervalType = newValue;
-                            });
-                          }
-                        },
-                        items: IntervalType.values.map((IntervalType type) {
-                          return DropdownMenuItem<IntervalType>(
-                            value: type,
-                            child: Text(_getIntervalTypeText(type)),
-                          );
-                        }).toList(),
-                        underline: Container(),
-                        icon: Icon(Icons.arrow_drop_down, color: colorScheme.onSurfaceVariant),
-                      ),
-                    ),
-                    Divider(height: 1, color: colorScheme.surfaceContainerHighest),
-                    ListTile(
-                      title: Text('Interval Value', style: textTheme.titleSmall),
-                      subtitle: Text('$_intervalValue ${_getIntervalUnitText()}', style: textTheme.bodyMedium),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest, shape: BoxShape.circle),
-                            child: IconButton(
-                              icon: const Icon(Icons.remove, size: 20),
-                              onPressed: _intervalValue > 1 ? () => setState(() => _intervalValue--) : null,
-                              constraints: const BoxConstraints(),
-                              padding: const EdgeInsets.all(8),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Text('$_intervalValue', style: textTheme.titleMedium),
-                          const SizedBox(width: 16),
-                          Container(
-                            decoration: BoxDecoration(color: colorScheme.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
-                            child: IconButton(
-                              icon: Icon(Icons.add, size: 20, color: colorScheme.primary),
-                              onPressed: () => setState(() => _intervalValue++),
-                              constraints: const BoxConstraints(),
-                              padding: const EdgeInsets.all(8),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Divider(height: 1, color: colorScheme.surfaceContainerHighest),
-                    ListTile(
-                      title: Text('Alarm Sound', style: textTheme.titleSmall),
-                      subtitle: Text(_alarmSound.displayName, style: textTheme.bodyMedium),
-                      trailing: Icon(Icons.music_note, color: colorScheme.onSurfaceVariant),
-                      onTap: _selectAlarmSound,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    ),
-                  ],
+              child: TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  hintText: 'New Interval Timer',
+                  filled: false,
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                 ),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            _buildSectionHeader('Preview', textTheme),
-            const SizedBox(height: 16),
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
-                ],
-              ),
-              child: Material(
-                color: colorScheme.surface,
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: colorScheme.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
-                        child: Icon(Icons.info_outline, color: colorScheme.primary, size: 20),
-                      ),
-                      title: Text('Summary', style: textTheme.titleSmall),
-                      subtitle: Text(
-                        'Alarms will sound ${_getIntervalSummary()} between ${timeFormat.format(_startTime)} and ${timeFormat.format(_endTime)}',
-                        style: textTheme.bodyMedium,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    ),
-                    Divider(height: 1, color: colorScheme.surfaceContainerHighest),
-                    ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: colorScheme.secondary.withValues(alpha: 0.1), shape: BoxShape.circle),
-                        child: Icon(Icons.notifications_active, color: colorScheme.secondary, size: 20),
-                      ),
-                      title: Text('Total Alarms', style: textTheme.titleSmall),
-                      subtitle: Text(
-                        '${_calculateTotalAlarms()} alarms will be triggered',
-                        style: textTheme.bodyMedium,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
-            
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _saveTimer,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: const Text('Save Interval Timer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
             const SizedBox(height: 24),
+
+            _buildSectionHeader('Time Range', textTheme),
+            const SizedBox(height: 10),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                  width: 0.8,
+                ),
+              ),
+              child: Column(
+                children: [
+                  ListTile(
+                    title: Text('Start Time', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                    subtitle: Text(timeFormat.format(_startTime), style: textTheme.bodySmall),
+                    trailing: Icon(CupertinoIcons.clock, color: colorScheme.onSurfaceVariant, size: 20),
+                    onTap: () {
+                      unawaited(HapticFeedback.selectionClick());
+                      _selectStartTime();
+                    },
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                  ),
+                  Divider(height: 1, color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA)),
+                  ListTile(
+                    title: Text('End Time', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                    subtitle: Text(timeFormat.format(_endTime), style: textTheme.bodySmall),
+                    trailing: Icon(CupertinoIcons.clock, color: colorScheme.onSurfaceVariant, size: 20),
+                    onTap: () {
+                      unawaited(HapticFeedback.selectionClick());
+                      _selectEndTime();
+                    },
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            _buildSectionHeader('Interval Settings', textTheme),
+            const SizedBox(height: 10),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                  width: 0.8,
+                ),
+              ),
+              child: Column(
+                children: [
+                  ListTile(
+                    title: Text('Interval Type', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                    subtitle: Text(_getIntervalTypeText(), style: textTheme.bodySmall),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                    trailing: DropdownButton<IntervalType>(
+                      value: _intervalType,
+                      onChanged: (IntervalType? newValue) {
+                        if (newValue != null) {
+                          unawaited(HapticFeedback.selectionClick());
+                          setState(() {
+                            _intervalType = newValue;
+                          });
+                        }
+                      },
+                      items: IntervalType.values.map((IntervalType type) {
+                        return DropdownMenuItem<IntervalType>(
+                          value: type,
+                          child: Text(_getIntervalTypeText(type)),
+                        );
+                      }).toList(),
+                      underline: Container(),
+                      icon: Icon(CupertinoIcons.chevron_down, size: 16, color: colorScheme.onSurfaceVariant),
+                    ),
+                  ),
+                  Divider(height: 1, color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA)),
+                  ListTile(
+                    title: Text('Interval Value', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                    subtitle: Text('$_intervalValue ${_getIntervalUnitText()}', style: textTheme.bodySmall),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(CupertinoIcons.minus, size: 16),
+                          onPressed: _intervalValue > 1 ? () {
+                            unawaited(HapticFeedback.selectionClick());
+                            setState(() => _intervalValue--);
+                          } : null,
+                          constraints: const BoxConstraints(),
+                          padding: const EdgeInsets.all(6),
+                        ),
+                        const SizedBox(width: 8),
+                        Text('$_intervalValue', style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: Icon(CupertinoIcons.plus, size: 16, color: colorScheme.primary),
+                          onPressed: () {
+                            unawaited(HapticFeedback.selectionClick());
+                            setState(() => _intervalValue++);
+                          },
+                          constraints: const BoxConstraints(),
+                          padding: const EdgeInsets.all(6),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA)),
+                  ListTile(
+                    title: Text('Alarm Sound', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                    subtitle: Text(_alarmSound.displayName, style: textTheme.bodySmall),
+                    trailing: Icon(CupertinoIcons.music_note, color: colorScheme.onSurfaceVariant, size: 20),
+                    onTap: () {
+                      unawaited(HapticFeedback.selectionClick());
+                      _selectAlarmSound();
+                    },
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            _buildSectionHeader('Preview', textTheme),
+            const SizedBox(height: 10),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                  width: 0.8,
+                ),
+              ),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: colorScheme.primary.withValues(alpha: 0.12), shape: BoxShape.circle),
+                      child: Icon(CupertinoIcons.info_circle, color: colorScheme.primary, size: 18),
+                    ),
+                    title: Text('Summary', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                    subtitle: Text(
+                      'Alarms will sound ${_getIntervalSummary()} between ${timeFormat.format(_startTime)} and ${timeFormat.format(_endTime)}',
+                      style: textTheme.bodySmall,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                  ),
+                  Divider(height: 1, color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA)),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: AppTheme.iosBlue.withValues(alpha: 0.12), shape: BoxShape.circle),
+                      child: const Icon(CupertinoIcons.bell_fill, color: AppTheme.iosBlue, size: 18),
+                    ),
+                    title: Text('Total Alarms', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                    subtitle: Text(
+                      '${_calculateTotalAlarms()} alarms will be triggered',
+                      style: textTheme.bodySmall,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  _saveTimer();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Save Interval Timer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              ),
+            ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -433,7 +452,10 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
   Widget _buildSectionHeader(String title, TextTheme textTheme) {
     return Text(
       title,
-      style: textTheme.titleLarge,
+      style: textTheme.titleSmall?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.2,
+      ),
     );
   }
 

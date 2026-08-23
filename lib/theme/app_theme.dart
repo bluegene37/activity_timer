@@ -1,55 +1,119 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Spacing constants
+  // Spacing constants (Apple 8pt grid)
   static const double spacingSmall = 8.0;
   static const double spacing = 16.0;
   static const double spacingLarge = 24.0;
   static const double spacingXLarge = 32.0;
 
-  // Border radius
+  // iOS Border radiuses
   static const double borderRadius = 12.0;
-  static const double cardRadius = 24.0;
+  static const double cardRadius = 16.0;
+  static const double pillRadius = 24.0;
 
   // Button constants
-  static const double buttonHeight = 48.0;
+  static const double buttonHeight = 50.0;
   static const double buttonElevation = 0.0;
   static const EdgeInsets buttonPadding = EdgeInsets.symmetric(
-    horizontal: 24,
-    vertical: 12,
+    horizontal: 20,
+    vertical: 14,
   );
 
-  // Modern Text Styles
+  // Apple System & Fitness Color Palette
+  static const Color iosOrange = Color(0xFFFF9500);
+  static const Color iosBlue = Color(0xFF007AFF);
+  static const Color iosGreen = Color(0xFF34C759);
+  static const Color iosMint = Color(0xFF00C7BE);
+  static const Color iosTeal = Color(0xFF30B0C7);
+  static const Color iosCyan = Color(0xFF32ADE6);
+  static const Color iosIndigo = Color(0xFF5856D6);
+  static const Color iosPurple = Color(0xFFAF52DE);
+  static const Color iosPink = Color(0xFFFF2D55);
+  static const Color iosRed = Color(0xFFFF3B30);
+  static const Color iosYellow = Color(0xFFFFCC00);
+
+  // Modern iOS Typography (SF Pro style with tightened tracking)
   static TextTheme _getTextTheme(Color onSurface, Color onSurfaceVariant) {
     return TextTheme(
-      headlineLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: onSurface, letterSpacing: -0.5),
-      headlineMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: onSurface, letterSpacing: -0.5),
-      headlineSmall: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: onSurface),
-      titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: onSurface),
-      titleMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: onSurface),
-      titleSmall: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: onSurface),
-      bodyLarge: TextStyle(fontSize: 16, color: onSurfaceVariant),
-      bodyMedium: TextStyle(fontSize: 14, color: onSurfaceVariant),
-      bodySmall: TextStyle(fontSize: 12, color: onSurfaceVariant, fontWeight: FontWeight.w600, letterSpacing: 0.5),
-      labelLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0),
+      headlineLarge: TextStyle(
+        fontSize: 34,
+        fontWeight: FontWeight.w800,
+        color: onSurface,
+        letterSpacing: -0.8,
+      ),
+      headlineMedium: TextStyle(
+        fontSize: 28,
+        fontWeight: FontWeight.w700,
+        color: onSurface,
+        letterSpacing: -0.6,
+      ),
+      headlineSmall: TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.w700,
+        color: onSurface,
+        letterSpacing: -0.4,
+      ),
+      titleLarge: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        color: onSurface,
+        letterSpacing: -0.3,
+      ),
+      titleMedium: TextStyle(
+        fontSize: 17,
+        fontWeight: FontWeight.w600,
+        color: onSurface,
+        letterSpacing: -0.2,
+      ),
+      titleSmall: TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        color: onSurface,
+        letterSpacing: -0.1,
+      ),
+      bodyLarge: TextStyle(
+        fontSize: 17,
+        fontWeight: FontWeight.w400,
+        color: onSurfaceVariant,
+        letterSpacing: -0.2,
+      ),
+      bodyMedium: TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w400,
+        color: onSurfaceVariant,
+        letterSpacing: -0.1,
+      ),
+      bodySmall: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        color: onSurfaceVariant,
+        letterSpacing: 0.1,
+      ),
+      labelLarge: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.1,
+      ),
     );
   }
 
-  // Theme methods
+  // Light Theme (iOS Grouped System Style)
   static ThemeData getLightTheme(Color primaryColor) {
-    // Generate a Material 3 color scheme based on the seed color.
     final colorScheme = ColorScheme.fromSeed(
       seedColor: primaryColor,
       brightness: Brightness.light,
       surface: Colors.white,
     );
-    
-    // Fallbacks if dynamic colors don't provide a good secondary
-    final secondaryColor = primaryColor == const Color(0xFFF96015) ? const Color(0xFF3333A3) : colorScheme.secondary;
 
-    const scaffoldBg = Color(0xFFF8F9FA);
-    const onSurface = Color(0xFF1E2022);
-    const onSurfaceVariant = Color(0xFF77838F);
+    final secondaryColor = primaryColor == const Color(0xFFF96015)
+        ? const Color(0xFF5856D6)
+        : colorScheme.secondary;
+
+    const scaffoldBg = Color(0xFFF2F2F7); // iOS System Grouped Background
+    const surfaceColor = Colors.white; // iOS Grouped Card Background
+    const onSurface = Color(0xFF000000);
+    const onSurfaceVariant = Color(0xFF8E8E93); // iOS System Gray
 
     return ThemeData(
       useMaterial3: true,
@@ -59,32 +123,34 @@ class AppTheme {
       colorScheme: colorScheme.copyWith(
         primary: primaryColor,
         secondary: secondaryColor,
-        surface: Colors.white,
+        surface: surfaceColor,
         onSurface: onSurface,
         onSurfaceVariant: onSurfaceVariant,
         surfaceContainerLow: scaffoldBg,
-        surfaceContainer: Colors.white,
-        surfaceContainerHighest: const Color(0xFFE9ECEF),
-        outlineVariant: Colors.grey.withValues(alpha: 0.1),
+        surfaceContainer: surfaceColor,
+        surfaceContainerHighest: const Color(0xFFE5E5EA), // iOS System Gray 5
+        outlineVariant: const Color(0xFFE5E5EA), // iOS Separator Hairline
       ),
       textTheme: _getTextTheme(onSurface, onSurfaceVariant),
       cardTheme: CardThemeData(
-        color: Colors.white,
+        color: surfaceColor,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(cardRadius),
+          side: const BorderSide(color: Color(0xFFE5E5EA), width: 0.8),
         ),
       ),
-      appBarTheme: AppBarTheme(
-        backgroundColor: scaffoldBg, // Match scaffold for seamless look
+      appBarTheme: const AppBarTheme(
+        backgroundColor: scaffoldBg,
         surfaceTintColor: Colors.transparent,
         centerTitle: true,
         elevation: 0,
-        iconTheme: const IconThemeData(color: onSurface),
-        titleTextStyle: const TextStyle(
+        iconTheme: IconThemeData(color: onSurface),
+        titleTextStyle: TextStyle(
           color: onSurface,
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.3,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -96,26 +162,45 @@ class AppTheme {
             borderRadius: BorderRadius.circular(borderRadius),
           ),
           backgroundColor: primaryColor,
-          foregroundColor: colorScheme.onPrimary,
+          foregroundColor: Colors.white,
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.2,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(borderRadius),
+          ),
+          side: BorderSide(color: primaryColor.withValues(alpha: 0.5), width: 1.2),
+          textStyle: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: secondaryColor,
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
-        elevation: 4,
+        elevation: 3,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(pillRadius),
         ),
       ),
     );
   }
 
-  // Modern Dark Theme with accent color support
+  // Dark Theme (Apple Fitness & OLED Pure Black Look)
   static ThemeData getDarkTheme(Color primaryColor) {
-    const scaffoldBg = Color(0xFF121212);
-    const surfaceColor = Color(0xFF1E1E1E);
-    const onSurface = Color(0xFFF8F9FA);
-    const onSurfaceVariant = Color(0xFFAAB4BE);
+    const scaffoldBg = Color(0xFF000000); // Apple Fitness OLED Pure Black
+    const surfaceColor = Color(0xFF1C1C1E); // Apple Dark Secondary Grouped
+    const onSurface = Color(0xFFFFFFFF);
+    const onSurfaceVariant = Color(0xFF98989D); // Apple Dark System Gray
 
     final darkColorScheme = ColorScheme.fromSeed(
       seedColor: primaryColor,
@@ -123,23 +208,22 @@ class AppTheme {
       surface: surfaceColor,
     );
 
-    final effectivePrimary = primaryColor;
-
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      primaryColor: effectivePrimary,
+      primaryColor: primaryColor,
       scaffoldBackgroundColor: scaffoldBg,
       colorScheme: darkColorScheme.copyWith(
-        primary: effectivePrimary,
+        primary: primaryColor,
         onPrimary: Colors.white,
+        secondary: darkColorScheme.secondary,
         surface: surfaceColor,
         onSurface: onSurface,
         onSurfaceVariant: onSurfaceVariant,
         surfaceContainerLow: scaffoldBg,
         surfaceContainer: surfaceColor,
-        surfaceContainerHighest: const Color(0xFF2C2C2C),
-        outlineVariant: Colors.white.withValues(alpha: 0.1),
+        surfaceContainerHighest: const Color(0xFF2C2C2E), // Apple Dark Gray 4
+        outlineVariant: const Color(0xFF38383A), // Dark Hairline Separator
       ),
       textTheme: _getTextTheme(onSurface, onSurfaceVariant),
       cardTheme: CardThemeData(
@@ -147,6 +231,7 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(cardRadius),
+          side: const BorderSide(color: Color(0xFF38383A), width: 0.8),
         ),
       ),
       appBarTheme: const AppBarTheme(
@@ -157,8 +242,9 @@ class AppTheme {
         iconTheme: IconThemeData(color: onSurface),
         titleTextStyle: TextStyle(
           color: onSurface,
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.3,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -169,16 +255,35 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(borderRadius),
           ),
-          backgroundColor: effectivePrimary,
+          backgroundColor: primaryColor,
           foregroundColor: Colors.white,
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.2,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(borderRadius),
+          ),
+          side: BorderSide(color: primaryColor.withValues(alpha: 0.6), width: 1.2),
+          textStyle: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: effectivePrimary,
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
-        elevation: 4,
+        elevation: 3,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(pillRadius),
         ),
       ),
     );

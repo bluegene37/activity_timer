@@ -6,57 +6,25 @@ part 'interval_phase.g.dart';
 @HiveType(typeId: 7)
 enum IntervalPhase {
   @HiveField(0)
-  work,
+  work('Work', Icons.fitness_center, Color(0xFFFF6D00)), // Energetic amber/orange
   @HiveField(1)
-  rest,
+  rest('Rest', Icons.bedtime_outlined, Color(0xFF00B0FF)), // Calming cyan/blue
   @HiveField(2)
-  prepare,
+  prepare('Prepare', Icons.hourglass_top_outlined, Color(0xFFFFD600)), // Golden yellow
   @HiveField(3)
-  cooldown;
+  cooldown('Cool Down', Icons.ac_unit, Color(0xFF00E676)); // Fresh mint green
 
-  String get displayName {
-    switch (this) {
-      case IntervalPhase.work:
-        return 'Work';
-      case IntervalPhase.rest:
-        return 'Rest';
-      case IntervalPhase.prepare:
-        return 'Prepare';
-      case IntervalPhase.cooldown:
-        return 'Cool Down';
-    }
-  }
+  const IntervalPhase(this.displayName, this.icon, this.defaultColor);
 
-  IconData get icon {
-    switch (this) {
-      case IntervalPhase.work:
-        return Icons.fitness_center;
-      case IntervalPhase.rest:
-        return Icons.bedtime_outlined;
-      case IntervalPhase.prepare:
-        return Icons.hourglass_top_outlined;
-      case IntervalPhase.cooldown:
-        return Icons.ac_unit;
-    }
-  }
-
-  Color get defaultColor {
-    switch (this) {
-      case IntervalPhase.work:
-        return const Color(0xFFFF6D00); // Energetic amber/orange
-      case IntervalPhase.rest:
-        return const Color(0xFF00B0FF); // Calming cyan/blue
-      case IntervalPhase.prepare:
-        return const Color(0xFFFFD600); // Golden yellow
-      case IntervalPhase.cooldown:
-        return const Color(0xFF00E676); // Fresh mint green
-    }
-  }
+  final String displayName;
+  final IconData icon;
+  final Color defaultColor;
 
   static IntervalPhase fromString(String? name) {
     if (name == null) return IntervalPhase.work;
+    final lowerName = name.toLowerCase();
     return IntervalPhase.values.firstWhere(
-      (phase) => phase.name.toLowerCase() == name.toLowerCase(),
+      (phase) => phase.name.toLowerCase() == lowerName,
       orElse: () => IntervalPhase.work,
     );
   }

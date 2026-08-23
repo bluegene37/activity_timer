@@ -19,15 +19,14 @@ enum AlarmSound {
   @HiveField(4)
   gentle('Gentle', 'gentle.mp3');
 
+  const AlarmSound(this.displayName, this.fileName);
+
   final String displayName;
   final String fileName;
 
-  const AlarmSound(this.displayName, this.fileName);
-
-  static AlarmSound fromString(String value) {
-    return AlarmSound.values.firstWhere(
-      (sound) => sound.name == value,
-      orElse: () => AlarmSound.beep,
-    );
-  }
+  /// Resolves a persisted [Enum.name], falling back to [AlarmSound.beep].
+  static AlarmSound fromString(String value) => AlarmSound.values.firstWhere(
+    (sound) => sound.name == value,
+    orElse: () => AlarmSound.beep,
+  );
 }

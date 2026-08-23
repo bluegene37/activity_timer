@@ -1,7 +1,7 @@
+import 'package:activity_timer/components/color_selector.dart';
+import 'package:activity_timer/components/glowing_timer_ring.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:activity_timer/components/glowing_timer_ring.dart';
-import 'package:activity_timer/components/color_selector.dart';
 
 void main() {
   group('GlowingTimerRing Widget tests', () {
