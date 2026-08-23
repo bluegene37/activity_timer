@@ -53,8 +53,8 @@ void main() {
 
       expect(find.text('Activity Timer'), findsOneWidget);
       expect(find.text('All Routines'), findsOneWidget);
-      expect(find.text('⚡ Fitness & Sports'), findsOneWidget);
-      expect(find.text('💼 Work & Focus'), findsOneWidget);
+      expect(find.text('Fitness & Sports'), findsOneWidget);
+      expect(find.text('Work & Focus'), findsOneWidget);
       expect(find.text('Explore Presets'), findsOneWidget);
     },
   );

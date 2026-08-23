@@ -178,7 +178,7 @@ class ActivityListScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       _buildCategoryChip(
-                        label: '⚡ Fitness & Sports',
+                        label: 'Fitness & Sports',
                         icon: CupertinoIcons.bolt_fill,
                         value: 'fitness',
                         selected:
@@ -188,7 +188,7 @@ class ActivityListScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       _buildCategoryChip(
-                        label: '💼 Work & Focus',
+                        label: 'Work & Focus',
                         icon: CupertinoIcons.briefcase_fill,
                         value: 'work',
                         selected: controller.selectedCategory.value == 'work',
