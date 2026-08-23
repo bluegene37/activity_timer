@@ -80,76 +80,70 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Obx(() {
-                        final isDark = appController.themeMode.value == ThemeMode.dark;
-                        return SwitchListTile(
-                          title: Text('Dark Mode', style: textTheme.titleSmall),
-                          subtitle: Text('Use a high-contrast minimalist dark theme', style: textTheme.bodyMedium),
-                          value: isDark,
-                          onChanged: (value) {
-                            appController.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
-                          },
-                          activeTrackColor: colorScheme.primary,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          secondary: Icon(
-                            isDark ? Icons.dark_mode : Icons.light_mode, 
-                            color: isDark ? Colors.white : colorScheme.primary
-                          ),
-                        );
-                      }),
-                      
-                      Obx(() {
-                        final isDark = appController.themeMode.value == ThemeMode.dark;
-                        if (isDark) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Divider(height: 1, color: colorScheme.surfaceContainerHighest),
-                              Padding(
-                                padding: const EdgeInsets.all(20),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Dark Theme Accent Color',
-                                      style: textTheme.titleSmall,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    ColorSelector(
-                                      selectedColor: appController.themeColor.value,
-                                      onColorSelected: controller.setThemeColor,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-                        
-                        return Column(
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Divider(height: 1, color: colorScheme.surfaceContainerHighest),
-                            Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Theme Color',
-                                    style: textTheme.titleSmall,
+                            Text('Theme Mode', style: textTheme.titleSmall),
+                            const SizedBox(height: 4),
+                            Text(
+                              'System follows your device setting',
+                              style: textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: 16),
+                            Obx(() => SizedBox(
+                              width: double.infinity,
+                              child: SegmentedButton<ThemeMode>(
+                                segments: const [
+                                  ButtonSegment(
+                                    value: ThemeMode.system,
+                                    label: Text('System'),
+                                    icon: Icon(Icons.brightness_auto),
                                   ),
-                                  const SizedBox(height: 16),
-                                  ColorSelector(
-                                    selectedColor: appController.themeColor.value,
-                                    onColorSelected: controller.setThemeColor,
+                                  ButtonSegment(
+                                    value: ThemeMode.light,
+                                    label: Text('Light'),
+                                    icon: Icon(Icons.light_mode),
+                                  ),
+                                  ButtonSegment(
+                                    value: ThemeMode.dark,
+                                    label: Text('Dark'),
+                                    icon: Icon(Icons.dark_mode),
                                   ),
                                 ],
+                                selected: {appController.themeMode.value},
+                                onSelectionChanged: (selection) {
+                                  appController.setThemeMode(selection.first);
+                                },
+                                style: SegmentedButton.styleFrom(
+                                  selectedBackgroundColor:
+                                      colorScheme.primary.withValues(alpha: 0.15),
+                                  selectedForegroundColor: colorScheme.primary,
+                                ),
                               ),
-                            ),
+                            )),
                           ],
-                        );
-                      }),
+                        ),
+                      ),
+                      Divider(height: 1, color: colorScheme.surfaceContainerHighest),
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Accent Color',
+                              style: textTheme.titleSmall,
+                            ),
+                            const SizedBox(height: 16),
+                            Obx(() => ColorSelector(
+                              selectedColor: appController.themeColor.value,
+                              onColorSelected: controller.setThemeColor,
+                            )),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),

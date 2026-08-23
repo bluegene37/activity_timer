@@ -7,6 +7,7 @@ import '../models/settings.dart';
 import '../models/session_history.dart';
 import '../services/database_service.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../components/glowing_timer_ring.dart';
 
 class IntervalTimerScreen extends StatefulWidget {
@@ -133,15 +134,19 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
   }
 
   void _startTimer() {
+    WakelockPlus.enable();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         _currentTime = DateTime.now();
 
         // Check if it's time for the alarm
-        if (_currentTime.isAfter(_nextAlarmTime) ||
-            _currentTime.isAtSameMomentAs(_nextAlarmTime)) {
+        if (!_currentTime.isBefore(_nextAlarmTime)) {
           _triggerAlarm();
-          _moveToNextAlarm();
+          // Advance past every alarm that already elapsed (several may have
+          // passed at once if the app was backgrounded), sounding only once.
+          while (!_isCompleted && !_currentTime.isBefore(_nextAlarmTime)) {
+            _moveToNextAlarm();
+          }
         }
       });
     });
@@ -179,6 +184,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
         // All alarms completed
         _isCompleted = true;
         _timer.cancel();
+        WakelockPlus.disable();
         _logSessionCompletion();
       }
     });
@@ -200,6 +206,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
   void _toggleTimer() {
     if (_isRunning) {
       _timer.cancel();
+      WakelockPlus.disable();
     } else {
       _startTimer();
     }
@@ -240,7 +247,31 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
   void dispose() {
     _timer.cancel();
     _audioPlayer.dispose();
+    WakelockPlus.disable();
     super.dispose();
+  }
+
+  void _confirmExit() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Exit Timer?'),
+        content: const Text('Are you sure you want to exit this timer?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext); // Close dialog
+              Navigator.pop(context); // Close timer screen
+            },
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -251,7 +282,12 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
     final timeFormat = DateFormat('h:mm:ss a');
     final timeFormatShort = DateFormat('h:mm a');
 
-    return Scaffold(
+    return PopScope(
+      canPop: _isCompleted,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmExit();
+      },
+      child: Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(widget.timer.name),
@@ -259,29 +295,11 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
         leading: IconButton(
           icon: Icon(Icons.close, color: colorScheme.onSurface),
           onPressed: () {
-            showDialog(
-              context: context,
-              builder:
-                  (context) => AlertDialog(
-                    title: const Text('Exit Timer?'),
-                    content: const Text(
-                      'Are you sure you want to exit this timer?',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context); // Close dialog
-                          Navigator.pop(context); // Close timer screen
-                        },
-                        child: const Text('Exit'),
-                      ),
-                    ],
-                  ),
-            );
+            if (_isCompleted) {
+              Navigator.pop(context);
+            } else {
+              _confirmExit();
+            }
           },
         ),
         actions: [
@@ -303,6 +321,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
       body: _isCompleted
               ? _buildCompletedView(textTheme, colorScheme, timeFormatShort)
               : _buildRunningView(textTheme, colorScheme, timeFormat, timeFormatShort),
+      ),
     );
   }
 
@@ -329,7 +348,9 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
         children: [
           // Progress indicator
           LinearProgressIndicator(
-            value: _currentAlarmIndex / (_allAlarmTimes.length - 1),
+            value: _allAlarmTimes.length > 1
+                ? (_currentAlarmIndex / (_allAlarmTimes.length - 1)).clamp(0.0, 1.0)
+                : 0.0,
             minHeight: 6,
             backgroundColor: colorScheme.onSurface.withValues(alpha: 0.08),
             color: colorScheme.primary,
