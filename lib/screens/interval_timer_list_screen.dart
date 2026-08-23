@@ -15,30 +15,6 @@ import '../theme/app_theme.dart';
 class IntervalTimerListScreen extends StatelessWidget {
   const IntervalTimerListScreen({super.key});
 
-  Future<void> _addNewIntervalTimer() async {
-    final now = DateTime.now();
-    final startTime = DateTime(now.year, now.month, now.day, now.hour, 0);
-    final endTime = startTime.add(const Duration(hours: 8));
-
-    final result = await Get.toNamed<bool>(
-      Routes.editIntervalTimer,
-      arguments: (
-        timer: IntervalTimer(
-          name: 'New Interval Timer',
-          startTime: startTime,
-          endTime: endTime,
-          intervalValue: 1,
-          intervalType: IntervalType.hour,
-        ),
-        isNew: true,
-      ),
-    );
-
-    if (result == true) {
-      unawaited(Get.find<IntervalTimerController>().refreshTimers());
-    }
-  }
-
   Future<void> _addWorkplacePreset({
     required String name,
     required int intervalValue,
@@ -86,7 +62,7 @@ class IntervalTimerListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<IntervalTimerController>();
+    final controller = Get.put(IntervalTimerController());
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -532,24 +508,6 @@ class IntervalTimerListScreen extends StatelessWidget {
                 );
               }),
             ],
-          ),
-        ),
-      ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 50.0),
-        child: FloatingActionButton.extended(
-          heroTag: 'interval_timer_list_fab',
-          onPressed: () {
-            HapticFeedback.selectionClick();
-            _addNewIntervalTimer();
-          },
-          backgroundColor: colorScheme.primary,
-          foregroundColor: Colors.white,
-          elevation: 4,
-          icon: const Icon(CupertinoIcons.plus, size: 18),
-          label: const Text(
-            'New Interval',
-            style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.2),
           ),
         ),
       ),

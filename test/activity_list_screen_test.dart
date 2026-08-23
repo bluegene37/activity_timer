@@ -56,7 +56,6 @@ void main() {
       expect(find.text('⚡ Fitness & Sports'), findsOneWidget);
       expect(find.text('💼 Work & Focus'), findsOneWidget);
       expect(find.text('Explore Presets'), findsOneWidget);
-      expect(find.text('New Routine'), findsOneWidget);
     },
   );
 }

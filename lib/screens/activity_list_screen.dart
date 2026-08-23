@@ -559,24 +559,6 @@ class ActivityListScreen extends StatelessWidget {
           ),
         ),
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 50.0),
-        child: FloatingActionButton.extended(
-          heroTag: 'activity_list_fab',
-          onPressed: () {
-            HapticFeedback.selectionClick();
-            controller.addNewSequence();
-          },
-          backgroundColor: colorScheme.primary,
-          foregroundColor: Colors.white,
-          elevation: 4,
-          icon: const Icon(CupertinoIcons.plus, size: 18),
-          label: const Text(
-            'New Routine',
-            style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.2),
-          ),
-        ),
-      ),
     );
   }
 

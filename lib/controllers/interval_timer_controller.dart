@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../models/interval_timer.dart';
+import '../routes/app_routes.dart';
 import '../services/database_service.dart';
 
 class IntervalTimerController extends GetxController {
@@ -25,6 +26,30 @@ class IntervalTimerController extends GetxController {
       Get.snackbar('Error', 'Failed to load interval timers: $e');
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<void> addNewIntervalTimer() async {
+    final now = DateTime.now();
+    final startTime = DateTime(now.year, now.month, now.day, now.hour, 0);
+    final endTime = startTime.add(const Duration(hours: 8));
+
+    final result = await Get.toNamed<bool>(
+      Routes.editIntervalTimer,
+      arguments: (
+        timer: IntervalTimer(
+          name: 'New Interval Timer',
+          startTime: startTime,
+          endTime: endTime,
+          intervalValue: 1,
+          intervalType: IntervalType.hour,
+        ),
+        isNew: true,
+      ),
+    );
+
+    if (result == true) {
+      await refreshTimers();
     }
   }
 

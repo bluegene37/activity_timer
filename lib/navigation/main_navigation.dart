@@ -2,6 +2,9 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import '../controllers/activity_list_controller.dart';
+import '../controllers/interval_timer_controller.dart';
 import '../screens/activity_list_screen.dart';
 import '../screens/interval_timer_list_screen.dart';
 import '../screens/settings_screen.dart';
@@ -32,6 +35,43 @@ class _MainNavigationState extends State<MainNavigation> {
     }
   }
 
+  Widget? _buildFloatingActionButton(ColorScheme colorScheme) {
+    if (_currentIndex == 0) {
+      return FloatingActionButton.extended(
+        heroTag: 'activity_list_fab',
+        onPressed: () {
+          HapticFeedback.selectionClick();
+          Get.find<ActivityListController>().addNewSequence();
+        },
+        backgroundColor: colorScheme.primary,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        icon: const Icon(CupertinoIcons.plus, size: 18),
+        label: const Text(
+          'New Routine',
+          style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.2),
+        ),
+      );
+    } else if (_currentIndex == 1) {
+      return FloatingActionButton.extended(
+        heroTag: 'interval_timer_list_fab',
+        onPressed: () {
+          HapticFeedback.selectionClick();
+          Get.find<IntervalTimerController>().addNewIntervalTimer();
+        },
+        backgroundColor: colorScheme.primary,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        icon: const Icon(CupertinoIcons.plus, size: 18),
+        label: const Text(
+          'New Interval',
+          style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.2),
+        ),
+      );
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -46,6 +86,7 @@ class _MainNavigationState extends State<MainNavigation> {
     return Scaffold(
       extendBody: true,
       body: IndexedStack(index: _currentIndex, children: _screens),
+      floatingActionButton: _buildFloatingActionButton(colorScheme),
       bottomNavigationBar: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
