@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../models/activity_timer.dart';
 import '../models/session_history.dart';
 import '../services/database_service.dart';
+import '../utils/time_format.dart';
 
 class ActivityListController extends GetxController {
   final _databaseService = DatabaseService();
@@ -11,6 +14,20 @@ class ActivityListController extends GetxController {
   final RxList<TimerSequence> sequences = <TimerSequence>[].obs;
   final RxList<SessionHistory> sessionHistory = <SessionHistory>[].obs;
   final RxBool isLoading = true.obs;
+  final RxString selectedCategory = 'all'.obs; // 'all', 'fitness', 'work'
+  final RxString searchQuery = ''.obs;
+
+  List<TimerSequence> get filteredSequences {
+    return sequences.where((seq) {
+      final matchesCategory = selectedCategory.value == 'all' ||
+          seq.category.toLowerCase() == selectedCategory.value.toLowerCase();
+      final query = searchQuery.value.trim().toLowerCase();
+      final matchesSearch = query.isEmpty ||
+          seq.name.toLowerCase().contains(query) ||
+          (seq.description != null && seq.description!.toLowerCase().contains(query));
+      return matchesCategory && matchesSearch;
+    }).toList();
+  }
 
   @override
   void onInit() {
@@ -38,10 +55,20 @@ class ActivityListController extends GetxController {
     } catch (_) {}
   }
 
+  void setCategory(String category) {
+    selectedCategory.value = category;
+  }
+
+  void setSearchQuery(String query) {
+    searchQuery.value = query;
+  }
+
   Future<void> addPresetTemplate(TimerSequence template) async {
     final newSequence = TimerSequence(
       name: template.name,
       description: template.description,
+      category: template.category,
+      preparationSeconds: template.preparationSeconds,
       defaultLoopEnabled: template.defaultLoopEnabled,
       timers: template.timers
           .map((t) => ActivityTimer(
@@ -49,6 +76,7 @@ class ActivityListController extends GetxController {
                 durationInSeconds: t.durationInSeconds,
                 description: t.description,
                 alarmSoundName: t.alarmSoundName,
+                phase: t.phase,
               ))
           .toList(),
     );
@@ -62,13 +90,82 @@ class ActivityListController extends GetxController {
     }
   }
 
-  Future<void> addNewSequence() async {
+  Future<void> duplicateSequence(int index) async {
+    final original = sequences[index];
+    try {
+      final duplicate = await _databaseService.duplicateSequence(original.id);
+      if (duplicate != null) {
+        sequences.add(duplicate);
+        Get.snackbar('Success', 'Duplicated "${original.name}"');
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to duplicate activity: $e');
+    }
+  }
+
+  // JSON Serialization for Sharing
+  static String sequenceToJson(TimerSequence sequence) {
+    const encoder = JsonEncoder.withIndent('  ');
+    return encoder.convert(sequence.toJson());
+  }
+
+  static TimerSequence? sequenceFromJson(String jsonString) {
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is Map<String, dynamic>) {
+        return TimerSequence.fromJson(decoded);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> exportSequenceToClipboard(TimerSequence sequence) async {
+    final jsonStr = sequenceToJson(sequence);
+    await Clipboard.setData(ClipboardData(text: jsonStr));
+    Get.snackbar(
+      'Exported to Clipboard',
+      'Routine "${sequence.name}" JSON copied to clipboard. Share it with anyone!',
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 3),
+    );
+  }
+
+  Future<bool> importSequenceFromJson(String jsonString) async {
+    final sequence = sequenceFromJson(jsonString);
+    if (sequence == null) {
+      Get.snackbar('Import Failed', 'Invalid timer routine JSON format.');
+      return false;
+    }
+
+    try {
+      final newSequence = TimerSequence(
+        name: sequence.name,
+        description: sequence.description,
+        category: sequence.category,
+        preparationSeconds: sequence.preparationSeconds,
+        defaultLoopEnabled: sequence.defaultLoopEnabled,
+        timers: sequence.timers.map((t) => t.copyWith()).toList(),
+      );
+
+      await _databaseService.createActivitySequence(newSequence);
+      sequences.add(newSequence);
+      Get.snackbar('Imported!', 'Successfully added "${newSequence.name}" to your routines.');
+      return true;
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to import routine: $e');
+      return false;
+    }
+  }
+
+  Future<void> addNewSequence({String category = 'custom', int preparationSeconds = 5}) async {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
     
-    final result = await Get.dialog<Map<String, String>>(
+    final result = await Get.dialog<Map<String, dynamic>>(
       AlertDialog(
-        title: const Text('New Activity'),
+        title: const Text('New Activity Routine'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -77,7 +174,7 @@ class ActivityListController extends GetxController {
                 controller: nameController,
                 decoration: const InputDecoration(
                   labelText: 'Activity Name',
-                  hintText: 'Enter activity name',
+                  hintText: 'e.g. HIIT Sprint, Pomodoro Focus',
                 ),
                 autofocus: true,
               ),
@@ -86,7 +183,7 @@ class ActivityListController extends GetxController {
                 controller: descriptionController,
                 decoration: const InputDecoration(
                   labelText: 'Description (Optional)',
-                  hintText: 'Enter description',
+                  hintText: 'e.g. 5 rounds of high intensity',
                 ),
                 maxLines: 2,
               ),
@@ -110,23 +207,23 @@ class ActivityListController extends GetxController {
       ),
     );
 
-    // Give dialog time to animate out fully before disposing controllers to avoid exceptions
     await Future.delayed(const Duration(milliseconds: 300));
     nameController.dispose();
     descriptionController.dispose();
 
-    if (result != null && result['name']!.isNotEmpty) {
+    if (result != null && result['name'] != null && (result['name'] as String).isNotEmpty) {
       final newSequence = TimerSequence(
-        name: result['name']!, 
-        description: result['description']!.isEmpty ? null : result['description'],
-        timers: []
+        name: result['name'] as String, 
+        description: (result['description'] as String).isEmpty ? null : (result['description'] as String),
+        category: category,
+        preparationSeconds: preparationSeconds,
+        timers: [],
       );
 
       try {
         await _databaseService.createActivitySequence(newSequence);
         sequences.add(newSequence);
 
-        // Navigate to timer list for the new sequence
         Get.toNamed('/timer-list', arguments: newSequence);
       } catch (e) {
         Get.snackbar('Error', 'Failed to create activity: $e');
@@ -134,7 +231,7 @@ class ActivityListController extends GetxController {
     }
   }
 
-  Future<void> editSequence(int index, String newName, String newDescription) async {
+  Future<void> editSequence(int index, String newName, String newDescription, {String? category, int? prepSeconds}) async {
     if (newName.isEmpty) return;
 
     final sequence = sequences[index];
@@ -142,6 +239,8 @@ class ActivityListController extends GetxController {
       id: sequence.id,
       name: newName,
       description: newDescription.isEmpty ? null : newDescription,
+      category: category ?? sequence.category,
+      preparationSeconds: prepSeconds ?? sequence.preparationSeconds,
       timers: sequence.timers,
       defaultLoopEnabled: sequence.defaultLoopEnabled,
       createdAt: sequence.createdAt,
@@ -163,7 +262,6 @@ class ActivityListController extends GetxController {
       await _databaseService.deleteActivitySequence(sequence.id);
       sequences.removeAt(index);
       
-      // Add slight delay to safely show snackbar
       await Future.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Success', 'Activity deleted');
     } catch (e) {
@@ -178,6 +276,8 @@ class ActivityListController extends GetxController {
       id: sequence.id,
       name: sequence.name,
       description: sequence.description,
+      category: sequence.category,
+      preparationSeconds: sequence.preparationSeconds,
       timers: sequence.timers,
       defaultLoopEnabled: !sequence.defaultLoopEnabled,
       createdAt: sequence.createdAt,
@@ -192,25 +292,5 @@ class ActivityListController extends GetxController {
     }
   }
 
-  String formatTotalDuration(int totalSeconds) {
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
-    final seconds = totalSeconds % 60;
-
-    final parts = <String>[];
-
-    if (hours > 0) {
-      parts.add('${hours}h');
-    }
-
-    if (minutes > 0 || (hours > 0 && seconds > 0)) {
-      parts.add('${minutes}m');
-    }
-
-    if (seconds > 0 || parts.isEmpty) {
-      parts.add('${seconds}s');
-    }
-
-    return parts.join(' ');
-  }
+  String formatTotalDuration(int totalSeconds) => TimeFormat.compact(totalSeconds);
 }
