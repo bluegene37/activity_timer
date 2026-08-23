@@ -414,7 +414,7 @@ class SettingsScreen extends StatelessWidget {
                           ),
                         ),
                         trailing: Text(
-                          'CodeGenexis',
+                          'genexis.dev',
                           style: textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),

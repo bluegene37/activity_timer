@@ -55,6 +55,12 @@ void main() {
     expect(find.text('Vibration'), findsOneWidget);
     expect(find.text('Default Alarm Sound'), findsOneWidget);
 
+    // App Info
+    expect(find.text('Version'), findsOneWidget);
+    expect(find.text('1.0.0'), findsOneWidget);
+    expect(find.text('Developer'), findsOneWidget);
+    expect(find.text('genexis.dev'), findsOneWidget);
+
     // Switching theme mode updates the controller
     final appController = Get.find<AppController>();
     await tester.tap(find.text('Light'));
