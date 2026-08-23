@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import '../models/activity_timer.dart';
+import '../models/interval_phase.dart';
 import '../services/database_service.dart';
+import '../utils/time_format.dart';
 import '../screens/edit_timer_screen.dart';
 import '../screens/timer_screen.dart';
 
@@ -30,33 +32,26 @@ class TimerListController extends GetxController {
     } catch (_) {}
   }
 
-  Future<void> addTimer() async {
-    final newTimer = ActivityTimer(name: 'New Timer', durationInSeconds: 60);
+  Future<void> addTimer({IntervalPhase phase = IntervalPhase.work}) async {
+    final newTimer = ActivityTimer(
+      name: phase == IntervalPhase.rest ? 'Rest' : 'New Timer',
+      durationInSeconds: phase == IntervalPhase.rest ? 15 : 45,
+      phase: phase,
+    );
 
     final result = await Get.to<ActivityTimer>(
-      () => EditTimerScreen(timer: newTimer),
+      () => EditTimerScreen(timer: newTimer, isNew: true),
     );
 
     if (result != null) {
       try {
-        // Optimistic update with a fresh list copy
         final updatedTimers = List<ActivityTimer>.from(sequence.value.timers)
           ..add(result);
-        sequence.value = TimerSequence(
-          id: sequence.value.id,
-          name: sequence.value.name,
-          description: sequence.value.description,
-          timers: updatedTimers,
-          defaultLoopEnabled: sequence.value.defaultLoopEnabled,
-          createdAt: sequence.value.createdAt,
-          updatedAt: DateTime.now(),
-        );
+        sequence.value = sequence.value.copyWith(timers: updatedTimers);
 
         await _databaseService.addTimerToSequence(sequence.value.id, result);
       } catch (e) {
-        await _reloadSequence(); // Revert on failure
-        
-        // Ensure no other navigation is active before showing snackbar
+        await _reloadSequence();
         await Future.delayed(const Duration(milliseconds: 100));
         Get.snackbar('Error', 'Failed to add timer: $e');
       }
@@ -73,24 +68,14 @@ class TimerListController extends GetxController {
 
     if (result != null) {
       try {
-        // Optimistic update with a fresh list copy
         final updatedTimers = List<ActivityTimer>.from(sequence.value.timers);
         updatedTimers[index] = result;
 
-        sequence.value = TimerSequence(
-          id: sequence.value.id,
-          name: sequence.value.name,
-          description: sequence.value.description,
-          timers: updatedTimers,
-          defaultLoopEnabled: sequence.value.defaultLoopEnabled,
-          createdAt: sequence.value.createdAt,
-          updatedAt: DateTime.now(),
-        );
+        sequence.value = sequence.value.copyWith(timers: updatedTimers);
 
         await _databaseService.updateTimerInSequence(sequence.value.id, result);
       } catch (e) {
-        await _reloadSequence(); // Revert on failure
-        
+        await _reloadSequence();
         await Future.delayed(const Duration(milliseconds: 100));
         Get.snackbar('Error', 'Failed to update timer: $e');
       }
@@ -102,26 +87,16 @@ class TimerListController extends GetxController {
     final timer = sequence.value.timers[index];
 
     try {
-      // Optimistic update with a fresh list copy
       final updatedTimers = List<ActivityTimer>.from(sequence.value.timers)
         ..removeAt(index);
-      sequence.value = TimerSequence(
-        id: sequence.value.id,
-        name: sequence.value.name,
-        description: sequence.value.description,
-        timers: updatedTimers,
-        defaultLoopEnabled: sequence.value.defaultLoopEnabled,
-        createdAt: sequence.value.createdAt,
-        updatedAt: DateTime.now(),
-      );
+      sequence.value = sequence.value.copyWith(timers: updatedTimers);
 
       await _databaseService.deleteTimerFromSequence(
         sequence.value.id,
         timer.id,
       );
     } catch (e) {
-      await _reloadSequence(); // Revert on failure
-      
+      await _reloadSequence();
       await Future.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Error', 'Failed to delete timer: $e');
     }
@@ -141,16 +116,7 @@ class TimerListController extends GetxController {
     final timer = updatedTimers.removeAt(oldIndex);
     updatedTimers.insert(newIndex, timer);
 
-    // Optimistically update local state for smooth UI
-    sequence.value = TimerSequence(
-      id: sequence.value.id,
-      name: sequence.value.name,
-      description: sequence.value.description,
-      timers: updatedTimers,
-      defaultLoopEnabled: sequence.value.defaultLoopEnabled,
-      createdAt: sequence.value.createdAt,
-      updatedAt: DateTime.now(),
-    );
+    sequence.value = sequence.value.copyWith(timers: updatedTimers);
 
     try {
       final timerIds = updatedTimers.map((t) => t.id).toList();
@@ -159,31 +125,34 @@ class TimerListController extends GetxController {
         timerIds,
       );
     } catch (e) {
-      // Revert on error
       await _reloadSequence();
-      
       await Future.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Error', 'Failed to reorder timers: $e');
     }
   }
 
   Future<void> toggleDefaultLoop() async {
-    final updatedSequence = TimerSequence(
-      id: sequence.value.id,
-      name: sequence.value.name,
-      description: sequence.value.description,
-      timers: sequence.value.timers,
+    final updated = sequence.value.copyWith(
       defaultLoopEnabled: !sequence.value.defaultLoopEnabled,
-      createdAt: sequence.value.createdAt,
-      updatedAt: DateTime.now(),
     );
 
     try {
-      await _databaseService.updateActivitySequence(updatedSequence);
-      sequence.value = updatedSequence;
+      await _databaseService.updateActivitySequence(updated);
+      sequence.value = updated;
     } catch (e) {
       await Future.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Error', 'Failed to update loop setting: $e');
+    }
+  }
+
+  Future<void> updatePreparationSeconds(int seconds) async {
+    final updated = sequence.value.copyWith(preparationSeconds: seconds);
+    try {
+      await _databaseService.updateActivitySequence(updated);
+      sequence.value = updated;
+      Get.snackbar('Prep Countdown', 'Set lead-in to ${seconds}s');
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to update prep duration: $e');
     }
   }
 
@@ -196,37 +165,7 @@ class TimerListController extends GetxController {
     Get.to(() => TimerScreen(sequence: sequence.value));
   }
 
-  String formatDuration(int seconds) {
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final remainingSeconds = seconds % 60;
+  String formatDuration(int seconds) => TimeFormat.clock(seconds);
 
-    if (hours > 0) {
-      return '$hours:${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
-    } else {
-      return '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
-    }
-  }
-
-  String formatTotalDuration(int totalSeconds) {
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
-    final seconds = totalSeconds % 60;
-
-    final parts = <String>[];
-
-    if (hours > 0) {
-      parts.add('${hours}h');
-    }
-
-    if (minutes > 0 || (hours > 0 && seconds > 0)) {
-      parts.add('${minutes}m');
-    }
-
-    if (seconds > 0 || parts.isEmpty) {
-      parts.add('${seconds}s');
-    }
-
-    return parts.join(' ');
-  }
+  String formatTotalDuration(int totalSeconds) => TimeFormat.compact(totalSeconds);
 }

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../models/activity_timer.dart';
 import '../models/alarm_sound.dart';
+import '../models/interval_phase.dart';
 
 class EditTimerScreen extends StatefulWidget {
   final ActivityTimer timer;
+  final bool isNew;
 
-  const EditTimerScreen({super.key, required this.timer});
+  const EditTimerScreen({super.key, required this.timer, this.isNew = false});
 
   @override
   State<EditTimerScreen> createState() => _EditTimerScreenState();
@@ -17,6 +19,7 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
   late int _hours;
   late int _minutes;
   late int _seconds;
+  late IntervalPhase _phase;
   AlarmSound? _selectedAlarmSound;
 
   @override
@@ -27,8 +30,8 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
       text: widget.timer.description ?? '',
     );
     _selectedAlarmSound = widget.timer.alarmSound;
+    _phase = widget.timer.phase;
 
-    // Convert total seconds to hours, minutes, seconds
     int totalSeconds = widget.timer.durationInSeconds;
     _hours = totalSeconds ~/ 3600;
     _minutes = (totalSeconds % 3600) ~/ 60;
@@ -286,6 +289,7 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
               ? null
               : _descriptionController.text,
       alarmSoundName: _selectedAlarmSound?.name,
+      phase: _phase,
     );
 
     Navigator.pop(context, updatedTimer);
@@ -304,7 +308,7 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
           icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(widget.timer.id.isEmpty ? 'Add Timer' : 'Edit Timer'),
+        title: Text(widget.isNew ? 'Add Timer' : 'Edit Timer'),
         centerTitle: true,
         actions: [
           TextButton(
@@ -325,12 +329,66 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Phase Selector
+            Text('Interval Phase', style: textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: colorScheme.outlineVariant),
+              ),
+              child: Row(
+                children: IntervalPhase.values.map((phase) {
+                  final isSelected = _phase == phase;
+                  return Expanded(
+                    child: InkWell(
+                      onTap: () => setState(() => _phase = phase),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? phase.defaultColor.withValues(alpha: 0.18)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: isSelected
+                              ? Border.all(color: phase.defaultColor, width: 1.5)
+                              : null,
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              phase.icon,
+                              size: 20,
+                              color: isSelected ? phase.defaultColor : colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              phase.displayName,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected ? phase.defaultColor : colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 28),
+
             Text('Timer Name', style: textTheme.titleSmall),
             const SizedBox(height: 8),
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
-                hintText: 'Enter timer name',
+                hintText: 'e.g. Sprint, Rest, Work Block',
                 filled: true,
                 fillColor: colorScheme.surface,
                 border: OutlineInputBorder(
@@ -340,7 +398,7 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
 
             Text('Duration', style: textTheme.titleSmall),
             const SizedBox(height: 8),
@@ -365,28 +423,26 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
 
             Text('Quick Presets', style: textTheme.titleSmall),
             const SizedBox(height: 12),
 
-            // Quick duration buttons
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 _buildQuickDurationButton(15, colorScheme, textTheme),
+                _buildQuickDurationButton(20, colorScheme, textTheme),
                 _buildQuickDurationButton(30, colorScheme, textTheme),
                 _buildQuickDurationButton(45, colorScheme, textTheme),
                 _buildQuickDurationButton(60, colorScheme, textTheme),
                 _buildQuickDurationButton(120, colorScheme, textTheme),
                 _buildQuickDurationButton(300, colorScheme, textTheme),
-                _buildQuickDurationButton(600, colorScheme, textTheme),
-                _buildQuickDurationButton(1800, colorScheme, textTheme),
-                _buildQuickDurationButton(3600, colorScheme, textTheme),
+                _buildQuickDurationButton(1500, colorScheme, textTheme),
               ],
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
 
             Text('Custom Alarm Sound', style: textTheme.titleSmall),
             const SizedBox(height: 8),
@@ -411,7 +467,7 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
 
             Text('Description (optional)', style: textTheme.titleSmall),
             const SizedBox(height: 8),
@@ -419,7 +475,7 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
               controller: _descriptionController,
               maxLines: 2,
               decoration: InputDecoration(
-                hintText: 'e.g., Push-ups, Rest, Stretching',
+                hintText: 'e.g. Burpees, Hydrate, Deep focus',
                 filled: true,
                 fillColor: colorScheme.surface,
                 border: OutlineInputBorder(
@@ -429,7 +485,7 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 36),
             
             SizedBox(
               width: double.infinity,

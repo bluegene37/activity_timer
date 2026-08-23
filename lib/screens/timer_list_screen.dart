@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/timer_list_controller.dart';
+import '../models/interval_phase.dart';
 import '../theme/app_theme.dart';
 
 class TimerListScreen extends StatelessWidget {
@@ -20,7 +21,7 @@ class TimerListScreen extends StatelessWidget {
           icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
           onPressed: () => Get.back(),
         ),
-        title: const Text('Activity Detail'),
+        title: Obx(() => Text(controller.sequence.value.name.isEmpty ? 'Activity Detail' : controller.sequence.value.name)),
         actions: [
           Obx(() => IconButton(
             icon: Icon(
@@ -67,23 +68,61 @@ class TimerListScreen extends StatelessWidget {
                               Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: colorScheme.primary,
-                                      borderRadius: BorderRadius.circular(4),
+                                      color: colorScheme.primary.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: Icon(Icons.timer, color: colorScheme.onPrimary, size: 14),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.timer, color: colorScheme.primary, size: 14),
+                                        const SizedBox(width: 6),
+                                        Obx(() => Text(
+                                          controller.sequence.value.category.toUpperCase(),
+                                          style: TextStyle(
+                                            color: colorScheme.primary,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        )),
+                                      ],
+                                    ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'ACTIVITY SUMMARY',
-                                    style: textTheme.bodySmall?.copyWith(letterSpacing: 1),
+                                ],
+                              ),
+                              // Prep countdown picker
+                              PopupMenuButton<int>(
+                                initialValue: controller.sequence.value.preparationSeconds,
+                                onSelected: controller.updatePreparationSeconds,
+                                tooltip: 'Lead-in Countdown',
+                                child: Obx(() => Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.hourglass_top, size: 12, color: colorScheme.onSurfaceVariant),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Prep: ${controller.sequence.value.preparationSeconds}s',
+                                        style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                                itemBuilder: (context) => const [
+                                  PopupMenuItem(value: 0, child: Text('No Prep (0s)')),
+                                  PopupMenuItem(value: 3, child: Text('3s Lead-in')),
+                                  PopupMenuItem(value: 5, child: Text('5s Lead-in (Default)')),
+                                  PopupMenuItem(value: 10, child: Text('10s Lead-in')),
                                 ],
                               ),
                             ],
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 20),
                           Row(
                             children: [
                               Expanded(
@@ -105,7 +144,7 @@ class TimerListScreen extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Total Timers', style: textTheme.bodySmall),
+                                    Text('Total Intervals', style: textTheme.bodySmall),
                                     const SizedBox(height: 4),
                                     Obx(() => Text(
                                       '${controller.sequence.value.timers.length}',
@@ -119,14 +158,14 @@ class TimerListScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 28),
 
                     // Individual Timers Header
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Individual Timers',
+                          'Intervals & Steps',
                           style: textTheme.titleLarge,
                         ),
                         Obx(() => Text(
@@ -135,7 +174,7 @@ class TimerListScreen extends StatelessWidget {
                         )),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
                     // Timer List
                     Obx(() {
@@ -152,7 +191,7 @@ class TimerListScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'No timers added yet',
+                                  'No intervals added yet',
                                   style: textTheme.titleMedium?.copyWith(
                                     color: colorScheme.onSurfaceVariant,
                                   ),
@@ -181,6 +220,7 @@ class TimerListScreen extends StatelessWidget {
 
                           final timer = controller.sequence.value.timers[index];
                           final durationText = controller.formatDuration(timer.durationInSeconds);
+                          final phaseColor = timer.phase.defaultColor;
 
                           return Container(
                             key: ValueKey(timer.id),
@@ -188,6 +228,7 @@ class TimerListScreen extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: colorScheme.surface,
                               borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: colorScheme.outlineVariant),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withValues(alpha: 0.02),
@@ -199,35 +240,49 @@ class TimerListScreen extends StatelessWidget {
                             padding: const EdgeInsets.all(16),
                             child: Row(
                               children: [
-                                // Left Index Circle
+                                // Left Phase Icon Badge
                                 Container(
-                                  width: 40,
-                                  height: 40,
+                                  width: 42,
+                                  height: 42,
                                   decoration: BoxDecoration(
-                                    color: colorScheme.primary.withValues(alpha: 0.1),
+                                    color: phaseColor.withValues(alpha: 0.15),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: Center(
-                                    child: Text(
-                                      '${index + 1}',
-                                      style: TextStyle(
-                                        color: colorScheme.primary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ),
+                                  child: Icon(timer.phase.icon, color: phaseColor, size: 20),
                                 ),
-                                const SizedBox(width: 16),
+                                const SizedBox(width: 14),
                                 
                                 // Middle Content
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        timer.name,
-                                        style: textTheme.titleSmall,
+                                      Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              timer.name,
+                                              style: textTheme.titleSmall,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: phaseColor.withValues(alpha: 0.15),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              timer.phase.displayName.toUpperCase(),
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.bold,
+                                                color: phaseColor,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
@@ -248,7 +303,7 @@ class TimerListScreen extends StatelessWidget {
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
                                     ),
-                                    const SizedBox(width: 16),
+                                    const SizedBox(width: 12),
                                     IconButton(
                                       icon: Icon(Icons.delete, color: colorScheme.onSurfaceVariant, size: 20),
                                       onPressed: () async {
@@ -277,7 +332,7 @@ class TimerListScreen extends StatelessWidget {
                                       constraints: const BoxConstraints(),
                                     ),
                                     const SizedBox(width: 8),
-                                    Icon(Icons.drag_handle, color: colorScheme.surfaceContainerHighest, size: 20),
+                                    Icon(Icons.drag_handle, color: colorScheme.outlineVariant, size: 20),
                                   ],
                                 ),
                               ],
@@ -287,34 +342,45 @@ class TimerListScreen extends StatelessWidget {
                       );
                     }),
 
-                    // Quick add interval button
+                    // Quick Add Phase Chips
+                    const SizedBox(height: 12),
+                    Text('Quick Add Phase', style: textTheme.bodySmall),
                     const SizedBox(height: 8),
-                    InkWell(
-                      onTap: controller.addTimer,
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: colorScheme.surfaceContainerHighest,
-                            width: 1.5,
-                            style: BorderStyle.solid,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => controller.addTimer(phase: IntervalPhase.work),
+                            icon: Icon(Icons.fitness_center, size: 14, color: IntervalPhase.work.defaultColor),
+                            label: const Text('+ Work', style: TextStyle(fontSize: 12)),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add_circle, color: colorScheme.onSurfaceVariant, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Quick add interval',
-                              style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => controller.addTimer(phase: IntervalPhase.rest),
+                            icon: Icon(Icons.bedtime_outlined, size: 14, color: IntervalPhase.rest.defaultColor),
+                            label: const Text('+ Rest', style: TextStyle(fontSize: 12)),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => controller.addTimer(phase: IntervalPhase.cooldown),
+                            icon: Icon(Icons.ac_unit, size: 14, color: IntervalPhase.cooldown.defaultColor),
+                            label: const Text('+ Cool', style: TextStyle(fontSize: 12)),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 32),
                   ],
@@ -324,58 +390,36 @@ class TimerListScreen extends StatelessWidget {
             
             // Bottom Action Bar
             Container(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(20.0),
               decoration: BoxDecoration(
                 color: theme.scaffoldBackgroundColor,
+                border: Border(top: BorderSide(color: colorScheme.outlineVariant)),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: OutlinedButton(
-                      onPressed: controller.addTimer,
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: colorScheme.primary, width: 1.5),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: Text(
-                        'Add Timer',
-                        style: textTheme.titleSmall?.copyWith(color: colorScheme.primary),
-                      ),
+              child: SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: controller.startTimerSequence,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: controller.startTimerSequence,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colorScheme.primary,
-                        foregroundColor: colorScheme.onPrimary,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.play_arrow, size: 24, color: colorScheme.onPrimary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Start Activity',
+                        style: textTheme.titleSmall?.copyWith(color: colorScheme.onPrimary),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.play_arrow, size: 24, color: colorScheme.onPrimary),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Start Activity',
-                            style: textTheme.titleSmall?.copyWith(color: colorScheme.onPrimary),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ],
