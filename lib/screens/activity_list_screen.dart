@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controllers/activity_list_controller.dart';
 import '../models/activity_timer.dart';
-import '../models/interval_phase.dart';
 import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 
