@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:get/get.dart';
+import 'models/interval_phase.dart';
 import 'models/settings.dart';
 import 'models/activity_timer.dart';
 import 'models/interval_timer.dart';
@@ -26,6 +27,7 @@ void main() async {
   Hive.registerAdapter(IntervalTypeAdapter());
   Hive.registerAdapter(AlarmSoundAdapter());
   Hive.registerAdapter(SessionHistoryAdapter());
+  Hive.registerAdapter(IntervalPhaseAdapter());
 
   // Initialize database service
   final databaseService = DatabaseService();

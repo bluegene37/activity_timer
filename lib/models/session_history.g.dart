@@ -24,13 +24,14 @@ class SessionHistoryAdapter extends TypeAdapter<SessionHistory> {
       itemCount: fields[4] == null ? 1 : (fields[4] as num).toInt(),
       loopCount: fields[5] == null ? 0 : (fields[5] as num).toInt(),
       sessionType: fields[6] == null ? 'activity' : fields[6] as String,
+      category: fields[7] == null ? 'custom' : fields[7] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, SessionHistory obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -44,7 +45,9 @@ class SessionHistoryAdapter extends TypeAdapter<SessionHistory> {
       ..writeByte(5)
       ..write(obj.loopCount)
       ..writeByte(6)
-      ..write(obj.sessionType);
+      ..write(obj.sessionType)
+      ..writeByte(7)
+      ..write(obj.category);
   }
 
   @override

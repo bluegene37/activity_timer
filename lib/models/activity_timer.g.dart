@@ -22,13 +22,15 @@ class ActivityTimerAdapter extends TypeAdapter<ActivityTimer> {
       durationInSeconds: (fields[2] as num).toInt(),
       description: fields[3] as String?,
       alarmSoundName: fields[4] as String?,
+      phase:
+          fields[5] == null ? IntervalPhase.work : fields[5] as IntervalPhase,
     );
   }
 
   @override
   void write(BinaryWriter writer, ActivityTimer obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -38,7 +40,9 @@ class ActivityTimerAdapter extends TypeAdapter<ActivityTimer> {
       ..writeByte(3)
       ..write(obj.description)
       ..writeByte(4)
-      ..write(obj.alarmSoundName);
+      ..write(obj.alarmSoundName)
+      ..writeByte(5)
+      ..write(obj.phase);
   }
 
   @override
@@ -68,6 +72,8 @@ class TimerSequenceAdapter extends TypeAdapter<TimerSequence> {
       timers: (fields[2] as List).cast<ActivityTimer>(),
       defaultLoopEnabled: fields[3] == null ? false : fields[3] as bool,
       description: fields[6] as String?,
+      category: fields[7] == null ? 'custom' : fields[7] as String,
+      preparationSeconds: fields[8] == null ? 5 : (fields[8] as num).toInt(),
       createdAt: fields[4] as DateTime?,
       updatedAt: fields[5] as DateTime?,
     );
@@ -76,7 +82,7 @@ class TimerSequenceAdapter extends TypeAdapter<TimerSequence> {
   @override
   void write(BinaryWriter writer, TimerSequence obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -90,7 +96,11 @@ class TimerSequenceAdapter extends TypeAdapter<TimerSequence> {
       ..writeByte(5)
       ..write(obj.updatedAt)
       ..writeByte(6)
-      ..write(obj.description);
+      ..write(obj.description)
+      ..writeByte(7)
+      ..write(obj.category)
+      ..writeByte(8)
+      ..write(obj.preparationSeconds);
   }
 
   @override

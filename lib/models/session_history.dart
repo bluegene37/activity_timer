@@ -26,6 +26,9 @@ class SessionHistory extends HiveObject {
   @HiveField(6)
   final String sessionType; // 'activity' or 'interval'
 
+  @HiveField(7)
+  final String category; // 'fitness', 'work', 'custom'
+
   SessionHistory({
     String? id,
     required this.title,
@@ -34,6 +37,7 @@ class SessionHistory extends HiveObject {
     this.itemCount = 1,
     this.loopCount = 0,
     this.sessionType = 'activity',
+    this.category = 'custom',
   })  : id = id ?? const Uuid().v4(),
         completedAt = completedAt ?? DateTime.now();
 }
