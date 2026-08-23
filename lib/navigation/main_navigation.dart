@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../screens/activity_list_screen.dart';
 import '../screens/interval_timer_list_screen.dart';
 import '../screens/settings_screen.dart';
+import '../theme/app_theme.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -37,28 +38,21 @@ class _MainNavigationState extends State<MainNavigation> {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final barBackground = (isDark ? const Color(0xFF1C1C1E) : Colors.white)
-        .withValues(alpha: isDark ? 0.8 : 0.88);
-    final borderColor = isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA);
+    final barBackground = AppTheme.cardBackground(
+      isDark: isDark,
+    ).withValues(alpha: isDark ? 0.8 : 0.88);
+    final borderColor = AppTheme.separator(isDark: isDark);
 
     return Scaffold(
       extendBody: true,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: barBackground,
-              border: Border(
-                top: BorderSide(
-                  color: borderColor,
-                  width: 0.6,
-                ),
-              ),
+              border: Border(top: BorderSide(color: borderColor, width: 0.6)),
             ),
             child: SafeArea(
               top: false,

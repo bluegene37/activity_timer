@@ -17,9 +17,9 @@ import '../theme/app_theme.dart';
 import '../utils/time_format.dart';
 
 class TimerScreen extends StatefulWidget {
-  final TimerSequence sequence;
-
   const TimerScreen({super.key, required this.sequence});
+
+  final TimerSequence sequence;
 
   @override
   State<TimerScreen> createState() => _TimerScreenState();
@@ -65,7 +65,13 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _timers = List.from(widget.sequence.timers);
     if (_timers.isEmpty) {
-      _timers = [ActivityTimer(name: 'Timer', durationInSeconds: 30, phase: IntervalPhase.work)];
+      _timers = [
+        ActivityTimer(
+          name: 'Timer',
+          durationInSeconds: 30,
+          phase: IntervalPhase.work,
+        ),
+      ];
     }
 
     _loopEnabled = widget.sequence.defaultLoopEnabled;
@@ -102,9 +108,11 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
 
   void _updateAudioSource() {
     if (_timers.isEmpty) return;
-    final sound = _isPreparing
-        ? _settings.defaultAlarmSound
-        : (_timers[_currentTimerIndex].alarmSound ?? _settings.defaultAlarmSound);
+    final sound =
+        _isPreparing
+            ? _settings.defaultAlarmSound
+            : (_timers[_currentTimerIndex].alarmSound ??
+                _settings.defaultAlarmSound);
     try {
       _audioPlayer.setSource(AssetSource('sounds/${sound.fileName}'));
     } catch (_) {}
@@ -256,9 +264,11 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
 
     if (_settings.vibrationEnabled) {
       unawaited(HapticFeedback.heavyImpact());
-      unawaited(Future<void>.delayed(const Duration(milliseconds: 200), () {
-        HapticFeedback.heavyImpact();
-      }));
+      unawaited(
+        Future<void>.delayed(const Duration(milliseconds: 200), () {
+          HapticFeedback.heavyImpact();
+        }),
+      );
     }
   }
 
@@ -282,7 +292,8 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     DatabaseService().logSessionHistory(
       SessionHistory(
         title: widget.sequence.name,
-        totalDurationInSeconds: widget.sequence.totalDuration * (_loopCount + 1),
+        totalDurationInSeconds:
+            widget.sequence.totalDuration * (_loopCount + 1),
         itemCount: _timers.length,
         loopCount: _loopCount,
         sessionType: 'activity',
@@ -336,23 +347,24 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
   void _confirmExit() {
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Exit Activity?'),
-        content: const Text('Are you sure you want to exit this activity?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Text('Exit Activity?'),
+            content: const Text('Are you sure you want to exit this activity?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  Navigator.pop(context);
+                },
+                child: const Text('Exit'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              Navigator.pop(context);
-            },
-            child: const Text('Exit'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -360,14 +372,16 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final remainingMs = math.max(0, _remainingMsNow);
     final remainingSeconds = (remainingMs / 1000).ceil();
-    final double progress = _currentDurationMs > 0
-        ? (1 - (remainingMs / _currentDurationMs)).clamp(0.0, 1.0)
-        : 0.0;
+    final double progress =
+        _currentDurationMs > 0
+            ? (1 - (remainingMs / _currentDurationMs)).clamp(0.0, 1.0)
+            : 0.0;
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
-    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
     return PopScope(
       canPop: _isCompleted,
@@ -380,7 +394,11 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
           title: Text(widget.sequence.name),
           centerTitle: true,
           leading: IconButton(
-            icon: Icon(CupertinoIcons.xmark, color: colorScheme.onSurface, size: 22),
+            icon: Icon(
+              CupertinoIcons.xmark,
+              color: colorScheme.onSurface,
+              size: 22,
+            ),
             onPressed: () {
               if (_isCompleted) {
                 Navigator.pop(context);
@@ -392,10 +410,13 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
           actions: [
             IconButton(
               icon: Icon(
-                _settings.soundEnabled ? CupertinoIcons.speaker_2_fill : CupertinoIcons.speaker_slash_fill,
-                color: _settings.soundEnabled
-                    ? colorScheme.primary
-                    : colorScheme.onSurfaceVariant,
+                _settings.soundEnabled
+                    ? CupertinoIcons.speaker_2_fill
+                    : CupertinoIcons.speaker_slash_fill,
+                color:
+                    _settings.soundEnabled
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
                 size: 20,
               ),
               onPressed: () async {
@@ -409,9 +430,10 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
             IconButton(
               icon: Icon(
                 _loopEnabled ? CupertinoIcons.repeat : CupertinoIcons.repeat,
-                color: _loopEnabled
-                    ? colorScheme.primary
-                    : colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                color:
+                    _loopEnabled
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                 size: 20,
               ),
               onPressed: () {
@@ -423,11 +445,22 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
             const SizedBox(width: 4),
           ],
         ),
-        body: _isCompleted
-            ? _buildCompletedView(textTheme, colorScheme)
-            : isLandscape
-                ? _buildLandscapeLayout(progress, remainingSeconds, textTheme, colorScheme)
-                : _buildPortraitLayout(progress, remainingSeconds, textTheme, colorScheme),
+        body:
+            _isCompleted
+                ? _buildCompletedView(textTheme, colorScheme)
+                : isLandscape
+                ? _buildLandscapeLayout(
+                  progress,
+                  remainingSeconds,
+                  textTheme,
+                  colorScheme,
+                )
+                : _buildPortraitLayout(
+                  progress,
+                  remainingSeconds,
+                  textTheme,
+                  colorScheme,
+                ),
       ),
     );
   }
@@ -440,8 +473,9 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     ColorScheme colorScheme,
   ) {
     final currentTimer = _timers[_currentTimerIndex];
-    final activePhase = _isPreparing ? IntervalPhase.prepare : currentTimer.phase;
-    final phaseColor = _getPhaseColor(activePhase, progress, colorScheme);
+    final activePhase =
+        _isPreparing ? IntervalPhase.prepare : currentTimer.phase;
+    final phaseColor = _getPhaseColor(activePhase, progress);
 
     return SafeArea(
       child: Column(
@@ -450,9 +484,11 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
           ClipRRect(
             borderRadius: BorderRadius.circular(2),
             child: LinearProgressIndicator(
-              value: _isPreparing
-                  ? 0.0
-                  : ((_currentTimerIndex + progress) / _timers.length).clamp(0.0, 1.0),
+              value:
+                  _isPreparing
+                      ? 0.0
+                      : ((_currentTimerIndex + progress) / _timers.length)
+                          .clamp(0.0, 1.0),
               minHeight: 4,
               backgroundColor: colorScheme.onSurface.withValues(alpha: 0.06),
               color: phaseColor,
@@ -470,23 +506,33 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                 const SizedBox(width: 8),
                 if (!_isPreparing) ...[
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(AppTheme.pillRadius),
                     ),
                     child: Text(
                       '${_currentTimerIndex + 1} of ${_timers.length}',
-                      style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                      style: textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   if (_loopEnabled && _loopCount > 0) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: colorScheme.primary.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.pillRadius,
+                        ),
                       ),
                       child: Text(
                         'Loop ${_loopCount + 1}',
@@ -511,7 +557,9 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
             ),
             textAlign: TextAlign.center,
           ),
-          if (!_isPreparing && currentTimer.description != null && currentTimer.description!.isNotEmpty) ...[
+          if (!_isPreparing &&
+              currentTimer.description != null &&
+              currentTimer.description!.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               currentTimer.description!,
@@ -543,7 +591,9 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     Text(
-                      _isRunning ? (_isPreparing ? 'starting soon' : 'remaining') : 'paused',
+                      _isRunning
+                          ? (_isPreparing ? 'starting soon' : 'remaining')
+                          : 'paused',
                       style: textTheme.titleSmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w500,
@@ -569,8 +619,13 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                   icon: const Icon(CupertinoIcons.minus, size: 14),
                   label: const Text('-15s'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.pillRadius)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -582,8 +637,13 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                   icon: const Icon(CupertinoIcons.plus, size: 14),
                   label: const Text('+15s'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.pillRadius)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+                    ),
                   ),
                 ),
               ],
@@ -625,7 +685,10 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                   foregroundColor: Colors.white,
                   elevation: 6,
                   shape: const CircleBorder(),
-                  child: Icon(_isRunning ? Icons.pause : Icons.play_arrow, size: 36),
+                  child: Icon(
+                    _isRunning ? Icons.pause : Icons.play_arrow,
+                    size: 36,
+                  ),
                 ),
                 const SizedBox(width: 24),
                 IconButton(
@@ -657,8 +720,9 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     ColorScheme colorScheme,
   ) {
     final currentTimer = _timers[_currentTimerIndex];
-    final activePhase = _isPreparing ? IntervalPhase.prepare : currentTimer.phase;
-    final phaseColor = _getPhaseColor(activePhase, progress, colorScheme);
+    final activePhase =
+        _isPreparing ? IntervalPhase.prepare : currentTimer.phase;
+    final phaseColor = _getPhaseColor(activePhase, progress);
 
     return SafeArea(
       child: Padding(
@@ -680,7 +744,9 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                       Flexible(
                         child: Text(
                           _isPreparing ? 'GET READY!' : currentTimer.name,
-                          style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                          style: textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -703,7 +769,9 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                     child: LinearProgressIndicator(
                       value: progress,
                       minHeight: 10,
-                      backgroundColor: colorScheme.onSurface.withValues(alpha: 0.1),
+                      backgroundColor: colorScheme.onSurface.withValues(
+                        alpha: 0.1,
+                      ),
                       color: phaseColor,
                     ),
                   ),
@@ -769,7 +837,10 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                         },
                         backgroundColor: phaseColor,
                         foregroundColor: Colors.white,
-                        child: Icon(_isRunning ? Icons.pause : Icons.play_arrow, size: 28),
+                        child: Icon(
+                          _isRunning ? Icons.pause : Icons.play_arrow,
+                          size: 28,
+                        ),
                       ),
                       const SizedBox(width: 14),
                       IconButton(
@@ -833,12 +904,18 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(CupertinoIcons.play_circle, size: 15, color: colorScheme.primary),
+            Icon(
+              CupertinoIcons.play_circle,
+              size: 15,
+              color: colorScheme.primary,
+            ),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
                 'Starts with: ${firstTimer.name} (${TimeFormat.clock(firstTimer.durationInSeconds)})',
-                style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                style: textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -859,12 +936,18 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(nextTimer.phase.icon, size: 15, color: nextTimer.phase.defaultColor),
+            Icon(
+              nextTimer.phase.icon,
+              size: 15,
+              color: nextTimer.phase.defaultColor,
+            ),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
                 'Next: ${nextTimer.name} (${TimeFormat.clock(nextTimer.durationInSeconds)})',
-                style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                style: textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -889,7 +972,9 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
             Flexible(
               child: Text(
                 'Next Loop: ${_timers[0].name}',
-                style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                style: textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -946,12 +1031,17 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
             const SizedBox(height: 8),
             Text(
               'Great job! Completed ${_timers.length} intervals.',
-              style: textTheme.titleMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+              style: textTheme.titleMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
             if (_loopCount > 0) ...[
               const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: colorScheme.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(AppTheme.pillRadius),
@@ -977,7 +1067,9 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                 icon: const Icon(CupertinoIcons.restart, size: 18),
                 label: const Text('Restart Activity'),
                 style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
             ),
@@ -986,7 +1078,9 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
               onPressed: () => Navigator.pop(context),
               child: Text(
                 'Back to Activities',
-                style: textTheme.titleSmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                style: textTheme.titleSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ],
@@ -995,22 +1089,20 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     );
   }
 
-  Color _getPhaseColor(IntervalPhase phase, double progress, ColorScheme colorScheme) {
-    Color baseColor;
-    switch (phase) {
-      case IntervalPhase.work:
-        baseColor = AppTheme.iosOrange; // High-energy Apple Orange
-      case IntervalPhase.rest:
-        baseColor = AppTheme.iosBlue; // Apple Blue
-      case IntervalPhase.prepare:
-        baseColor = AppTheme.iosYellow; // Apple Yellow Prep
-      case IntervalPhase.cooldown:
-        baseColor = AppTheme.iosGreen; // Apple Mint/Green
-    }
+  /// Phase accent, brightened at the start of a step and dimmed as it runs out.
+  Color _getPhaseColor(IntervalPhase phase, double progress) {
+    final baseColor = switch (phase) {
+      IntervalPhase.work => AppTheme.iosOrange, // High-energy Apple Orange
+      IntervalPhase.rest => AppTheme.iosBlue, // Apple Blue
+      IntervalPhase.prepare => AppTheme.iosYellow, // Apple Yellow Prep
+      IntervalPhase.cooldown => AppTheme.iosGreen, // Apple Mint/Green
+    };
 
     final hsl = HSLColor.fromColor(baseColor);
-    final targetLightness = (hsl.lightness + 0.05 - (progress * 0.15)).clamp(0.25, 0.85);
+    final targetLightness = (hsl.lightness + 0.05 - progress * 0.15).clamp(
+      0.25,
+      0.85,
+    );
     return hsl.withLightness(targetLightness).toColor();
   }
 }
-

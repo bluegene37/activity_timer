@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../models/activity_timer.dart';
 import '../models/session_history.dart';
+import '../routes/app_routes.dart';
 import '../services/database_service.dart';
 import '../utils/time_format.dart';
 
@@ -20,12 +21,15 @@ class ActivityListController extends GetxController {
 
   List<TimerSequence> get filteredSequences {
     return sequences.where((seq) {
-      final matchesCategory = selectedCategory.value == 'all' ||
+      final matchesCategory =
+          selectedCategory.value == 'all' ||
           seq.category.toLowerCase() == selectedCategory.value.toLowerCase();
       final query = searchQuery.value.trim().toLowerCase();
-      final matchesSearch = query.isEmpty ||
+      final matchesSearch =
+          query.isEmpty ||
           seq.name.toLowerCase().contains(query) ||
-          (seq.description != null && seq.description!.toLowerCase().contains(query));
+          (seq.description != null &&
+              seq.description!.toLowerCase().contains(query));
       return matchesCategory && matchesSearch;
     }).toList();
   }
@@ -71,15 +75,18 @@ class ActivityListController extends GetxController {
       category: template.category,
       preparationSeconds: template.preparationSeconds,
       defaultLoopEnabled: template.defaultLoopEnabled,
-      timers: template.timers
-          .map((t) => ActivityTimer(
-                name: t.name,
-                durationInSeconds: t.durationInSeconds,
-                description: t.description,
-                alarmSoundName: t.alarmSoundName,
-                phase: t.phase,
-              ))
-          .toList(),
+      timers:
+          template.timers
+              .map(
+                (t) => ActivityTimer(
+                  name: t.name,
+                  durationInSeconds: t.durationInSeconds,
+                  description: t.description,
+                  alarmSoundName: t.alarmSoundName,
+                  phase: t.phase,
+                ),
+              )
+              .toList(),
     );
 
     try {
@@ -152,7 +159,10 @@ class ActivityListController extends GetxController {
 
       await _databaseService.createActivitySequence(newSequence);
       sequences.add(newSequence);
-      Get.snackbar('Imported!', 'Successfully added "${newSequence.name}" to your routines.');
+      Get.snackbar(
+        'Imported!',
+        'Successfully added "${newSequence.name}" to your routines.',
+      );
       return true;
     } catch (e) {
       Get.snackbar('Error', 'Failed to import routine: $e');
@@ -160,11 +170,14 @@ class ActivityListController extends GetxController {
     }
   }
 
-  Future<void> addNewSequence({String category = 'custom', int preparationSeconds = 5}) async {
+  Future<void> addNewSequence({
+    String category = 'custom',
+    int preparationSeconds = 5,
+  }) async {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
-    
-    final result = await Get.dialog<Map<String, dynamic>>(
+
+    final result = await Get.dialog<({String name, String description})>(
       AlertDialog(
         title: const Text('New Activity Routine'),
         content: SingleChildScrollView(
@@ -192,15 +205,19 @@ class ActivityListController extends GetxController {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Get.back<Map<String, String>>(), child: const Text('Cancel')),
+          TextButton(
+            onPressed: Get.back<({String name, String description})>,
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () {
               final name = nameController.text.trim();
-              final desc = descriptionController.text.trim();
-              Get.back<Map<String, String>>(result: {
-                'name': name.isNotEmpty ? name : 'New Activity',
-                'description': desc,
-              });
+              Get.back(
+                result: (
+                  name: name.isNotEmpty ? name : 'New Activity',
+                  description: descriptionController.text.trim(),
+                ),
+              );
             },
             child: const Text('Create'),
           ),
@@ -212,10 +229,13 @@ class ActivityListController extends GetxController {
     nameController.dispose();
     descriptionController.dispose();
 
-    if (result != null && result['name'] != null && (result['name'] as String).isNotEmpty) {
+    if (result case (
+      name: final name,
+      description: final description,
+    ) when name.isNotEmpty) {
       final newSequence = TimerSequence(
-        name: result['name'] as String, 
-        description: (result['description'] as String).isEmpty ? null : (result['description'] as String),
+        name: name,
+        description: description.isEmpty ? null : description,
         category: category,
         preparationSeconds: preparationSeconds,
         timers: [],
@@ -225,14 +245,20 @@ class ActivityListController extends GetxController {
         await _databaseService.createActivitySequence(newSequence);
         sequences.add(newSequence);
 
-        unawaited(Get.toNamed<dynamic>('/timer-list', arguments: newSequence));
+        unawaited(Get.toNamed<void>(Routes.timerList, arguments: newSequence));
       } catch (e) {
         Get.snackbar('Error', 'Failed to create activity: $e');
       }
     }
   }
 
-  Future<void> editSequence(int index, String newName, String newDescription, {String? category, int? prepSeconds}) async {
+  Future<void> editSequence(
+    int index,
+    String newName,
+    String newDescription, {
+    String? category,
+    int? prepSeconds,
+  }) async {
     if (newName.isEmpty) return;
 
     final sequence = sequences[index];
@@ -262,7 +288,7 @@ class ActivityListController extends GetxController {
     try {
       await _databaseService.deleteActivitySequence(sequence.id);
       sequences.removeAt(index);
-      
+
       await Future<void>.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Success', 'Activity deleted');
     } catch (e) {
@@ -293,5 +319,6 @@ class ActivityListController extends GetxController {
     }
   }
 
-  String formatTotalDuration(int totalSeconds) => TimeFormat.compact(totalSeconds);
+  String formatTotalDuration(int totalSeconds) =>
+      TimeFormat.compact(totalSeconds);
 }

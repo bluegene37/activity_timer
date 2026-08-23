@@ -33,6 +33,21 @@ class AppTheme {
   static const Color iosRed = Color(0xFFFF3B30);
   static const Color iosYellow = Color(0xFFFFCC00);
 
+  // iOS grouped-list surfaces. Both sides of each pair are Apple's system
+  // values, so they are resolved from brightness rather than the ColorScheme.
+  static const Color _cardDark = Color(0xFF1C1C1E);
+  static const Color _cardLight = Colors.white;
+  static const Color _separatorDark = Color(0xFF38383A);
+  static const Color _separatorLight = Color(0xFFE5E5EA);
+
+  /// Background of a grouped-list card.
+  static Color cardBackground({required bool isDark}) =>
+      isDark ? _cardDark : _cardLight;
+
+  /// Hairline rule between grouped-list rows.
+  static Color separator({required bool isDark}) =>
+      isDark ? _separatorDark : _separatorLight;
+
   // Modern iOS Typography (SF Pro style with tightened tracking)
   static TextTheme _getTextTheme(Color onSurface, Color onSurfaceVariant) {
     return TextTheme(
@@ -106,9 +121,10 @@ class AppTheme {
       surface: Colors.white,
     );
 
-    final secondaryColor = primaryColor == const Color(0xFFF96015)
-        ? const Color(0xFF5856D6)
-        : colorScheme.secondary;
+    final secondaryColor =
+        primaryColor == const Color(0xFFF96015)
+            ? const Color(0xFF5856D6)
+            : colorScheme.secondary;
 
     const scaffoldBg = Color(0xFFF2F2F7); // iOS System Grouped Background
     const surfaceColor = Colors.white; // iOS Grouped Card Background
@@ -177,11 +193,11 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(borderRadius),
           ),
-          side: BorderSide(color: primaryColor.withValues(alpha: 0.5), width: 1.2),
-          textStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
+          side: BorderSide(
+            color: primaryColor.withValues(alpha: 0.5),
+            width: 1.2,
           ),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -271,11 +287,11 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(borderRadius),
           ),
-          side: BorderSide(color: primaryColor.withValues(alpha: 0.6), width: 1.2),
-          textStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
+          side: BorderSide(
+            color: primaryColor.withValues(alpha: 0.6),
+            width: 1.2,
           ),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(

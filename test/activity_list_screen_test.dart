@@ -40,25 +40,23 @@ void main() {
     Get.reset();
   });
 
-  testWidgets('ActivityListScreen renders header, category filter chips, search, and preset button',
-      (tester) async {
-    tester.view.physicalSize = const Size(400, 800);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
+  testWidgets(
+    'ActivityListScreen renders header, category filter chips, search, and preset button',
+    (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
 
-    await tester.pumpWidget(
-      const GetMaterialApp(
-        home: ActivityListScreen(),
-      ),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpWidget(const GetMaterialApp(home: ActivityListScreen()));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('Activity Timer'), findsOneWidget);
-    expect(find.text('All Routines'), findsOneWidget);
-    expect(find.text('⚡ Fitness & Sports'), findsOneWidget);
-    expect(find.text('💼 Work & Focus'), findsOneWidget);
-    expect(find.text('Explore Presets'), findsOneWidget);
-    expect(find.text('New Routine'), findsOneWidget);
-  });
+      expect(find.text('Activity Timer'), findsOneWidget);
+      expect(find.text('All Routines'), findsOneWidget);
+      expect(find.text('⚡ Fitness & Sports'), findsOneWidget);
+      expect(find.text('💼 Work & Focus'), findsOneWidget);
+      expect(find.text('Explore Presets'), findsOneWidget);
+      expect(find.text('New Routine'), findsOneWidget);
+    },
+  );
 }

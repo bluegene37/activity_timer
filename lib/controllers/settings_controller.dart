@@ -47,30 +47,32 @@ class SettingsController extends GetxController {
         title: const Text('Select Default Alarm Sound'),
         content: SizedBox(
           width: double.maxFinite,
-          child: Obx(() => RadioGroup<AlarmSound>(
-            groupValue: _appController.defaultAlarmSound.value,
-            onChanged: (AlarmSound? value) {
-              if (value != null) {
-                Get.back<AlarmSound>(result: value);
-              }
-            },
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: AlarmSound.values.length,
-              itemBuilder: (context, index) {
-                final sound = AlarmSound.values[index];
-                return ListTile(
-                  leading: Radio<AlarmSound>(value: sound),
-                  title: Text(sound.displayName),
-                  onTap: () => Get.back<AlarmSound>(result: sound),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.play_arrow),
-                    onPressed: () => previewAlarmSound(sound),
-                  ),
-                );
+          child: Obx(
+            () => RadioGroup<AlarmSound>(
+              groupValue: _appController.defaultAlarmSound.value,
+              onChanged: (AlarmSound? value) {
+                if (value != null) {
+                  Get.back<AlarmSound>(result: value);
+                }
               },
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: AlarmSound.values.length,
+                itemBuilder: (context, index) {
+                  final sound = AlarmSound.values[index];
+                  return ListTile(
+                    leading: Radio<AlarmSound>(value: sound),
+                    title: Text(sound.displayName),
+                    onTap: () => Get.back<AlarmSound>(result: sound),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.play_arrow),
+                      onPressed: () => previewAlarmSound(sound),
+                    ),
+                  );
+                },
+              ),
             ),
-          )),
+          ),
         ),
         actions: [
           TextButton(

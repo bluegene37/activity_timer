@@ -13,9 +13,21 @@ void main() {
         preparationSeconds: 5,
         defaultLoopEnabled: false,
         timers: [
-          ActivityTimer(name: 'Round 1', durationInSeconds: 180, phase: IntervalPhase.work),
-          ActivityTimer(name: 'Corner Rest', durationInSeconds: 60, phase: IntervalPhase.rest),
-          ActivityTimer(name: 'Round 2', durationInSeconds: 180, phase: IntervalPhase.work),
+          ActivityTimer(
+            name: 'Round 1',
+            durationInSeconds: 180,
+            phase: IntervalPhase.work,
+          ),
+          ActivityTimer(
+            name: 'Corner Rest',
+            durationInSeconds: 60,
+            phase: IntervalPhase.rest,
+          ),
+          ActivityTimer(
+            name: 'Round 2',
+            durationInSeconds: 180,
+            phase: IntervalPhase.work,
+          ),
         ],
       );
 
@@ -36,8 +48,14 @@ void main() {
     });
 
     test('sequenceFromJson returns null on invalid JSON', () {
-      expect(ActivityListController.sequenceFromJson('invalid json string'), isNull);
-      expect(ActivityListController.sequenceFromJson('{}'), isNotNull); // Empty object with fallbacks
+      expect(
+        ActivityListController.sequenceFromJson('invalid json string'),
+        isNull,
+      );
+      expect(
+        ActivityListController.sequenceFromJson('{}'),
+        isNotNull,
+      ); // Empty object with fallbacks
     });
   });
 }

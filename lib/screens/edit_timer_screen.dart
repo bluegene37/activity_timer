@@ -6,12 +6,13 @@ import '../models/activity_timer.dart';
 import '../models/alarm_sound.dart';
 import '../models/interval_phase.dart';
 import '../theme/app_theme.dart';
+import '../utils/time_format.dart';
 
 class EditTimerScreen extends StatefulWidget {
+  const EditTimerScreen({super.key, required this.timer, this.isNew = false});
+
   final ActivityTimer timer;
   final bool isNew;
-
-  const EditTimerScreen({super.key, required this.timer, this.isNew = false});
 
   @override
   State<EditTimerScreen> createState() => _EditTimerScreenState();
@@ -50,15 +51,10 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
   }
 
   String _formatDuration() {
-    final parts = <String>[];
-
-    if (_hours > 0) {
-      parts.add('$_hours hr');
-    }
-
-    if (_minutes > 0 || (_hours > 0 && _seconds > 0)) {
-      parts.add('$_minutes min');
-    }
+    final parts = [
+      if (_hours > 0) '$_hours hr',
+      if (_minutes > 0 || (_hours > 0 && _seconds > 0)) '$_minutes min',
+    ];
 
     if (_seconds > 0 || parts.isEmpty) {
       parts.add('$_seconds sec');
@@ -76,7 +72,9 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
         int seconds = _seconds;
 
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
           title: const Text('Set Duration'),
           content: StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
@@ -95,7 +93,9 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                               DropdownButtonFormField<int>(
                                 initialValue: hours,
                                 decoration: InputDecoration(
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                   contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 10,
                                     vertical: 8,
@@ -129,7 +129,9 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                               DropdownButtonFormField<int>(
                                 initialValue: minutes,
                                 decoration: InputDecoration(
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                   contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 10,
                                     vertical: 8,
@@ -163,7 +165,9 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                               DropdownButtonFormField<int>(
                                 initialValue: seconds,
                                 decoration: InputDecoration(
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                   contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 10,
                                     vertical: 8,
@@ -192,7 +196,9 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                     const SizedBox(height: 16),
                     Text(
                       'Total: ${_formatTimeValue(hours)}:${_formatTimeValue(minutes)}:${_formatTimeValue(seconds)}',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ],
                 ),
@@ -213,7 +219,10 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                 });
                 Navigator.pop(context);
               },
-              child: const Text('Set', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Set',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         );
@@ -224,51 +233,54 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
   void _selectAlarmSound() {
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text('Select Alarm Sound'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: RadioGroup<AlarmSound?>(
-            groupValue: _selectedAlarmSound,
-            onChanged: (AlarmSound? value) {
-              setState(() => _selectedAlarmSound = value);
-              Navigator.pop(context);
-            },
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: AlarmSound.values.length + 1,
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return ListTile(
-                    leading: const Radio<AlarmSound?>(value: null),
-                    title: const Text('Use Default App Sound'),
-                    onTap: () {
-                      setState(() => _selectedAlarmSound = null);
-                      Navigator.pop(context);
-                    },
-                  );
-                }
-                final sound = AlarmSound.values[index - 1];
-                return ListTile(
-                  leading: Radio<AlarmSound?>(value: sound),
-                  title: Text(sound.displayName),
-                  onTap: () {
-                    setState(() => _selectedAlarmSound = sound);
-                    Navigator.pop(context);
-                  },
-                );
-              },
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
             ),
+            title: const Text('Select Alarm Sound'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: RadioGroup<AlarmSound?>(
+                groupValue: _selectedAlarmSound,
+                onChanged: (AlarmSound? value) {
+                  setState(() => _selectedAlarmSound = value);
+                  Navigator.pop(context);
+                },
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: AlarmSound.values.length + 1,
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      return ListTile(
+                        leading: const Radio<AlarmSound?>(value: null),
+                        title: const Text('Use Default App Sound'),
+                        onTap: () {
+                          setState(() => _selectedAlarmSound = null);
+                          Navigator.pop(context);
+                        },
+                      );
+                    }
+                    final sound = AlarmSound.values[index - 1];
+                    return ListTile(
+                      leading: Radio<AlarmSound?>(value: sound),
+                      title: Text(sound.displayName),
+                      onTap: () {
+                        setState(() => _selectedAlarmSound = sound);
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+            ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -312,10 +324,20 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(CupertinoIcons.chevron_back, color: colorScheme.onSurface, size: 22),
+          icon: Icon(
+            CupertinoIcons.chevron_back,
+            color: colorScheme.onSurface,
+            size: 22,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(widget.isNew ? 'Add Timer' : 'Edit Timer', style: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.3)),
+        title: Text(
+          widget.isNew ? 'Add Timer' : 'Edit Timer',
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
+          ),
+        ),
         centerTitle: true,
         actions: [
           TextButton(
@@ -340,73 +362,100 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Phase Selector
-            Text('Interval Phase', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              'Interval Phase',
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                color: AppTheme.cardBackground(isDark: isDark),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                  color: AppTheme.separator(isDark: isDark),
                   width: 0.8,
                 ),
               ),
               child: Row(
-                children: IntervalPhase.values.map((phase) {
-                  final isSelected = _phase == phase;
-                  return Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        unawaited(HapticFeedback.selectionClick());
-                        setState(() => _phase = phase);
-                      },
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? phase.defaultColor.withValues(alpha: 0.18)
-                              : Colors.transparent,
+                children:
+                    IntervalPhase.values.map((phase) {
+                      final isSelected = _phase == phase;
+                      return Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            unawaited(HapticFeedback.selectionClick());
+                            setState(() => _phase = phase);
+                          },
                           borderRadius: BorderRadius.circular(10),
-                          border: isSelected
-                              ? Border.all(color: phase.defaultColor, width: 1.2)
-                              : null,
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(
-                              phase.icon,
-                              size: 18,
-                              color: isSelected ? phase.defaultColor : colorScheme.onSurfaceVariant,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color:
+                                  isSelected
+                                      ? phase.defaultColor.withValues(
+                                        alpha: 0.18,
+                                      )
+                                      : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                              border:
+                                  isSelected
+                                      ? Border.all(
+                                        color: phase.defaultColor,
+                                        width: 1.2,
+                                      )
+                                      : null,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              phase.displayName,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
-                                color: isSelected ? phase.defaultColor : colorScheme.onSurfaceVariant,
-                              ),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  phase.icon,
+                                  size: 18,
+                                  color:
+                                      isSelected
+                                          ? phase.defaultColor
+                                          : colorScheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  phase.displayName,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight:
+                                        isSelected
+                                            ? FontWeight.w700
+                                            : FontWeight.normal,
+                                    color:
+                                        isSelected
+                                            ? phase.defaultColor
+                                            : colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                  );
-                }).toList(),
+                      );
+                    }).toList(),
               ),
             ),
             const SizedBox(height: 22),
 
-            Text('Timer Name', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              'Timer Name',
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 8),
             DecoratedBox(
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                color: AppTheme.cardBackground(isDark: isDark),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                  color: AppTheme.separator(isDark: isDark),
                   width: 0.8,
                 ),
               ),
@@ -416,13 +465,21 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                   hintText: 'e.g. Sprint, Rest, Work Block',
                   filled: false,
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 22),
 
-            Text('Duration', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              'Duration',
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 8),
             InkWell(
               onTap: () {
@@ -431,12 +488,15 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
               },
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                  color: AppTheme.cardBackground(isDark: isDark),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                    color: AppTheme.separator(isDark: isDark),
                     width: 0.8,
                   ),
                 ),
@@ -445,16 +505,27 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                   children: [
                     Text(
                       _formatDuration(),
-                      style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    Icon(CupertinoIcons.clock, color: colorScheme.primary, size: 20),
+                    Icon(
+                      CupertinoIcons.clock,
+                      color: colorScheme.primary,
+                      size: 20,
+                    ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 18),
 
-            Text('Quick Presets', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              'Quick Presets',
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 10),
 
             Wrap(
@@ -473,7 +544,12 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
             ),
             const SizedBox(height: 22),
 
-            Text('Custom Alarm Sound', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              'Custom Alarm Sound',
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 8),
             InkWell(
               onTap: () {
@@ -482,12 +558,15 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
               },
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                  color: AppTheme.cardBackground(isDark: isDark),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                    color: AppTheme.separator(isDark: isDark),
                     width: 0.8,
                   ),
                 ),
@@ -495,24 +574,37 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _selectedAlarmSound != null ? _selectedAlarmSound!.displayName : 'Default App Sound',
-                      style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                      _selectedAlarmSound != null
+                          ? _selectedAlarmSound!.displayName
+                          : 'Default App Sound',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    Icon(CupertinoIcons.music_note, color: colorScheme.primary, size: 20),
+                    Icon(
+                      CupertinoIcons.music_note,
+                      color: colorScheme.primary,
+                      size: 20,
+                    ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 22),
 
-            Text('Description (optional)', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              'Description (optional)',
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 8),
             DecoratedBox(
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                color: AppTheme.cardBackground(isDark: isDark),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                  color: AppTheme.separator(isDark: isDark),
                   width: 0.8,
                 ),
               ),
@@ -523,12 +615,15 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                   hintText: 'e.g. Burpees, Hydrate, Deep focus',
                   filled: false,
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 32),
-            
+
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -544,7 +639,10 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text('Save Timer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                child: const Text(
+                  'Save Timer',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -554,19 +652,22 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
     );
   }
 
-  Widget _buildQuickDurationButton(int seconds, ColorScheme colorScheme, TextTheme textTheme, bool isDark) {
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final remainingSeconds = seconds % 60;
+  Widget _buildQuickDurationButton(
+    int seconds,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    bool isDark,
+  ) {
+    final hours = seconds ~/ Duration.secondsPerHour;
+    final minutes =
+        (seconds % Duration.secondsPerHour) ~/ Duration.secondsPerMinute;
+    final remainingSeconds = seconds % Duration.secondsPerMinute;
 
-    String label;
-    if (hours > 0) {
-      label = '$hours:${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
-    } else if (minutes > 0) {
-      label = '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
-    } else {
-      label = '$seconds sec';
-    }
+    // Under a minute reads better spelled out than as a 0:ss clock.
+    final label =
+        seconds < Duration.secondsPerMinute
+            ? '$seconds sec'
+            : TimeFormat.clock(seconds);
 
     return OutlinedButton(
       onPressed: () {
@@ -578,11 +679,8 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
         });
       },
       style: OutlinedButton.styleFrom(
-        backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-        side: BorderSide(
-          color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
-          width: 0.8,
-        ),
+        backgroundColor: AppTheme.cardBackground(isDark: isDark),
+        side: BorderSide(color: AppTheme.separator(isDark: isDark), width: 0.8),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.pillRadius),
         ),
@@ -595,4 +693,3 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
     );
   }
 }
-

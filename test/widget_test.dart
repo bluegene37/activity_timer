@@ -5,7 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('GlowingTimerRing Widget tests', () {
-    testWidgets('renders GlowingTimerRing with child content', (WidgetTester tester) async {
+    testWidgets('renders GlowingTimerRing with child content', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -27,7 +29,9 @@ void main() {
   });
 
   group('ColorSelector Widget tests', () {
-    testWidgets('renders ColorSelector and allows tapping options', (WidgetTester tester) async {
+    testWidgets('renders ColorSelector and allows tapping options', (
+      WidgetTester tester,
+    ) async {
       Color? tappedColor;
 
       await tester.pumpWidget(
@@ -46,7 +50,7 @@ void main() {
       );
 
       expect(find.byType(GestureDetector), findsWidgets);
-      
+
       // Tap the second color option
       await tester.tap(find.byType(GestureDetector).at(1));
       await tester.pump();

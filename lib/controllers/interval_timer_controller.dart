@@ -4,7 +4,7 @@ import '../services/database_service.dart';
 
 class IntervalTimerController extends GetxController {
   final _databaseService = DatabaseService();
-  
+
   // Reactive variables
   final RxList<IntervalTimer> intervalTimers = <IntervalTimer>[].obs;
   final RxBool isLoading = true.obs;
@@ -32,7 +32,7 @@ class IntervalTimerController extends GetxController {
     try {
       await _databaseService.deleteIntervalTimer(id);
       intervalTimers.removeWhere((timer) => timer.id == id);
-      
+
       // Delay snackbar slightly to ensure any dialog has closed
       await Future<void>.delayed(const Duration(milliseconds: 100));
       Get.snackbar('Success', 'Interval timer deleted');

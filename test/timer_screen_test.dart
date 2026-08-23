@@ -29,71 +29,85 @@ void main() {
   });
 
   TimerSequence buildSequence({int preparationSeconds = 0}) => TimerSequence(
-        name: 'Test Routine',
-        preparationSeconds: preparationSeconds,
-        timers: [
-          ActivityTimer(name: 'Step One', durationInSeconds: 60, phase: IntervalPhase.work),
-          ActivityTimer(name: 'Step Two', durationInSeconds: 30, phase: IntervalPhase.rest),
-        ],
+    name: 'Test Routine',
+    preparationSeconds: preparationSeconds,
+    timers: [
+      ActivityTimer(
+        name: 'Step One',
+        durationInSeconds: 60,
+        phase: IntervalPhase.work,
+      ),
+      ActivityTimer(
+        name: 'Step Two',
+        durationInSeconds: 30,
+        phase: IntervalPhase.rest,
+      ),
+    ],
+  );
+
+  testWidgets(
+    'runs, skips forward and back, pauses and resumes with phase pills',
+    (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        MaterialApp(home: TimerScreen(sequence: buildSequence())),
       );
+      await tester.pump();
 
-  testWidgets('runs, skips forward and back, pauses and resumes with phase pills',
-      (tester) async {
+      // Starts on the first timer (Work phase), running.
+      expect(find.text('Step One'), findsOneWidget);
+      expect(find.text('WORK'), findsOneWidget);
+      expect(find.text('1 of 2'), findsOneWidget);
+      expect(find.text('1:00'), findsOneWidget);
+      expect(find.text('remaining'), findsOneWidget);
+      expect(find.text('Next: Step Two (0:30)'), findsOneWidget);
+
+      // Test +15s adjustment button
+      expect(find.text('+15s'), findsOneWidget);
+      await tester.tap(find.text('+15s'));
+      await tester.pump();
+      expect(find.text('1:15'), findsOneWidget);
+
+      // Skip to the second timer (Rest phase).
+      await tester.tap(find.byIcon(Icons.skip_next));
+      await tester.pump();
+      expect(find.text('Step Two'), findsOneWidget);
+      expect(find.text('REST'), findsOneWidget);
+      expect(find.text('2 of 2'), findsOneWidget);
+      expect(find.text('0:30'), findsOneWidget);
+
+      // Back to the first timer.
+      await tester.tap(find.byIcon(Icons.skip_previous));
+      await tester.pump();
+      expect(find.text('1 of 2'), findsOneWidget);
+      expect(find.text('Step One'), findsOneWidget);
+
+      // Pause and resume.
+      await tester.tap(find.byIcon(Icons.pause));
+      await tester.pump();
+      expect(find.text('paused'), findsOneWidget);
+      expect(find.byIcon(Icons.play_arrow), findsWidgets);
+
+      await tester.tap(find.byIcon(Icons.play_arrow).first);
+      await tester.pump();
+      expect(find.text('remaining'), findsOneWidget);
+    },
+  );
+
+  testWidgets('handles preparation countdown before sequence starts', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(400, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
     await tester.pumpWidget(
-      MaterialApp(home: TimerScreen(sequence: buildSequence())),
-    );
-    await tester.pump();
-
-    // Starts on the first timer (Work phase), running.
-    expect(find.text('Step One'), findsOneWidget);
-    expect(find.text('WORK'), findsOneWidget);
-    expect(find.text('1 of 2'), findsOneWidget);
-    expect(find.text('1:00'), findsOneWidget);
-    expect(find.text('remaining'), findsOneWidget);
-    expect(find.text('Next: Step Two (0:30)'), findsOneWidget);
-
-    // Test +15s adjustment button
-    expect(find.text('+15s'), findsOneWidget);
-    await tester.tap(find.text('+15s'));
-    await tester.pump();
-    expect(find.text('1:15'), findsOneWidget);
-
-    // Skip to the second timer (Rest phase).
-    await tester.tap(find.byIcon(Icons.skip_next));
-    await tester.pump();
-    expect(find.text('Step Two'), findsOneWidget);
-    expect(find.text('REST'), findsOneWidget);
-    expect(find.text('2 of 2'), findsOneWidget);
-    expect(find.text('0:30'), findsOneWidget);
-
-    // Back to the first timer.
-    await tester.tap(find.byIcon(Icons.skip_previous));
-    await tester.pump();
-    expect(find.text('1 of 2'), findsOneWidget);
-    expect(find.text('Step One'), findsOneWidget);
-
-    // Pause and resume.
-    await tester.tap(find.byIcon(Icons.pause));
-    await tester.pump();
-    expect(find.text('paused'), findsOneWidget);
-    expect(find.byIcon(Icons.play_arrow), findsWidgets);
-
-    await tester.tap(find.byIcon(Icons.play_arrow).first);
-    await tester.pump();
-    expect(find.text('remaining'), findsOneWidget);
-  });
-
-  testWidgets('handles preparation countdown before sequence starts', (tester) async {
-    tester.view.physicalSize = const Size(400, 800);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-
-    await tester.pumpWidget(
-      MaterialApp(home: TimerScreen(sequence: buildSequence(preparationSeconds: 5))),
+      MaterialApp(
+        home: TimerScreen(sequence: buildSequence(preparationSeconds: 5)),
+      ),
     );
     await tester.pump();
 
@@ -110,8 +124,9 @@ void main() {
     expect(find.text('WORK'), findsOneWidget);
   });
 
-  testWidgets('system back shows the exit confirmation instead of popping',
-      (tester) async {
+  testWidgets('system back shows the exit confirmation instead of popping', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(400, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);

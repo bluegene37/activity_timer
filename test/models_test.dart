@@ -26,10 +26,7 @@ void main() {
 
   group('ActivityTimer tests', () {
     test('creates ActivityTimer with default values and work phase', () {
-      final timer = ActivityTimer(
-        name: 'Work Step',
-        durationInSeconds: 1500,
-      );
+      final timer = ActivityTimer(name: 'Work Step', durationInSeconds: 1500);
 
       expect(timer.name, 'Work Step');
       expect(timer.durationInSeconds, 1500);
@@ -49,7 +46,7 @@ void main() {
 
       expect(timer.alarmSound, AlarmSound.digital);
       expect(timer.isRest, true);
-      
+
       timer.alarmSoundName = AlarmSound.chime.name;
       expect(timer.alarmSound, AlarmSound.chime);
       expect(timer.alarmSoundName, 'chime');
@@ -94,22 +91,33 @@ void main() {
   });
 
   group('TimerSequence tests', () {
-    test('calculates total duration and supports category/preparationSeconds', () {
-      final sequence = TimerSequence(
-        name: 'Tabata',
-        category: 'fitness',
-        preparationSeconds: 10,
-        timers: [
-          ActivityTimer(name: 'Sprint', durationInSeconds: 20, phase: IntervalPhase.work),
-          ActivityTimer(name: 'Rest', durationInSeconds: 10, phase: IntervalPhase.rest),
-        ],
-      );
+    test(
+      'calculates total duration and supports category/preparationSeconds',
+      () {
+        final sequence = TimerSequence(
+          name: 'Tabata',
+          category: 'fitness',
+          preparationSeconds: 10,
+          timers: [
+            ActivityTimer(
+              name: 'Sprint',
+              durationInSeconds: 20,
+              phase: IntervalPhase.work,
+            ),
+            ActivityTimer(
+              name: 'Rest',
+              durationInSeconds: 10,
+              phase: IntervalPhase.rest,
+            ),
+          ],
+        );
 
-      expect(sequence.totalDuration, 30);
-      expect(sequence.timers.length, 2);
-      expect(sequence.category, 'fitness');
-      expect(sequence.preparationSeconds, 10);
-    });
+        expect(sequence.totalDuration, 30);
+        expect(sequence.timers.length, 2);
+        expect(sequence.category, 'fitness');
+        expect(sequence.preparationSeconds, 10);
+      },
+    );
 
     test('toJson and fromJson roundtrip serialization', () {
       final sequence = TimerSequence(
@@ -117,8 +125,16 @@ void main() {
         category: 'work',
         preparationSeconds: 5,
         timers: [
-          ActivityTimer(name: 'Focus', durationInSeconds: 1500, phase: IntervalPhase.work),
-          ActivityTimer(name: 'Short Break', durationInSeconds: 300, phase: IntervalPhase.rest),
+          ActivityTimer(
+            name: 'Focus',
+            durationInSeconds: 1500,
+            phase: IntervalPhase.work,
+          ),
+          ActivityTimer(
+            name: 'Short Break',
+            durationInSeconds: 300,
+            phase: IntervalPhase.rest,
+          ),
         ],
       );
 

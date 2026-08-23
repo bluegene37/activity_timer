@@ -6,11 +6,11 @@ import '../models/settings.dart';
 
 class AppController extends GetxController {
   final _settings = AppSettings();
-  
+
   // Reactive variables
   final Rx<ThemeMode> themeMode = ThemeMode.dark.obs;
   // Initialize with the standard default, but it will be instantly overridden in onInit
-  final Rx<Color> themeColor = const Color(0xFF4A6FFF).obs; 
+  final Rx<Color> themeColor = const Color(0xFF4A6FFF).obs;
   final RxBool soundEnabled = true.obs;
   final RxBool vibrationEnabled = true.obs;
   final Rx<AlarmSound> defaultAlarmSound = AlarmSound.beep.obs;
@@ -23,7 +23,7 @@ class AppController extends GetxController {
 
   Future<void> _loadSettings() async {
     await _settings.loadSettings();
-    
+
     // Update reactive variables with precisely what is stored in Hive DB
     themeMode.value = _settings.themeMode;
     themeColor.value = _settings.themeColor;

@@ -3,14 +3,14 @@ import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 
 class ColorSelector extends StatefulWidget {
-  final Color selectedColor;
-  final void Function(Color) onColorSelected;
-
   const ColorSelector({
     super.key,
     required this.selectedColor,
     required this.onColorSelected,
   });
+
+  final Color selectedColor;
+  final ValueChanged<Color> onColorSelected;
 
   @override
   State<ColorSelector> createState() => _ColorSelectorState();
@@ -21,7 +21,7 @@ class _ColorSelectorState extends State<ColorSelector> {
   final ScrollController _scrollController = ScrollController();
 
   // Apple System & Fitness Color Palette
-  final List<Color> _colorOptions = const [
+  static const List<Color> _colorOptions = [
     AppTheme.iosOrange,
     AppTheme.iosBlue,
     AppTheme.iosGreen,
@@ -85,7 +85,8 @@ class _ColorSelectorState extends State<ColorSelector> {
             itemBuilder: (context, index) {
               final color = _colorOptions[index];
               final isSelected = color.toARGB32() == _selectedColor.toARGB32();
-              final iconColor = _isLightColor(color) ? Colors.black : Colors.white;
+              final iconColor =
+                  _isLightColor(color) ? Colors.black : Colors.white;
 
               return GestureDetector(
                 onTap: () {
@@ -98,7 +99,10 @@ class _ColorSelectorState extends State<ColorSelector> {
                 child: Container(
                   width: 44,
                   height: 44,
-                  margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: color,
                     shape: BoxShape.circle,
@@ -114,13 +118,10 @@ class _ColorSelectorState extends State<ColorSelector> {
                       ),
                     ],
                   ),
-                  child: isSelected
-                      ? Icon(
-                          Icons.check,
-                          color: iconColor,
-                          size: 20,
-                        )
-                      : null,
+                  child:
+                      isSelected
+                          ? Icon(Icons.check, color: iconColor, size: 20)
+                          : null,
                 ),
               );
             },

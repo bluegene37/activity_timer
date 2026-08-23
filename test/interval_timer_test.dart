@@ -6,7 +6,7 @@ void main() {
   group('IntervalTimer tests for Workplace & Activity scenarios', () {
     test('calculates exact alarm times for hourly workplace check-ins', () {
       final startTime = DateTime(2026, 8, 23, 9, 0); // 9:00 AM
-      final endTime = DateTime(2026, 8, 23, 17, 0);   // 5:00 PM (8 hours)
+      final endTime = DateTime(2026, 8, 23, 17, 0); // 5:00 PM (8 hours)
 
       final timer = IntervalTimer(
         name: 'Hourly Boss Check-in',
@@ -56,20 +56,26 @@ void main() {
       expect(alarmTimes[4], DateTime(2026, 8, 23, 17, 0));
     });
 
-    test('calculates exact alarm times for 30-min hydration / posture check', () {
-      final startTime = DateTime(2026, 8, 23, 9, 0);
-      final endTime = DateTime(2026, 8, 23, 12, 0); // 3 hours
+    test(
+      'calculates exact alarm times for 30-min hydration / posture check',
+      () {
+        final startTime = DateTime(2026, 8, 23, 9, 0);
+        final endTime = DateTime(2026, 8, 23, 12, 0); // 3 hours
 
-      final timer = IntervalTimer(
-        name: 'Stand & Hydrate',
-        startTime: startTime,
-        endTime: endTime,
-        intervalValue: 30,
-        intervalType: IntervalType.minute,
-      );
+        final timer = IntervalTimer(
+          name: 'Stand & Hydrate',
+          startTime: startTime,
+          endTime: endTime,
+          intervalValue: 30,
+          intervalType: IntervalType.minute,
+        );
 
-      expect(timer.intervalString, 'Every 30 minutes');
-      expect(timer.totalAlarms, 7); // 9:00, 9:30, 10:00, 10:30, 11:00, 11:30, 12:00
-    });
+        expect(timer.intervalString, 'Every 30 minutes');
+        expect(
+          timer.totalAlarms,
+          7,
+        ); // 9:00, 9:30, 10:00, 10:30, 11:00, 11:30, 12:00
+      },
+    );
   });
 }

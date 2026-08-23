@@ -35,8 +35,9 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  testWidgets('SettingsScreen renders theme mode selector and sections',
-      (tester) async {
+  testWidgets('SettingsScreen renders theme mode selector and sections', (
+    tester,
+  ) async {
     Get.put(AppController());
 
     await tester.pumpWidget(const GetMaterialApp(home: SettingsScreen()));

@@ -39,6 +39,7 @@ linter:
 
     # Correctness
     - avoid_slow_async_io
+    - avoid_void_async
     - cast_nullable_to_non_nullable
     - unawaited_futures
     - unnecessary_await_in_return
@@ -49,4 +50,5 @@ linter:
     - directives_ordering
     - prefer_final_locals
     - prefer_single_quotes
+    - sort_constructors_first
     - unnecessary_parenthesis

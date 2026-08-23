@@ -16,8 +16,7 @@ class TimerListController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    final args = Get.arguments;
-    if (args is TimerSequence) {
+    if (Get.arguments case final TimerSequence args) {
       sequence.value = args;
     }
   }
@@ -163,10 +162,11 @@ class TimerListController extends GetxController {
       return;
     }
 
-    Get.to<dynamic>(() => TimerScreen(sequence: sequence.value));
+    Get.to<void>(() => TimerScreen(sequence: sequence.value));
   }
 
   String formatDuration(int seconds) => TimeFormat.clock(seconds);
 
-  String formatTotalDuration(int totalSeconds) => TimeFormat.compact(totalSeconds);
+  String formatTotalDuration(int totalSeconds) =>
+      TimeFormat.compact(totalSeconds);
 }

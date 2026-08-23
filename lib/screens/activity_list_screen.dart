@@ -6,8 +6,23 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controllers/activity_list_controller.dart';
 import '../models/activity_timer.dart';
+import '../routes/app_routes.dart';
 import '../services/database_service.dart';
 import '../theme/app_theme.dart';
+
+/// Actions offered in a routine card's overflow menu.
+enum _RoutineAction {
+  edit('Edit Name', CupertinoIcons.pencil),
+  duplicate('Duplicate Routine', CupertinoIcons.doc_on_doc),
+  share('Copy JSON to Share', CupertinoIcons.share),
+  delete('Delete', CupertinoIcons.trash, isDestructive: true);
+
+  const _RoutineAction(this.label, this.icon, {this.isDestructive = false});
+
+  final String label;
+  final IconData icon;
+  final bool isDestructive;
+}
 
 class ActivityListScreen extends StatelessWidget {
   const ActivityListScreen({super.key});
@@ -25,7 +40,12 @@ class ActivityListScreen extends StatelessWidget {
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.only(left: 20.0, right: 20.0, top: 12.0, bottom: 100.0),
+          padding: const EdgeInsets.only(
+            left: 20.0,
+            right: 20.0,
+            top: 12.0,
+            bottom: 100.0,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -84,12 +104,20 @@ class ActivityListScreen extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    icon: Icon(CupertinoIcons.square_arrow_down, color: colorScheme.onSurfaceVariant, size: 22),
+                    icon: Icon(
+                      CupertinoIcons.square_arrow_down,
+                      color: colorScheme.onSurfaceVariant,
+                      size: 22,
+                    ),
                     onPressed: () => _showImportDialog(context, controller),
                     tooltip: 'Import Routine JSON',
                   ),
                   IconButton(
-                    icon: Icon(CupertinoIcons.chart_bar_alt_fill, color: colorScheme.primary, size: 22),
+                    icon: Icon(
+                      CupertinoIcons.chart_bar_alt_fill,
+                      color: colorScheme.primary,
+                      size: 22,
+                    ),
                     onPressed: () => _showStatsBottomSheet(context, controller),
                     tooltip: 'Session History & Stats',
                   ),
@@ -100,28 +128,32 @@ class ActivityListScreen extends StatelessWidget {
               // iOS Styled Search Bar
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                  color: AppTheme.cardBackground(isDark: isDark),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                    color: AppTheme.separator(isDark: isDark),
                     width: 0.8,
                   ),
                 ),
                 child: TextField(
                   onChanged: controller.setSearchQuery,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: colorScheme.onSurface,
-                  ),
+                  style: TextStyle(fontSize: 15, color: colorScheme.onSurface),
                   decoration: InputDecoration(
                     hintText: 'Search routines...',
                     hintStyle: TextStyle(
                       fontSize: 15,
                       color: colorScheme.onSurfaceVariant,
                     ),
-                    prefixIcon: Icon(CupertinoIcons.search, color: colorScheme.onSurfaceVariant, size: 18),
+                    prefixIcon: Icon(
+                      CupertinoIcons.search,
+                      color: colorScheme.onSurfaceVariant,
+                      size: 18,
+                    ),
                     filled: false,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
@@ -131,39 +163,42 @@ class ActivityListScreen extends StatelessWidget {
               const SizedBox(height: 14),
 
               // Category Filter Bar (iOS Pill Tabs)
-              Obx(() => SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildCategoryChip(
-                      label: 'All Routines',
-                      icon: CupertinoIcons.square_grid_2x2,
-                      value: 'all',
-                      selected: controller.selectedCategory.value == 'all',
-                      onTap: () => controller.setCategory('all'),
-                      colorScheme: colorScheme,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildCategoryChip(
-                      label: '⚡ Fitness & Sports',
-                      icon: CupertinoIcons.bolt_fill,
-                      value: 'fitness',
-                      selected: controller.selectedCategory.value == 'fitness',
-                      onTap: () => controller.setCategory('fitness'),
-                      colorScheme: colorScheme,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildCategoryChip(
-                      label: '💼 Work & Focus',
-                      icon: CupertinoIcons.briefcase_fill,
-                      value: 'work',
-                      selected: controller.selectedCategory.value == 'work',
-                      onTap: () => controller.setCategory('work'),
-                      colorScheme: colorScheme,
-                    ),
-                  ],
+              Obx(
+                () => SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildCategoryChip(
+                        label: 'All Routines',
+                        icon: CupertinoIcons.square_grid_2x2,
+                        value: 'all',
+                        selected: controller.selectedCategory.value == 'all',
+                        onTap: () => controller.setCategory('all'),
+                        colorScheme: colorScheme,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildCategoryChip(
+                        label: '⚡ Fitness & Sports',
+                        icon: CupertinoIcons.bolt_fill,
+                        value: 'fitness',
+                        selected:
+                            controller.selectedCategory.value == 'fitness',
+                        onTap: () => controller.setCategory('fitness'),
+                        colorScheme: colorScheme,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildCategoryChip(
+                        label: '💼 Work & Focus',
+                        icon: CupertinoIcons.briefcase_fill,
+                        value: 'work',
+                        selected: controller.selectedCategory.value == 'work',
+                        onTap: () => controller.setCategory('work'),
+                        colorScheme: colorScheme,
+                      ),
+                    ],
+                  ),
                 ),
-              )),
+              ),
               const SizedBox(height: 22),
 
               // Routines Section Header
@@ -181,8 +216,13 @@ class ActivityListScreen extends StatelessWidget {
                     ),
                   ),
                   TextButton.icon(
-                    onPressed: () => _showPresetsBottomSheet(context, controller),
-                    icon: Icon(CupertinoIcons.sparkles, size: 16, color: colorScheme.primary),
+                    onPressed:
+                        () => _showPresetsBottomSheet(context, controller),
+                    icon: Icon(
+                      CupertinoIcons.sparkles,
+                      size: 16,
+                      color: colorScheme.primary,
+                    ),
                     label: Text(
                       'Explore Presets',
                       style: textTheme.bodyMedium?.copyWith(
@@ -217,7 +257,9 @@ class ActivityListScreen extends StatelessWidget {
                           Icon(
                             CupertinoIcons.timer,
                             size: 56,
-                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                            color: colorScheme.onSurfaceVariant.withValues(
+                              alpha: 0.4,
+                            ),
                           ),
                           const SizedBox(height: 14),
                           Text(
@@ -230,7 +272,11 @@ class ActivityListScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton.icon(
-                            onPressed: () => _showPresetsBottomSheet(context, controller),
+                            onPressed:
+                                () => _showPresetsBottomSheet(
+                                  context,
+                                  controller,
+                                ),
                             icon: const Icon(CupertinoIcons.sparkles, size: 18),
                             label: const Text('Add from Preset Library'),
                           ),
@@ -244,26 +290,34 @@ class ActivityListScreen extends StatelessWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: list.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  separatorBuilder:
+                      (context, index) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final sequence = list[index];
-                    final originalIndex = controller.sequences.indexOf(sequence);
-                    final totalDuration = controller.formatTotalDuration(sequence.totalDuration);
+                    final originalIndex = controller.sequences.indexOf(
+                      sequence,
+                    );
+                    final totalDuration = controller.formatTotalDuration(
+                      sequence.totalDuration,
+                    );
                     final isFitness = sequence.category == 'fitness';
                     final isWork = sequence.category == 'work';
 
-                    final categoryColor = isFitness
-                        ? AppTheme.iosOrange
-                        : isWork
+                    final categoryColor =
+                        isFitness
+                            ? AppTheme.iosOrange
+                            : isWork
                             ? AppTheme.iosBlue
                             : colorScheme.primary;
 
                     return DecoratedBox(
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-                        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                        color: AppTheme.cardBackground(isDark: isDark),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.cardRadius,
+                        ),
                         border: Border.all(
-                          color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+                          color: AppTheme.separator(isDark: isDark),
                           width: 0.8,
                         ),
                       ),
@@ -281,83 +335,95 @@ class ActivityListScreen extends StatelessWidget {
                                       Flexible(
                                         child: Text(
                                           sequence.name,
-                                          style: textTheme.titleMedium?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: -0.2,
-                                          ),
+                                          style: textTheme.titleMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                                letterSpacing: -0.2,
+                                              ),
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      _buildSmallCategoryBadge(
-                                        isFitness ? 'FITNESS' : isWork ? 'WORK' : 'CUSTOM',
-                                        categoryColor,
-                                      ),
+                                      _buildSmallCategoryBadge(switch (sequence
+                                          .category
+                                          .toLowerCase()) {
+                                        'fitness' => 'FITNESS',
+                                        'work' => 'WORK',
+                                        _ => 'CUSTOM',
+                                      }, categoryColor),
                                     ],
                                   ),
                                 ),
-                                PopupMenuButton<String>(
-                                  icon: Icon(CupertinoIcons.ellipsis, size: 18, color: colorScheme.onSurfaceVariant),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                  onSelected: (value) {
-                                    switch (value) {
-                                      case 'edit':
-                                        _showEditDialog(context, controller, originalIndex);
-                                      case 'duplicate':
-                                        controller.duplicateSequence(originalIndex);
-                                      case 'share':
-                                        controller.exportSequenceToClipboard(sequence);
-                                      case 'delete':
-                                        _showDeleteDialog(context, controller, originalIndex, sequence.name);
+                                PopupMenuButton<_RoutineAction>(
+                                  icon: Icon(
+                                    CupertinoIcons.ellipsis,
+                                    size: 18,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  onSelected: (action) {
+                                    switch (action) {
+                                      case _RoutineAction.edit:
+                                        _showEditDialog(
+                                          context,
+                                          controller,
+                                          originalIndex,
+                                        );
+                                      case _RoutineAction.duplicate:
+                                        controller.duplicateSequence(
+                                          originalIndex,
+                                        );
+                                      case _RoutineAction.share:
+                                        controller.exportSequenceToClipboard(
+                                          sequence,
+                                        );
+                                      case _RoutineAction.delete:
+                                        _showDeleteDialog(
+                                          context,
+                                          controller,
+                                          originalIndex,
+                                          sequence.name,
+                                        );
                                     }
                                   },
-                                  itemBuilder: (context) => [
-                                    const PopupMenuItem(
-                                      value: 'edit',
-                                      child: Row(
-                                        children: [
-                                          Icon(CupertinoIcons.pencil, size: 18),
-                                          SizedBox(width: 10),
-                                          Text('Edit Name'),
-                                        ],
-                                      ),
-                                    ),
-                                    const PopupMenuItem(
-                                      value: 'duplicate',
-                                      child: Row(
-                                        children: [
-                                          Icon(CupertinoIcons.doc_on_doc, size: 18),
-                                          SizedBox(width: 10),
-                                          Text('Duplicate Routine'),
-                                        ],
-                                      ),
-                                    ),
-                                    const PopupMenuItem(
-                                      value: 'share',
-                                      child: Row(
-                                        children: [
-                                          Icon(CupertinoIcons.share, size: 18),
-                                          SizedBox(width: 10),
-                                          Text('Copy JSON to Share'),
-                                        ],
-                                      ),
-                                    ),
-                                    const PopupMenuItem(
-                                      value: 'delete',
-                                      child: Row(
-                                        children: [
-                                          Icon(CupertinoIcons.trash, size: 18, color: Colors.red),
-                                          SizedBox(width: 10),
-                                          Text('Delete', style: TextStyle(color: Colors.red)),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
+                                  itemBuilder:
+                                      (context) => [
+                                        for (final action
+                                            in _RoutineAction.values)
+                                          PopupMenuItem(
+                                            value: action,
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  action.icon,
+                                                  size: 18,
+                                                  color:
+                                                      action.isDestructive
+                                                          ? Colors.red
+                                                          : null,
+                                                ),
+                                                const SizedBox(width: 10),
+                                                Text(
+                                                  action.label,
+                                                  style:
+                                                      action.isDestructive
+                                                          ? const TextStyle(
+                                                            color: Colors.red,
+                                                          )
+                                                          : null,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                      ],
                                 ),
                               ],
                             ),
 
-                            if (sequence.description != null && sequence.description!.isNotEmpty) ...[
+                            if (sequence.description != null &&
+                                sequence.description!.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Text(
                                 sequence.description!,
@@ -372,16 +438,26 @@ class ActivityListScreen extends StatelessWidget {
                             // Meta Info Row
                             Row(
                               children: [
-                                Icon(CupertinoIcons.stopwatch, size: 14, color: colorScheme.onSurfaceVariant),
+                                Icon(
+                                  CupertinoIcons.stopwatch,
+                                  size: 14,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   totalDuration,
-                                  style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                                  style: textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                                 const SizedBox(width: 10),
                                 Text('•', style: textTheme.bodySmall),
                                 const SizedBox(width: 10),
-                                Icon(CupertinoIcons.list_number, size: 14, color: colorScheme.onSurfaceVariant),
+                                Icon(
+                                  CupertinoIcons.list_number,
+                                  size: 14,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${sequence.timers.length} steps',
@@ -391,7 +467,11 @@ class ActivityListScreen extends StatelessWidget {
                                   const SizedBox(width: 10),
                                   Text('•', style: textTheme.bodySmall),
                                   const SizedBox(width: 10),
-                                  Icon(CupertinoIcons.repeat, size: 14, color: colorScheme.primary),
+                                  Icon(
+                                    CupertinoIcons.repeat,
+                                    size: 14,
+                                    color: colorScheme.primary,
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     'Loop',
@@ -410,12 +490,23 @@ class ActivityListScreen extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: OutlinedButton.icon(
-                                    onPressed: () => Get.toNamed<dynamic>('/timer-list', arguments: sequence),
-                                    icon: const Icon(CupertinoIcons.slider_horizontal_3, size: 15),
+                                    onPressed:
+                                        () => Get.toNamed<void>(
+                                          Routes.timerList,
+                                          arguments: sequence,
+                                        ),
+                                    icon: const Icon(
+                                      CupertinoIcons.slider_horizontal_3,
+                                      size: 15,
+                                    ),
                                     label: const Text('Customize'),
                                     style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 10),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -423,20 +514,35 @@ class ActivityListScreen extends StatelessWidget {
                                 Expanded(
                                   child: ElevatedButton.icon(
                                     onPressed: () {
-                                      unawaited(HapticFeedback.selectionClick());
+                                      unawaited(
+                                        HapticFeedback.selectionClick(),
+                                      );
                                       if (sequence.timers.isEmpty) {
-                                        Get.toNamed<dynamic>('/timer-list', arguments: sequence);
+                                        Get.toNamed<void>(
+                                          Routes.timerList,
+                                          arguments: sequence,
+                                        );
                                       } else {
-                                        Get.toNamed<dynamic>('/timer', arguments: sequence);
+                                        Get.toNamed<void>(
+                                          Routes.timer,
+                                          arguments: sequence,
+                                        );
                                       }
                                     },
-                                    icon: const Icon(CupertinoIcons.play_fill, size: 15),
+                                    icon: const Icon(
+                                      CupertinoIcons.play_fill,
+                                      size: 15,
+                                    ),
                                     label: const Text('Start'),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: colorScheme.primary,
                                       foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 10),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -465,7 +571,10 @@ class ActivityListScreen extends StatelessWidget {
           foregroundColor: Colors.white,
           elevation: 4,
           icon: const Icon(CupertinoIcons.plus, size: 18),
-          label: const Text('New Routine', style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.2)),
+          label: const Text(
+            'New Routine',
+            style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.2),
+          ),
         ),
       ),
     );
@@ -537,50 +646,63 @@ class ActivityListScreen extends StatelessWidget {
     );
   }
 
-  void _showImportDialog(BuildContext context, ActivityListController controller) {
+  void _showImportDialog(
+    BuildContext context,
+    ActivityListController controller,
+  ) {
     final textController = TextEditingController();
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text('Import Routine JSON'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Paste a timer routine JSON string below to import it:'),
-            const SizedBox(height: 12),
-            TextField(
-              controller: textController,
-              maxLines: 5,
-              decoration: InputDecoration(
-                hintText: '{\n  "name": "My Shared Workout",\n  ...\n}',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+      builder:
+          (dialogContext) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            title: const Text('Import Routine JSON'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Paste a timer routine JSON string below to import it:',
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: textController,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    hintText: '{\n  "name": "My Shared Workout",\n  ...\n}',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final jsonStr = textController.text.trim();
+                  if (jsonStr.isNotEmpty) {
+                    Navigator.pop(dialogContext);
+                    await controller.importSequenceFromJson(jsonStr);
+                  }
+                },
+                child: const Text('Import'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () async {
-              final jsonStr = textController.text.trim();
-              if (jsonStr.isNotEmpty) {
-                Navigator.pop(dialogContext);
-                await controller.importSequenceFromJson(jsonStr);
-              }
-            },
-            child: const Text('Import'),
-          ),
-        ],
-      ),
     );
   }
 
-  void _showPresetsBottomSheet(BuildContext context, ActivityListController controller) {
+  void _showPresetsBottomSheet(
+    BuildContext context,
+    ActivityListController controller,
+  ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final db = DatabaseService();
@@ -593,70 +715,104 @@ class ActivityListScreen extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.8,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => DefaultTabController(
-          length: 3,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // iOS modal drag bar
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2.5),
+      builder:
+          (context) => DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.8,
+            maxChildSize: 0.95,
+            builder:
+                (context, scrollController) => DefaultTabController(
+                  length: 3,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0,
+                      vertical: 12.0,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // iOS modal drag bar
+                        Center(
+                          child: Container(
+                            width: 36,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.3,
+                              ),
+                              borderRadius: BorderRadius.circular(2.5),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Preset Library',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                CupertinoIcons.xmark_circle_fill,
+                                size: 22,
+                              ),
+                              color: colorScheme.onSurfaceVariant,
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          '1-Click add tested templates for athletes and productivity.',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 14),
+                        TabBar(
+                          labelColor: colorScheme.primary,
+                          indicatorColor: colorScheme.primary,
+                          unselectedLabelColor: colorScheme.onSurfaceVariant,
+                          tabs: const [
+                            Tab(text: 'All'),
+                            Tab(text: '⚡ Fitness'),
+                            Tab(text: '💼 Work'),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Expanded(
+                          child: TabBarView(
+                            children: [
+                              _buildPresetList(
+                                allPresets,
+                                controller,
+                                context,
+                                scrollController,
+                              ),
+                              _buildPresetList(
+                                allPresets
+                                    .where((p) => p.category == 'fitness')
+                                    .toList(),
+                                controller,
+                                context,
+                                scrollController,
+                              ),
+                              _buildPresetList(
+                                allPresets
+                                    .where((p) => p.category == 'work')
+                                    .toList(),
+                                controller,
+                                context,
+                                scrollController,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Preset Library', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-                    IconButton(
-                      icon: const Icon(CupertinoIcons.xmark_circle_fill, size: 22),
-                      color: colorScheme.onSurfaceVariant,
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                Text(
-                  '1-Click add tested templates for athletes and productivity.',
-                  style: theme.textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 14),
-                TabBar(
-                  labelColor: colorScheme.primary,
-                  indicatorColor: colorScheme.primary,
-                  unselectedLabelColor: colorScheme.onSurfaceVariant,
-                  tabs: const [
-                    Tab(text: 'All'),
-                    Tab(text: '⚡ Fitness'),
-                    Tab(text: '💼 Work'),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      _buildPresetList(allPresets, controller, context, scrollController),
-                      _buildPresetList(allPresets.where((p) => p.category == 'fitness').toList(), controller, context, scrollController),
-                      _buildPresetList(allPresets.where((p) => p.category == 'work').toList(), controller, context, scrollController),
-                    ],
-                  ),
-                ),
-              ],
-            ),
           ),
-        ),
-      ),
     );
   }
 
@@ -682,10 +838,10 @@ class ActivityListScreen extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+            color: AppTheme.cardBackground(isDark: isDark),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+              color: AppTheme.separator(isDark: isDark),
               width: 0.8,
             ),
           ),
@@ -698,7 +854,9 @@ class ActivityListScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  isFitness ? CupertinoIcons.bolt_fill : CupertinoIcons.briefcase_fill,
+                  isFitness
+                      ? CupertinoIcons.bolt_fill
+                      : CupertinoIcons.briefcase_fill,
                   color: badgeColor,
                   size: 20,
                 ),
@@ -708,7 +866,12 @@ class ActivityListScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(preset.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      preset.name,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     if (preset.description != null)
                       Text(
                         preset.description!,
@@ -719,7 +882,10 @@ class ActivityListScreen extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       '${preset.timers.length} intervals • ${controller.formatTotalDuration(preset.totalDuration)}',
-                      style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.w700),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ],
                 ),
@@ -734,7 +900,9 @@ class ActivityListScreen extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(60, 36),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 child: const Text('Add'),
               ),
@@ -745,7 +913,10 @@ class ActivityListScreen extends StatelessWidget {
     );
   }
 
-  void _showStatsBottomSheet(BuildContext context, ActivityListController controller) {
+  void _showStatsBottomSheet(
+    BuildContext context,
+    ActivityListController controller,
+  ) {
     controller.loadSessionHistory();
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -759,218 +930,312 @@ class ActivityListScreen extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Obx(() {
-        final historyList = controller.sessionHistory;
-        final int totalSeconds = historyList.fold(0, (sum, s) => sum + s.totalDurationInSeconds);
-        final formattedTotalTime = controller.formatTotalDuration(totalSeconds);
+      builder:
+          (context) => Obx(() {
+            final historyList = controller.sessionHistory;
+            final int totalSeconds = historyList.fold(
+              0,
+              (sum, s) => sum + s.totalDurationInSeconds,
+            );
+            final formattedTotalTime = controller.formatTotalDuration(
+              totalSeconds,
+            );
 
-        final fitnessSeconds = historyList
-            .where((s) => s.category == 'fitness')
-            .fold(0, (sum, s) => sum + s.totalDurationInSeconds);
-        final workSeconds = historyList
-            .where((s) => s.category == 'work')
-            .fold(0, (sum, s) => sum + s.totalDurationInSeconds);
+            final fitnessSeconds = historyList
+                .where((s) => s.category == 'fitness')
+                .fold(0, (sum, s) => sum + s.totalDurationInSeconds);
+            final workSeconds = historyList
+                .where((s) => s.category == 'work')
+                .fold(0, (sum, s) => sum + s.totalDurationInSeconds);
 
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.75,
-          maxChildSize: 0.9,
-          builder: (context, scrollController) => Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: ListView(
-              controller: scrollController,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2.5),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Activity Stats & History', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-                    IconButton(
-                      icon: const Icon(CupertinoIcons.xmark_circle_fill, size: 22),
-                      color: colorScheme.onSurfaceVariant,
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-                          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                          border: Border.all(
-                            color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
-                            width: 0.8,
+            return DraggableScrollableSheet(
+              expand: false,
+              initialChildSize: 0.75,
+              maxChildSize: 0.9,
+              builder:
+                  (context, scrollController) => Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: ListView(
+                      controller: scrollController,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 36,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.3,
+                              ),
+                              borderRadius: BorderRadius.circular(2.5),
+                            ),
                           ),
                         ),
-                        child: Column(
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Completed', style: theme.textTheme.bodySmall),
-                            const SizedBox(height: 4),
                             Text(
-                              '${historyList.length}',
-                              style: theme.textTheme.headlineMedium?.copyWith(
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.w800,
+                              'Activity Stats & History',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                            Text('Sessions', style: theme.textTheme.bodyMedium),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-                          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                          border: Border.all(
-                            color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
-                            width: 0.8,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Text('Total Time', style: theme.textTheme.bodySmall),
-                            const SizedBox(height: 4),
-                            Text(
-                              formattedTotalTime,
-                              style: theme.textTheme.headlineMedium?.copyWith(
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.w800,
+                            IconButton(
+                              icon: const Icon(
+                                CupertinoIcons.xmark_circle_fill,
+                                size: 22,
                               ),
+                              color: colorScheme.onSurfaceVariant,
+                              onPressed: () => Navigator.pop(context),
                             ),
-                            Text('Active Logged', style: theme.textTheme.bodyMedium),
                           ],
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Category Time Breakdown (Apple Activity Style)
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.iosOrange.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
+                        const SizedBox(height: 14),
+                        Row(
                           children: [
-                            const Text('⚡ Fitness Time', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.iosOrange)),
-                            const SizedBox(height: 2),
-                            Text(controller.formatTotalDuration(fitnessSeconds), style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.iosOrange)),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.iosBlue.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text('💼 Work Time', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.iosBlue)),
-                            const SizedBox(height: 2),
-                            Text(controller.formatTotalDuration(workSeconds), style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.iosBlue)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-                Text('Recent History', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 10),
-                if (historyList.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 32),
-                    child: Center(
-                      child: Text(
-                        'No completed sessions logged yet.\nComplete a workout or work timer to see it here!',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ),
-                  )
-                else
-                  ...historyList.map(
-                    (session) => Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
-                          width: 0.8,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            session.sessionType == 'interval' ? CupertinoIcons.stopwatch : CupertinoIcons.check_mark_circled_solid,
-                            color: colorScheme.primary,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(session.title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-                                Text(
-                                  '${controller.formatTotalDuration(session.totalDurationInSeconds)} • ${dateFormat.format(session.completedAt)}',
-                                  style: theme.textTheme.bodySmall,
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.cardBackground(
+                                    isDark: isDark,
+                                  ),
+                                  borderRadius: BorderRadius.circular(
+                                    AppTheme.cardRadius,
+                                  ),
+                                  border: Border.all(
+                                    color: AppTheme.separator(isDark: isDark),
+                                    width: 0.8,
+                                  ),
                                 ),
-                              ],
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'Completed',
+                                      style: theme.textTheme.bodySmall,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${historyList.length}',
+                                      style: theme.textTheme.headlineMedium
+                                          ?.copyWith(
+                                            color: colorScheme.primary,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                    ),
+                                    Text(
+                                      'Sessions',
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.cardBackground(
+                                    isDark: isDark,
+                                  ),
+                                  borderRadius: BorderRadius.circular(
+                                    AppTheme.cardRadius,
+                                  ),
+                                  border: Border.all(
+                                    color: AppTheme.separator(isDark: isDark),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'Total Time',
+                                      style: theme.textTheme.bodySmall,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      formattedTotalTime,
+                                      style: theme.textTheme.headlineMedium
+                                          ?.copyWith(
+                                            color: colorScheme.primary,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                    ),
+                                    Text(
+                                      'Active Logged',
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Category Time Breakdown (Apple Activity Style)
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.iosOrange.withValues(
+                                    alpha: 0.12,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Column(
+                                  children: [
+                                    const Text(
+                                      '⚡ Fitness Time',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.iosOrange,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      controller.formatTotalDuration(
+                                        fitnessSeconds,
+                                      ),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.iosOrange,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.iosBlue.withValues(
+                                    alpha: 0.12,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Column(
+                                  children: [
+                                    const Text(
+                                      '💼 Work Time',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.iosBlue,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      controller.formatTotalDuration(
+                                        workSeconds,
+                                      ),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.iosBlue,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+                        Text(
+                          'Recent History',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        if (historyList.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 32),
+                            child: Center(
+                              child: Text(
+                                'No completed sessions logged yet.\nComplete a workout or work timer to see it here!',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            ),
+                          )
+                        else
+                          ...historyList.map(
+                            (session) => Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: AppTheme.cardBackground(isDark: isDark),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppTheme.separator(isDark: isDark),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    session.sessionType == 'interval'
+                                        ? CupertinoIcons.stopwatch
+                                        : CupertinoIcons
+                                            .check_mark_circled_solid,
+                                    color: colorScheme.primary,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          session.title,
+                                          style: theme.textTheme.titleSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                        Text(
+                                          '${controller.formatTotalDuration(session.totalDurationInSeconds)} • ${dateFormat.format(session.completedAt)}',
+                                          style: theme.textTheme.bodySmall,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
-              ],
-            ),
-          ),
-        );
-      }),
+            );
+          }),
     );
   }
 
-  void _showEditDialog(BuildContext context, ActivityListController controller, int index) async {
+  Future<void> _showEditDialog(
+    BuildContext context,
+    ActivityListController controller,
+    int index,
+  ) async {
     final sequence = controller.sequences[index];
     final nameController = TextEditingController(text: sequence.name);
-    final descController = TextEditingController(text: sequence.description ?? '');
+    final descController = TextEditingController(
+      text: sequence.description ?? '',
+    );
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
-    final result = await Get.dialog<Map<String, String>>(
+
+    final result = await Get.dialog<({String name, String description})>(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: const Text('Edit Activity'),
@@ -983,9 +1248,17 @@ class ActivityListScreen extends StatelessWidget {
                 decoration: InputDecoration(
                   labelText: 'Activity Name',
                   filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  fillColor: colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.5,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
                 ),
                 autofocus: true,
               ),
@@ -995,9 +1268,17 @@ class ActivityListScreen extends StatelessWidget {
                 decoration: InputDecoration(
                   labelText: 'Description (Optional)',
                   filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  fillColor: colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.5,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
                 ),
                 maxLines: 2,
               ),
@@ -1006,43 +1287,59 @@ class ActivityListScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back<Map<String, String>>(),
+            onPressed: Get.back<({String name, String description})>,
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
-              Get.back<Map<String, String>>(result: {
-                'name': nameController.text.trim(),
-                'description': descController.text.trim(),
-              });
+              Get.back(
+                result: (
+                  name: nameController.text.trim(),
+                  description: descController.text.trim(),
+                ),
+              );
             },
-            child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Save',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
     );
 
-    Future.delayed(const Duration(seconds: 1), () {
+    Future<void>.delayed(const Duration(seconds: 1), () {
       nameController.dispose();
       descController.dispose();
     });
 
-    if (result != null && result['name'] != null) {
-      unawaited(controller.editSequence(index, result['name']!, result['description']!));
+    if (result case (name: final name, description: final description)) {
+      unawaited(controller.editSequence(index, name, description));
     }
   }
 
-  void _showDeleteDialog(BuildContext context, ActivityListController controller, int index, String name) async {
+  Future<void> _showDeleteDialog(
+    BuildContext context,
+    ActivityListController controller,
+    int index,
+    String name,
+  ) async {
     final confirm = await Get.dialog<bool>(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: const Text('Delete Activity'),
         content: Text('Are you sure you want to delete "$name"?'),
         actions: [
-          TextButton(onPressed: () => Get.back<bool>(result: false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Get.back<bool>(result: false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Get.back<bool>(result: true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),

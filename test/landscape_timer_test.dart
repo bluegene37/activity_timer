@@ -26,34 +26,44 @@ void main() {
     );
   });
 
-  testWidgets('TimerScreen renders landscape split HUD when orientation is horizontal',
-      (tester) async {
-    tester.view.physicalSize = const Size(1920, 1080);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
+  testWidgets(
+    'TimerScreen renders landscape split HUD when orientation is horizontal',
+    (tester) async {
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
 
-    final sequence = TimerSequence(
-      name: 'Gym Workout Routine',
-      category: 'fitness',
-      preparationSeconds: 0,
-      timers: [
-        ActivityTimer(name: 'Barbell Squats', durationInSeconds: 45, phase: IntervalPhase.work),
-        ActivityTimer(name: 'Rest', durationInSeconds: 60, phase: IntervalPhase.rest),
-      ],
-    );
+      final sequence = TimerSequence(
+        name: 'Gym Workout Routine',
+        category: 'fitness',
+        preparationSeconds: 0,
+        timers: [
+          ActivityTimer(
+            name: 'Barbell Squats',
+            durationInSeconds: 45,
+            phase: IntervalPhase.work,
+          ),
+          ActivityTimer(
+            name: 'Rest',
+            durationInSeconds: 60,
+            phase: IntervalPhase.rest,
+          ),
+        ],
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(home: TimerScreen(sequence: sequence)),
-    );
-    await tester.pump();
+      await tester.pumpWidget(
+        MaterialApp(home: TimerScreen(sequence: sequence)),
+      );
+      await tester.pump();
 
-    // Verify landscape split layout elements
-    expect(find.text('Gym Workout Routine'), findsOneWidget);
-    expect(find.text('Barbell Squats'), findsOneWidget);
-    expect(find.text('WORK'), findsOneWidget);
-    expect(find.text('0:45'), findsOneWidget);
-    expect(find.text('+15s'), findsOneWidget);
-    expect(find.text('-15s'), findsOneWidget);
-    expect(find.text('Next: Rest (1:00)'), findsOneWidget);
-  });
+      // Verify landscape split layout elements
+      expect(find.text('Gym Workout Routine'), findsOneWidget);
+      expect(find.text('Barbell Squats'), findsOneWidget);
+      expect(find.text('WORK'), findsOneWidget);
+      expect(find.text('0:45'), findsOneWidget);
+      expect(find.text('+15s'), findsOneWidget);
+      expect(find.text('-15s'), findsOneWidget);
+      expect(find.text('Next: Rest (1:00)'), findsOneWidget);
+    },
+  );
 }

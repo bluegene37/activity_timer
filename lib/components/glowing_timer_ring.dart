@@ -2,13 +2,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 class GlowingTimerRing extends StatelessWidget {
-  final double progress;
-  final Color color;
-  final Color backgroundColor;
-  final double strokeWidth;
-  final double size;
-  final Widget child;
-
   const GlowingTimerRing({
     super.key,
     required this.progress,
@@ -18,6 +11,13 @@ class GlowingTimerRing extends StatelessWidget {
     this.size = 260.0,
     required this.child,
   });
+
+  final double progress;
+  final Color color;
+  final Color backgroundColor;
+  final double strokeWidth;
+  final double size;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -38,17 +38,17 @@ class GlowingTimerRing extends StatelessWidget {
 }
 
 class _AppleFitnessRingPainter extends CustomPainter {
-  final double progress;
-  final Color color;
-  final Color backgroundColor;
-  final double strokeWidth;
-
   _AppleFitnessRingPainter({
     required this.progress,
     required this.color,
     required this.backgroundColor,
     required this.strokeWidth,
   });
+
+  final double progress;
+  final Color color;
+  final Color backgroundColor;
+  final double strokeWidth;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -57,11 +57,12 @@ class _AppleFitnessRingPainter extends CustomPainter {
     final rect = Rect.fromCircle(center: center, radius: radius);
 
     // 1. Draw Apple Background track (subtle translucent ring with rounded track)
-    final bgPaint = Paint()
-      ..color = backgroundColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
+    final bgPaint =
+        Paint()
+          ..color = backgroundColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..strokeCap = StrokeCap.round;
 
     canvas.drawCircle(center, radius, bgPaint);
 
@@ -72,18 +73,20 @@ class _AppleFitnessRingPainter extends CustomPainter {
     final sweepAngle = 2 * math.pi * clampedProgress;
 
     // 2. Draw Apple Watch ambient neon glow
-    final glowPaint = Paint()
-      ..color = color.withValues(alpha: 0.35)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth * 1.4
-      ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+    final glowPaint =
+        Paint()
+          ..color = color.withValues(alpha: 0.35)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth * 1.4
+          ..strokeCap = StrokeCap.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
 
     canvas.drawArc(rect, startAngle, sweepAngle, false, glowPaint);
 
     // 3. Draw Gradient Arc (Apple Fitness style gradient from lighter to vibrant color)
     final HSLColor hsl = HSLColor.fromColor(color);
-    final lightColor = hsl.withLightness((hsl.lightness + 0.12).clamp(0.0, 1.0)).toColor();
+    final lightColor =
+        hsl.withLightness((hsl.lightness + 0.12).clamp(0.0, 1.0)).toColor();
     final deepColor = color;
 
     final gradient = SweepGradient(
@@ -94,11 +97,12 @@ class _AppleFitnessRingPainter extends CustomPainter {
       transform: const GradientRotation(-math.pi / 2),
     );
 
-    final fgPaint = Paint()
-      ..shader = gradient.createShader(rect)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
+    final fgPaint =
+        Paint()
+          ..shader = gradient.createShader(rect)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..strokeCap = StrokeCap.round;
 
     canvas.drawArc(rect, startAngle, sweepAngle, false, fgPaint);
 
@@ -110,16 +114,18 @@ class _AppleFitnessRingPainter extends CustomPainter {
         center.dy + radius * math.sin(endAngle),
       );
 
-      final endCapShadow = Paint()
-        ..color = Colors.black.withValues(alpha: 0.25)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+      final endCapShadow =
+          Paint()
+            ..color = Colors.black.withValues(alpha: 0.25)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
 
       canvas.drawCircle(endPoint, strokeWidth / 2, endCapShadow);
 
       // Re-draw crisp end point tip
-      final endCapPaint = Paint()
-        ..color = deepColor
-        ..style = PaintingStyle.fill;
+      final endCapPaint =
+          Paint()
+            ..color = deepColor
+            ..style = PaintingStyle.fill;
       canvas.drawCircle(endPoint, strokeWidth / 2, endCapPaint);
     }
   }

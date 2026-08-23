@@ -15,9 +15,9 @@ import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 
 class IntervalTimerScreen extends StatefulWidget {
-  final IntervalTimer timer;
-
   const IntervalTimerScreen({super.key, required this.timer});
+
+  final IntervalTimer timer;
 
   @override
   State<IntervalTimerScreen> createState() => _IntervalTimerScreenState();
@@ -195,7 +195,8 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
   }
 
   void _logSessionCompletion() {
-    final durationInSeconds = _allAlarmTimes.last.difference(_allAlarmTimes.first).inSeconds;
+    final durationInSeconds =
+        _allAlarmTimes.last.difference(_allAlarmTimes.first).inSeconds;
     DatabaseService().logSessionHistory(
       SessionHistory(
         title: widget.timer.name,
@@ -229,21 +230,12 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
     _initializeTimer();
   }
 
-  int _getTotalIntervalSeconds() {
-    switch (widget.timer.intervalType) {
-      case IntervalType.hour:
-        return widget.timer.intervalValue * 3600;
-      case IntervalType.minute:
-        return widget.timer.intervalValue * 60;
-      case IntervalType.second:
-        return widget.timer.intervalValue;
-    }
-  }
-
   Color _getTimerColor(double progress, ColorScheme colorScheme) {
-    final HSLColor baseColor = HSLColor.fromColor(colorScheme.primary);
-    double targetLightness = (baseColor.lightness + 0.15) - (progress * 0.3);
-    targetLightness = targetLightness.clamp(0.2, 0.8);
+    final baseColor = HSLColor.fromColor(colorScheme.primary);
+    final targetLightness = (baseColor.lightness + 0.15 - progress * 0.3).clamp(
+      0.2,
+      0.8,
+    );
     return baseColor.withLightness(targetLightness).toColor();
   }
 
@@ -258,23 +250,24 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
   void _confirmExit() {
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Exit Timer?'),
-        content: const Text('Are you sure you want to exit this timer?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Text('Exit Timer?'),
+            content: const Text('Are you sure you want to exit this timer?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext); // Close dialog
+                  Navigator.pop(context); // Close timer screen
+                },
+                child: const Text('Exit'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext); // Close dialog
-              Navigator.pop(context); // Close timer screen
-            },
-            child: const Text('Exit'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -297,7 +290,11 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
           title: Text(widget.timer.name),
           centerTitle: true,
           leading: IconButton(
-            icon: Icon(CupertinoIcons.xmark, color: colorScheme.onSurface, size: 22),
+            icon: Icon(
+              CupertinoIcons.xmark,
+              color: colorScheme.onSurface,
+              size: 22,
+            ),
             onPressed: () {
               if (_isCompleted) {
                 Navigator.pop(context);
@@ -310,8 +307,13 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
             // Sound toggle button
             IconButton(
               icon: Icon(
-                _settings.soundEnabled ? CupertinoIcons.speaker_2_fill : CupertinoIcons.speaker_slash_fill,
-                color: _settings.soundEnabled ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                _settings.soundEnabled
+                    ? CupertinoIcons.speaker_2_fill
+                    : CupertinoIcons.speaker_slash_fill,
+                color:
+                    _settings.soundEnabled
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
                 size: 20,
               ),
               onPressed: () async {
@@ -325,9 +327,15 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
             const SizedBox(width: 4),
           ],
         ),
-        body: _isCompleted
-            ? _buildCompletedView(textTheme, colorScheme, timeFormatShort)
-            : _buildRunningView(textTheme, colorScheme, timeFormat, timeFormatShort),
+        body:
+            _isCompleted
+                ? _buildCompletedView(textTheme, colorScheme, timeFormatShort)
+                : _buildRunningView(
+                  textTheme,
+                  colorScheme,
+                  timeFormat,
+                  timeFormatShort,
+                ),
       ),
     );
   }
@@ -344,10 +352,11 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
     final seconds = timeDifference.inSeconds % 60;
 
     // Calculate progress for the current interval
-    final totalSeconds = _getTotalIntervalSeconds();
+    final totalSeconds = widget.timer.intervalInSeconds;
     final remainingSeconds = timeDifference.inSeconds;
-    
-    double progress = totalSeconds > 0 ? 1.0 - (remainingSeconds / totalSeconds) : 0.0;
+
+    double progress =
+        totalSeconds > 0 ? 1.0 - (remainingSeconds / totalSeconds) : 0.0;
     progress = progress.clamp(0.0, 1.0);
 
     return SafeArea(
@@ -357,9 +366,11 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(2),
             child: LinearProgressIndicator(
-              value: _allAlarmTimes.length > 1
-                  ? (_currentAlarmIndex / (_allAlarmTimes.length - 1)).clamp(0.0, 1.0)
-                  : 0.0,
+              value:
+                  _allAlarmTimes.length > 1
+                      ? (_currentAlarmIndex / (_allAlarmTimes.length - 1))
+                          .clamp(0.0, 1.0)
+                      : 0.0,
               minHeight: 4,
               backgroundColor: colorScheme.onSurface.withValues(alpha: 0.06),
               color: colorScheme.primary,
@@ -373,7 +384,9 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
               children: [
                 Text(
                   'Current Time',
-                  style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -385,7 +398,10 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                 ),
                 const SizedBox(height: 14),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: colorScheme.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(AppTheme.pillRadius),
@@ -471,13 +487,18 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 2,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'Alarm Schedule',
-                        style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       Text(
                         'Next: ${timeFormatShort.format(_nextAlarmTime)}',
@@ -504,14 +525,16 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                         width: 78,
                         margin: const EdgeInsets.symmetric(horizontal: 5),
                         decoration: BoxDecoration(
-                          color: isCurrentAlarm
-                              ? colorScheme.primary.withValues(alpha: 0.12)
-                              : colorScheme.surface,
+                          color:
+                              isCurrentAlarm
+                                  ? colorScheme.primary.withValues(alpha: 0.12)
+                                  : colorScheme.surface,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: isCurrentAlarm
-                                ? colorScheme.primary
-                                : colorScheme.outlineVariant,
+                            color:
+                                isCurrentAlarm
+                                    ? colorScheme.primary
+                                    : colorScheme.outlineVariant,
                             width: isCurrentAlarm ? 1.5 : 0.8,
                           ),
                         ),
@@ -523,9 +546,10 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 12,
-                                color: isCurrentAlarm
-                                    ? colorScheme.primary
-                                    : isPastAlarm
+                                color:
+                                    isCurrentAlarm
+                                        ? colorScheme.primary
+                                        : isPastAlarm
                                         ? colorScheme.onSurfaceVariant
                                         : colorScheme.onSurface,
                               ),
@@ -535,10 +559,14 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                               timeFormatShort.format(alarmTime),
                               style: TextStyle(
                                 fontSize: 11,
-                                fontWeight: isCurrentAlarm ? FontWeight.w700 : FontWeight.normal,
-                                color: isCurrentAlarm
-                                    ? colorScheme.primary
-                                    : isPastAlarm
+                                fontWeight:
+                                    isCurrentAlarm
+                                        ? FontWeight.w700
+                                        : FontWeight.normal,
+                                color:
+                                    isCurrentAlarm
+                                        ? colorScheme.primary
+                                        : isPastAlarm
                                         ? colorScheme.onSurfaceVariant
                                         : colorScheme.onSurface,
                               ),
@@ -549,11 +577,14 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                                   ? CupertinoIcons.check_mark_circled_solid
                                   : CupertinoIcons.circle,
                               size: 14,
-                              color: isPastAlarm
-                                  ? AppTheme.iosGreen
-                                  : isCurrentAlarm
+                              color:
+                                  isPastAlarm
+                                      ? AppTheme.iosGreen
+                                      : isCurrentAlarm
                                       ? colorScheme.primary
-                                      : colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                                      : colorScheme.onSurfaceVariant.withValues(
+                                        alpha: 0.4,
+                                      ),
                             ),
                           ],
                         ),
@@ -567,7 +598,10 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
 
           // Control buttons
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 20.0,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -595,7 +629,12 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                   foregroundColor: Colors.white,
                   elevation: 6,
                   shape: const CircleBorder(),
-                  child: Icon(_isRunning ? CupertinoIcons.pause_fill : CupertinoIcons.play_fill, size: 36),
+                  child: Icon(
+                    _isRunning
+                        ? CupertinoIcons.pause_fill
+                        : CupertinoIcons.play_fill,
+                    size: 36,
+                  ),
                 ),
                 const SizedBox(width: 24),
                 IconButton(
@@ -619,7 +658,11 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
     );
   }
 
-  Widget _buildCompletedView(TextTheme textTheme, ColorScheme colorScheme, DateFormat timeFormatShort) {
+  Widget _buildCompletedView(
+    TextTheme textTheme,
+    ColorScheme colorScheme,
+    DateFormat timeFormatShort,
+  ) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -664,7 +707,9 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
             const SizedBox(height: 8),
             Text(
               'All ${_allAlarmTimes.length} alarms have been triggered',
-              style: textTheme.titleMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+              style: textTheme.titleMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 14),
             Container(
@@ -675,7 +720,9 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
               ),
               child: Text(
                 'Time Range: ${DateFormat('h:mm a').format(_allAlarmTimes.first)} - ${DateFormat('h:mm a').format(_allAlarmTimes.last)}',
-                style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                style: textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             const SizedBox(height: 36),
@@ -699,7 +746,12 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
             const SizedBox(height: 12),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Back to Timers', style: textTheme.titleSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+              child: Text(
+                'Back to Timers',
+                style: textTheme.titleSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
             ),
           ],
         ),
