@@ -1,4 +1,4 @@
-package com.genexis.activity_timer
+package dev.genexis.activitytimer
 
 import io.flutter.embedding.android.FlutterActivity
 
