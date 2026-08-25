@@ -739,7 +739,7 @@ Append to `lib/services/database_service.dart`, after `getPresetTemplates`:
         name: 'Hoffmann V60',
         method: BrewMethod.v60,
         doseGrams: 30,
-        ratio: 16.7,
+        ratio: 16.67, // 30g x 16.67 = 500.1 -> 500g; 16.7 would give 501
         notes: 'James Hoffmann one-cup V60 technique.',
         steps: [
           BrewStep(
@@ -786,7 +786,7 @@ Append to `lib/services/database_service.dart`, after `getPresetTemplates`:
         name: 'Chemex',
         method: BrewMethod.chemex,
         doseGrams: 30,
-        ratio: 16.7,
+        ratio: 16.67,
         steps: [
           BrewStep(name: 'Bloom', seconds: 45, pourToFraction: 0.12, pourSeconds: 15),
           BrewStep(name: 'Second pour', seconds: 45, pourToFraction: 0.5, pourSeconds: 25),
@@ -2824,6 +2824,9 @@ void main() {
     await tester.tap(find.text('Brew Library'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Chemex').last);
+    await tester.pumpAndSettle();
+    // addFromTemplate writes to Hive; real disk IO only progresses in runAsync.
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
     await tester.pumpAndSettle();
 
     expect(Get.find<BrewController>().recipes.map((r) => r.name), contains('Chemex'));
