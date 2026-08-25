@@ -44,3 +44,18 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 .env
+
+# Agent / tooling state (local only)
+.gstack/
+.superpowers/
+.claude/settings.local.json
+
+# Test coverage output
+coverage/
+lcov.info
+
+# Packaged build outputs
+*.apk
+*.aab
+*.ipa
+*.app.zip
