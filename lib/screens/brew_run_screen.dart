@@ -92,7 +92,7 @@ class _BrewRunScreenState extends State<BrewRunScreen> {
                     Text(
                       rate == null
                           ? '+${added}g'
-                          : '+${added}g · ${rate.toStringAsFixed(1)} g/s',
+                          : '+${added}g · ≈${rate.toStringAsFixed(1)} g/s',
                       style: TextStyle(fontSize: 16, color: palette.inkSoft),
                     ),
                   if (_controller.currentStep.description != null) ...[

@@ -21,11 +21,18 @@ class _BrewEditScreenState extends State<BrewEditScreen> {
     text: widget.recipe.name,
   );
   late final TextEditingController _doseField = TextEditingController(
-    text: widget.recipe.doseGrams.toStringAsFixed(0),
+    text: _formatNum(widget.recipe.doseGrams),
   );
   late final TextEditingController _ratioField = TextEditingController(
-    text: widget.recipe.ratio.toStringAsFixed(1),
+    text: _formatNum(widget.recipe.ratio),
   );
+
+  /// Displays a whole number bare ('16') and a fractional one as typed
+  /// ('16.67'), rather than rounding it to a fixed number of decimals.
+  static String _formatNum(num value) {
+    final text = value.toString();
+    return text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
+  }
 
   // Deep copy, not an alias: `widget.recipe` is the exact live instance held
   // by BrewController.recipes (and Hive), so mutating it directly would
@@ -63,11 +70,21 @@ class _BrewEditScreenState extends State<BrewEditScreen> {
     setState(() {
       final step = _draft.steps[index];
       if (grams == null) {
+        final wasPour = step.kind == BrewStepKind.pour;
         step.pourToFraction = null;
         step.pourSeconds = null;
-        step.kind = BrewStepKind.wait;
+        // Clearing a target shouldn't demote a swirl or drawdown step that
+        // never had a pour kind to begin with.
+        if (wasPour) {
+          step.kind = BrewStepKind.wait;
+        }
       } else {
-        step.pourToFraction = grams / _totalWater;
+        // The total is a display-rounded value (500.1g -> "500g"), so typing
+        // that rounded total back in has to land on fraction 1.0 exactly --
+        // otherwise no integer the user can type ever satisfies the model's
+        // strict "last pour reaches the total" invariant.
+        step.pourToFraction =
+            grams == _draft.totalWaterGrams ? 1.0 : grams / _totalWater;
         step.kind = BrewStepKind.pour;
       }
     });
@@ -140,6 +157,24 @@ class _BrewEditScreenState extends State<BrewEditScreen> {
                 key: const Key('brew-name-field'),
                 controller: _nameField,
                 decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<BrewMethod>(
+                key: const Key('brew-method-field'),
+                initialValue: _draft.method,
+                decoration: const InputDecoration(labelText: 'Method'),
+                items: [
+                  for (final method in BrewMethod.values)
+                    DropdownMenuItem(
+                      value: method,
+                      child: Text(method.displayName),
+                    ),
+                ],
+                onChanged: (method) {
+                  if (method != null) {
+                    setState(() => _draft.method = method);
+                  }
+                },
               ),
               const SizedBox(height: 16),
               Row(

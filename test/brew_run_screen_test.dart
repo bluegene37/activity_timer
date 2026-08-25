@@ -82,7 +82,7 @@ void main() {
     expect(find.text('pour to 60g'), findsOneWidget);
     expect(find.text('Bloom'), findsOneWidget);
     expect(find.textContaining('+60g'), findsOneWidget);
-    expect(find.textContaining('6.0 g/s'), findsOneWidget);
+    expect(find.textContaining('≈6.0 g/s'), findsOneWidget);
     expect(find.text('Wet the bed evenly.'), findsOneWidget);
     expect(find.textContaining('next: pour to 320g'), findsOneWidget);
 

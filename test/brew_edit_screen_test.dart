@@ -89,6 +89,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('480g'), findsWidgets);
+    // Bloom's fraction (0.1875) rescaled against the new total (480g) is
+    // 90g -- if step targets stopped following the dose, this would still
+    // show the old 60g value even though the "Total water" line above did
+    // update.
+    expect(
+      _renderedFieldText(tester, 'brew-step-0-target-90'),
+      '90',
+    );
   });
 
   testWidgets('blocks a save that breaks an invariant', (tester) async {
@@ -142,6 +150,68 @@ void main() {
       expect(stored.targetGramsAt(1), 320);
     });
   });
+
+  testWidgets(
+    'typing the displayed total into the final pour saves despite a '
+    'fractional grand total',
+    (tester) async {
+      // dose 30 x ratio 16.67 = 500.1g total -- no integer typed into a
+      // target field can ever equal 500.1 exactly, so the editor has to
+      // special-case "typed the rounded total" to land on fraction 1.0.
+      final fractional = BrewRecipe(
+        name: 'Fractional total',
+        method: BrewMethod.chemex,
+        doseGrams: 30,
+        ratio: 16.67,
+        steps: [
+          BrewStep(
+            name: 'Bloom',
+            seconds: 30,
+            pourToFraction: 0.2,
+            pourSeconds: 10,
+          ),
+          BrewStep(
+            name: 'Final pour',
+            seconds: 45,
+            pourToFraction: 0.9,
+            pourSeconds: 30,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        GetMaterialApp(
+          home: BrewEditScreen(recipe: fractional, isNew: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 0.9 x 500.1 rounds to 450g -- that is the target field's current key.
+      await tester.enterText(
+        find.byKey(const Key('brew-step-1-target-450')),
+        '500',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Save'));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('last pour must reach the full water total'),
+        findsNothing,
+      );
+      expect(find.textContaining('pours past the total water'), findsNothing);
+
+      await tester.runAsync(() async {
+        final stored = await DatabaseService().getBrewRecipe(fractional.id);
+        expect(stored, isNotNull);
+        expect(stored!.targetGramsAt(1), 500);
+      });
+    },
+  );
 
   testWidgets('canceling without saving leaves the original recipe untouched', (
     tester,

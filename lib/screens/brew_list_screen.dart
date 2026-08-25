@@ -16,10 +16,15 @@ class BrewListScreen extends StatelessWidget {
   static String _duration(int seconds) =>
       '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
 
-  static String _ratio(double ratio) =>
-      ratio.truncateToDouble() == ratio
-          ? ratio.toStringAsFixed(0)
-          : ratio.toStringAsFixed(1);
+  static String _ratio(double ratio) {
+    if (ratio.truncateToDouble() == ratio) {
+      return ratio.toStringAsFixed(0);
+    }
+    final twoDecimals = ratio.toStringAsFixed(2);
+    return twoDecimals.endsWith('0')
+        ? ratio.toStringAsFixed(1)
+        : twoDecimals;
+  }
 
   Future<void> _confirmDelete(BrewController controller, BrewRecipe recipe) async {
     final confirmed = await Get.dialog<bool>(
@@ -157,6 +162,7 @@ class BrewListScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
+                              '${recipe.method.displayName} · '
                               '${recipe.doseGrams.toStringAsFixed(0)}g · '
                               '1:${_ratio(recipe.ratio)} · '
                               '${recipe.totalWaterGrams}g · '
