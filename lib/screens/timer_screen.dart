@@ -342,6 +342,18 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     setState(() {
       _loopEnabled = !_loopEnabled;
     });
+    // The toggle is the routine's loop preference: persist it so the
+    // routine remembers it next time.
+    widget.sequence.defaultLoopEnabled = _loopEnabled;
+    unawaited(_saveLoopPreference());
+  }
+
+  Future<void> _saveLoopPreference() async {
+    try {
+      await DatabaseService().updateActivitySequence(widget.sequence);
+    } catch (_) {
+      // Non-fatal: the toggle still applies to the running session.
+    }
   }
 
   void _confirmExit() {
