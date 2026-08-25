@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:hive_ce/hive.dart';
 
 import '../models/activity_timer.dart';
+import '../models/brew_recipe.dart';
 import '../models/interval_phase.dart';
 import '../models/interval_timer.dart';
 import '../models/session_history.dart';
@@ -18,6 +19,7 @@ class DatabaseService {
   static const String _sequencesBoxName = 'activity_sequences';
   static const String _intervalTimersBoxName = 'interval_timers';
   static const String _historyBoxName = 'session_history';
+  static const String _brewRecipesBoxName = 'brew_recipes';
 
   // `Hive.openBox` returns the already-open box on subsequent calls, so these
   // double as cheap accessors once `init()` has run.
@@ -27,10 +29,12 @@ class DatabaseService {
       Hive.openBox<IntervalTimer>(_intervalTimersBoxName);
   Future<Box<SessionHistory>> get _history =>
       Hive.openBox<SessionHistory>(_historyBoxName);
+  Future<Box<BrewRecipe>> get _brewRecipes =>
+      Hive.openBox<BrewRecipe>(_brewRecipesBoxName);
 
   /// Open every box the app reads from.
   Future<void> init() async {
-    await (_sequences, _intervalTimers, _history).wait;
+    await (_sequences, _intervalTimers, _history, _brewRecipes).wait;
   }
 
   // ACTIVITY SEQUENCE METHODS
@@ -137,6 +141,29 @@ class DatabaseService {
 
   Future<void> deleteIntervalTimer(String id) async =>
       (await _intervalTimers).delete(id);
+
+  // BREW RECIPE METHODS
+
+  Future<List<BrewRecipe>> getAllBrewRecipes() async =>
+      (await _brewRecipes).values.toList();
+
+  Future<BrewRecipe?> getBrewRecipe(String id) async =>
+      (await _brewRecipes).values
+          .where((recipe) => recipe.id == id)
+          .firstOrNull;
+
+  Future<String> createBrewRecipe(BrewRecipe recipe) async {
+    await (await _brewRecipes).put(recipe.id, recipe);
+    return recipe.id;
+  }
+
+  Future<void> updateBrewRecipe(BrewRecipe recipe) async {
+    recipe.updatedAt = DateTime.now();
+    await (await _brewRecipes).put(recipe.id, recipe);
+  }
+
+  Future<void> deleteBrewRecipe(String id) async =>
+      (await _brewRecipes).delete(id);
 
   // SESSION HISTORY METHODS
 
