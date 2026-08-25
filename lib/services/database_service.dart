@@ -445,6 +445,117 @@ class DatabaseService {
     return all.where((s) => s.category == category).toList();
   }
 
+  // BREW TEMPLATE METHODS
+
+  /// Built-in pour-over recipes offered in the "Brew Library" sheet. These are
+  /// code, not stored rows; the user clones one to get an editable copy.
+  List<BrewRecipe> getBrewTemplates({BrewMethod? method}) {
+    final all = [
+      BrewRecipe(
+        name: 'Hoffmann V60',
+        method: BrewMethod.v60,
+        doseGrams: 30,
+        ratio: 16.67, // 30g x 16.67 = 500.1 -> 500g; 16.7 would give 501
+        notes: 'James Hoffmann one-cup V60 technique.',
+        steps: [
+          BrewStep(
+            name: 'Bloom',
+            seconds: 45,
+            pourToFraction: 0.12,
+            pourSeconds: 10,
+            description: 'Wet all the grounds, then swirl the slurry flat.',
+          ),
+          BrewStep(
+            name: 'Second pour',
+            seconds: 45,
+            pourToFraction: 0.6,
+            pourSeconds: 30,
+            description: 'Steady spiral out from the centre.',
+          ),
+          BrewStep(
+            name: 'Final pour',
+            seconds: 30,
+            pourToFraction: 1,
+            pourSeconds: 30,
+            description: 'Gentler now, keep the bed level.',
+          ),
+          BrewStep(name: 'Swirl', seconds: 10, kind: BrewStepKind.swirl),
+          BrewStep(name: 'Drawdown', seconds: 95, kind: BrewStepKind.drawdown),
+        ],
+      ),
+      BrewRecipe(
+        name: 'Kasuya 4:6',
+        method: BrewMethod.v60,
+        doseGrams: 20,
+        ratio: 15,
+        notes: 'Tetsu Kasuya 4:6 — first two pours set sweetness, last three set strength.',
+        steps: [
+          BrewStep(name: 'First pour', seconds: 45, pourToFraction: 0.2, pourSeconds: 10),
+          BrewStep(name: 'Second pour', seconds: 45, pourToFraction: 0.4, pourSeconds: 10),
+          BrewStep(name: 'Third pour', seconds: 45, pourToFraction: 0.6, pourSeconds: 10),
+          BrewStep(name: 'Fourth pour', seconds: 45, pourToFraction: 0.8, pourSeconds: 10),
+          BrewStep(name: 'Fifth pour', seconds: 45, pourToFraction: 1, pourSeconds: 10),
+          BrewStep(name: 'Drawdown', seconds: 45, kind: BrewStepKind.drawdown),
+        ],
+      ),
+      BrewRecipe(
+        name: 'Chemex',
+        method: BrewMethod.chemex,
+        doseGrams: 30,
+        ratio: 16.67,
+        steps: [
+          BrewStep(name: 'Bloom', seconds: 45, pourToFraction: 0.12, pourSeconds: 15),
+          BrewStep(name: 'Second pour', seconds: 45, pourToFraction: 0.5, pourSeconds: 25),
+          BrewStep(name: 'Third pour', seconds: 45, pourToFraction: 0.76, pourSeconds: 25),
+          BrewStep(name: 'Final pour', seconds: 45, pourToFraction: 1, pourSeconds: 25),
+          BrewStep(name: 'Drawdown', seconds: 90, kind: BrewStepKind.drawdown),
+        ],
+      ),
+      BrewRecipe(
+        name: 'Kalita Wave',
+        method: BrewMethod.kalita,
+        doseGrams: 20,
+        ratio: 16,
+        steps: [
+          BrewStep(name: 'Bloom', seconds: 30, pourToFraction: 0.1875, pourSeconds: 10),
+          BrewStep(name: 'Second pour', seconds: 30, pourToFraction: 0.5, pourSeconds: 15),
+          BrewStep(name: 'Third pour', seconds: 30, pourToFraction: 0.75, pourSeconds: 15),
+          BrewStep(name: 'Final pour', seconds: 30, pourToFraction: 1, pourSeconds: 15),
+          BrewStep(name: 'Drawdown', seconds: 60, kind: BrewStepKind.drawdown),
+        ],
+      ),
+      BrewRecipe(
+        name: 'AeroPress',
+        method: BrewMethod.aeropress,
+        doseGrams: 11,
+        ratio: 18.2,
+        steps: [
+          BrewStep(
+            name: 'Pour',
+            seconds: 15,
+            pourToFraction: 1,
+            pourSeconds: 15,
+            description: 'Straight in, no bloom.',
+          ),
+          BrewStep(name: 'Steep', seconds: 120, kind: BrewStepKind.wait),
+          BrewStep(name: 'Swirl', seconds: 10, kind: BrewStepKind.swirl),
+          BrewStep(name: 'Settle', seconds: 30, kind: BrewStepKind.wait),
+          BrewStep(
+            name: 'Press',
+            seconds: 30,
+            kind: BrewStepKind.drawdown,
+            description: 'Slow and even, stop at the hiss.',
+          ),
+        ],
+      ),
+    ];
+
+    if (method == null) {
+      return all;
+    }
+    return all.where((recipe) => recipe.method == method).toList();
+  }
+
   /// Seed first-run demo content so the app never opens on an empty list.
   Future<void> insertDemoDataIfEmpty() async {
     final sequenceBox = await _sequences;
