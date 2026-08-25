@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../controllers/brew_run_controller.dart';
 import '../models/brew_recipe.dart';
+import '../services/brew_session_service.dart';
 import '../theme/brew_theme.dart';
 
 class BrewRunScreen extends StatefulWidget {
@@ -10,7 +11,7 @@ class BrewRunScreen extends StatefulWidget {
 
   final BrewRecipe recipe;
 
-  /// Test seam: production builds its own controller.
+  /// Test seam: production borrows the controller from [BrewSessionService].
   final BrewRunController? controller;
 
   @override
@@ -18,8 +19,10 @@ class BrewRunScreen extends StatefulWidget {
 }
 
 class _BrewRunScreenState extends State<BrewRunScreen> {
+  // The session service owns the production controller, so popping this
+  // screen minimizes a running brew instead of killing it.
   late final BrewRunController _controller =
-      widget.controller ?? BrewRunController(recipe: widget.recipe);
+      widget.controller ?? BrewSessionService().obtain(widget.recipe);
 
   String _clock(Duration duration) {
     final minutes = duration.inMinutes;
@@ -30,7 +33,9 @@ class _BrewRunScreenState extends State<BrewRunScreen> {
   @override
   void dispose() {
     if (widget.controller == null) {
-      _controller.onClose();
+      // A running brew survives the pop (the floater offers the way back);
+      // an unstarted or finished one has nothing to keep alive.
+      BrewSessionService().releaseIfIdle();
     }
     super.dispose();
   }
@@ -48,6 +53,13 @@ class _BrewRunScreenState extends State<BrewRunScreen> {
           backgroundColor: palette.paper,
           foregroundColor: palette.ink,
           elevation: 0,
+          // Popping minimizes: a running brew keeps ticking in the session
+          // service and the floating chip brings it back.
+          leading: IconButton(
+            icon: const Icon(Icons.keyboard_arrow_down),
+            tooltip: 'Minimize',
+            onPressed: () => Get.back<void>(),
+          ),
           title: Text(widget.recipe.name),
         ),
         body: SafeArea(

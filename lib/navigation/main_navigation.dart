@@ -6,12 +6,16 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../controllers/activity_list_controller.dart';
 import '../controllers/brew_controller.dart';
+import '../controllers/brew_run_controller.dart';
 import '../controllers/interval_timer_controller.dart';
+import '../routes/app_routes.dart';
 import '../screens/activity_list_screen.dart';
 import '../screens/brew_list_screen.dart';
 import '../screens/interval_timer_list_screen.dart';
 import '../screens/settings_screen.dart';
+import '../services/brew_session_service.dart';
 import '../theme/app_theme.dart';
+import '../theme/brew_theme.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -105,7 +109,12 @@ class _MainNavigationState extends State<MainNavigation> {
 
     return Scaffold(
       extendBody: true,
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      body: Stack(
+        children: [
+          IndexedStack(index: _currentIndex, children: _screens),
+          _BrewFloater(),
+        ],
+      ),
       floatingActionButton: _buildFloatingActionButton(colorScheme),
       bottomNavigationBar: ClipRect(
         child: BackdropFilter(
@@ -200,5 +209,105 @@ class _MainNavigationState extends State<MainNavigation> {
         ),
       ),
     );
+  }
+}
+
+/// The minimized brew: a washi pill floating above the nav bar whenever a
+/// started, unfinished brew lives in [BrewSessionService]. Tapping it
+/// reopens the full run screen on the same controller; the close button
+/// ends the brew.
+class _BrewFloater extends StatelessWidget {
+  String _clock(Duration duration) {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = BrewSessionService();
+    final palette = BrewTheme.paletteFor(Theme.of(context).brightness);
+
+    return Obx(() {
+      final BrewRunController? controller = session.active.value;
+      if (controller == null || !session.hasBrewInProgress) {
+        return const SizedBox.shrink();
+      }
+
+      final target = controller.currentTarget;
+      final label =
+          target == null
+              ? controller.currentStep.name
+              : '${controller.currentStep.name} · pour to ${target}g';
+
+      return Positioned(
+        left: 16,
+        right: 16,
+        // Clear the 52px nav bar plus breathing room; extendBody is on.
+        bottom: 68 + MediaQuery.paddingOf(context).bottom,
+        child: Material(
+          key: const Key('brew-floater'),
+          color: palette.paperRaised,
+          elevation: 6,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+            side: BorderSide(color: palette.hairline),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+            onTap:
+                () => unawaited(
+                  Get.toNamed<dynamic>(
+                    Routes.brew,
+                    arguments: controller.recipe,
+                  ),
+                ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(Icons.coffee, size: 18, color: palette.lead),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: palette.ink,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    _clock(controller.stepRemaining),
+                    style: TextStyle(
+                      color: controller.isPouring ? palette.lead : palette.inkSoft,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    key: const Key('brew-floater-close'),
+                    icon: Icon(Icons.close, size: 16, color: palette.inkSoft),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                    tooltip: 'End brew',
+                    onPressed: session.clear,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    });
   }
 }
