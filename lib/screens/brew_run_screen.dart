@@ -29,7 +29,9 @@ class _BrewRunScreenState extends State<BrewRunScreen> {
 
   @override
   void dispose() {
-    _controller.onClose();
+    if (widget.controller == null) {
+      _controller.onClose();
+    }
     super.dispose();
   }
 
