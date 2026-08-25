@@ -80,4 +80,36 @@ void main() {
       expect(find.text('New Interval'), findsNothing);
     },
   );
+
+  testWidgets('Brew tab sits between Intervals and Settings with its own FAB', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    Get.put(AppController());
+
+    await tester.pumpWidget(const GetMaterialApp(home: MainNavigation()));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+
+    expect(find.text('Brew'), findsOneWidget);
+
+    await tester.tap(find.text('Brew'));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+
+    expect(find.text('New Brew'), findsOneWidget);
+    expect(find.text('New Interval'), findsNothing);
+
+    await tester.tap(find.text('Settings'));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+
+    expect(find.text('New Brew'), findsNothing);
+  });
 }
