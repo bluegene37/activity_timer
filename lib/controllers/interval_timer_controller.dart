@@ -34,7 +34,10 @@ class IntervalTimerController extends GetxController {
     final startTime = DateTime(now.year, now.month, now.day, now.hour, 0);
     final endTime = startTime.add(const Duration(hours: 8));
 
-    final result = await Get.toNamed<bool>(
+    // GetX builds every named route as `GetPageRoute<dynamic>`, so pushing with
+    // a concrete result type throws inside `Navigator.pushNamed`. Push untyped
+    // and narrow the result here.
+    final result = await Get.toNamed<dynamic>(
       Routes.editIntervalTimer,
       arguments: (
         timer: IntervalTimer(

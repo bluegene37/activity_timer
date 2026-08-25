@@ -45,7 +45,9 @@ class IntervalTimerListScreen extends StatelessWidget {
   }
 
   Future<void> _editIntervalTimer(IntervalTimer timer) async {
-    final result = await Get.toNamed<bool>(
+    // Named routes always come back as `GetPageRoute<dynamic>`; see
+    // `IntervalTimerController.addNewIntervalTimer`.
+    final result = await Get.toNamed<dynamic>(
       Routes.editIntervalTimer,
       arguments: (timer: timer, isNew: false),
     );
