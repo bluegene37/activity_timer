@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../controllers/activity_list_controller.dart';
+import '../controllers/activity_run_controller.dart';
 import '../controllers/brew_controller.dart';
 import '../controllers/brew_run_controller.dart';
 import '../controllers/interval_run_controller.dart';
@@ -14,6 +15,7 @@ import '../screens/activity_list_screen.dart';
 import '../screens/brew_list_screen.dart';
 import '../screens/interval_timer_list_screen.dart';
 import '../screens/settings_screen.dart';
+import '../services/activity_session_service.dart';
 import '../services/brew_session_service.dart';
 import '../services/interval_session_service.dart';
 import '../theme/app_theme.dart';
@@ -128,7 +130,11 @@ class _MainNavigationState extends State<MainNavigation> {
                   bottom: 68 + MediaQuery.paddingOf(bodyContext).bottom,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: [_IntervalFloater(), _BrewFloater()],
+                    children: [
+                      _ActivityFloater(),
+                      _IntervalFloater(),
+                      _BrewFloater(),
+                    ],
                   ),
                 ),
           ),
@@ -426,6 +432,114 @@ class _IntervalFloater extends StatelessWidget {
                       minHeight: 32,
                     ),
                     tooltip: 'End interval timer',
+                    onPressed: session.clear,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    });
+  }
+}
+
+/// The minimized activity routine: a pill floating above the nav bar
+/// whenever an unfinished routine lives in [ActivitySessionService].
+/// Tapping it reopens the full run screen on the same controller; the close
+/// button ends the routine.
+class _ActivityFloater extends StatelessWidget {
+  String _clock(int milliseconds) {
+    final total = (milliseconds / 1000).ceil();
+    final minutes = total ~/ 60;
+    final seconds = total % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = ActivitySessionService();
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Obx(() {
+      final ActivityRunController? controller = session.active.value;
+      if (controller == null || !session.hasSessionInProgress) {
+        return const SizedBox.shrink();
+      }
+
+      final label =
+          controller.isPreparing.value
+              ? '${controller.sequence.name} · get ready'
+              : '${controller.sequence.name} · ${controller.currentTimer.name}';
+
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Material(
+          key: const Key('activity-floater'),
+          color: colorScheme.surfaceContainerHigh,
+          elevation: 6,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+            side: BorderSide(color: colorScheme.outlineVariant),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+            onTap:
+                () => unawaited(
+                  Get.toNamed<dynamic>(
+                    Routes.timer,
+                    arguments: controller.sequence,
+                  ),
+                ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(
+                    CupertinoIcons.timer,
+                    size: 18,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    _clock(controller.remainingMs.value),
+                    style: TextStyle(
+                      color:
+                          controller.isRunning.value
+                              ? colorScheme.primary
+                              : colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    key: const Key('activity-floater-close'),
+                    icon: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                    tooltip: 'End routine',
                     onPressed: session.clear,
                   ),
                 ],

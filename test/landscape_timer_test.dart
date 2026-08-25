@@ -1,6 +1,7 @@
 import 'package:activity_timer/models/activity_timer.dart';
 import 'package:activity_timer/models/interval_phase.dart';
 import 'package:activity_timer/screens/timer_screen.dart';
+import 'package:activity_timer/services/activity_session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -64,6 +65,10 @@ void main() {
       expect(find.text('+15s'), findsOneWidget);
       expect(find.text('-15s'), findsOneWidget);
       expect(find.text('Next: Rest (1:00)'), findsOneWidget);
+
+      // The pending-timer check runs before addTearDown, so stop the
+      // session inside the body.
+      ActivitySessionService().clear();
     },
   );
 }

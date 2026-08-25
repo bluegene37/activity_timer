@@ -4,395 +4,46 @@ import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:get/get.dart';
 
 import '../components/glowing_timer_ring.dart';
+import '../controllers/activity_run_controller.dart';
 import '../models/activity_timer.dart';
 import '../models/interval_phase.dart';
-import '../models/session_history.dart';
 import '../models/settings.dart';
-import '../services/alarm_scheduler.dart';
-import '../services/cue_player.dart';
-import '../services/database_service.dart';
+import '../services/activity_session_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/time_format.dart';
 
 class TimerScreen extends StatefulWidget {
-  const TimerScreen({super.key, required this.sequence, this.scheduler});
+  const TimerScreen({super.key, required this.sequence, this.controller});
 
   final TimerSequence sequence;
 
-  /// Test seam: production schedules through the OS.
-  final AlarmScheduler? scheduler;
+  /// Test seam: production borrows the controller from
+  /// [ActivitySessionService].
+  final ActivityRunController? controller;
 
   @override
   State<TimerScreen> createState() => _TimerScreenState();
 }
 
-class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
-  late List<ActivityTimer> _timers;
-  int _currentTimerIndex = 0;
-
-  // Preparation Countdown State
-  bool _isPreparing = false;
-  int _prepDurationMs = 0;
-
-  // Wall-clock based countdown
-  DateTime? _deadline;
-  int _remainingMs = 0;
-
-  bool _isRunning = false;
-  bool _isCompleted = false;
-  bool _loopEnabled = false;
-  int _loopCount = 0;
-  int _lastHapticSecond = -1;
-  Timer? _ticker;
-  final CuePlayer _cuePlayer = AudioCuePlayer();
-  late final AlarmScheduler _scheduler =
-      widget.scheduler ?? LocalNotificationAlarmScheduler();
+class _TimerScreenState extends State<TimerScreen> {
+  // The session service owns the production controller, so popping this
+  // screen minimizes the routine instead of killing it. The engine — the
+  // clock, cues, looping, alarms, history — lives in the controller.
+  late final ActivityRunController _c =
+      widget.controller ?? ActivitySessionService().obtain(widget.sequence);
   final _settings = AppSettings();
-
-  int get _currentDurationMs {
-    if (_timers.isEmpty) return 0;
-    if (_isPreparing) return _prepDurationMs;
-    return _timers[_currentTimerIndex].durationInSeconds * 1000;
-  }
-
-  int get _remainingMsNow {
-    if (_isRunning && _deadline != null) {
-      return _deadline!.difference(DateTime.now()).inMilliseconds;
-    }
-    return _remainingMs;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _timers = List.from(widget.sequence.timers);
-    if (_timers.isEmpty) {
-      _timers = [
-        ActivityTimer(
-          name: 'Timer',
-          durationInSeconds: 30,
-          phase: IntervalPhase.work,
-        ),
-      ];
-    }
-
-    _loopEnabled = widget.sequence.defaultLoopEnabled;
-
-    if (widget.sequence.preparationSeconds > 0) {
-      _isPreparing = true;
-      _prepDurationMs = widget.sequence.preparationSeconds * 1000;
-      _remainingMs = _prepDurationMs;
-    } else {
-      _isPreparing = false;
-      _remainingMs = _currentDurationMs;
-    }
-
-    _start();
-  }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _ticker?.cancel();
-    unawaited(_cuePlayer.dispose());
-    unawaited(_scheduler.cancelAll());
-    WakelockPlus.disable();
+    if (widget.controller == null) {
+      // A running routine survives the pop (the floater offers the way
+      // back); a completed one has nothing to keep alive.
+      ActivitySessionService().releaseIfIdle();
+    }
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _isRunning) {
-      _tick();
-    }
-  }
-
-  void _start() {
-    _deadline = DateTime.now().add(Duration(milliseconds: _remainingMs));
-    _ticker?.cancel();
-    _ticker = Timer.periodic(const Duration(milliseconds: 100), (_) => _tick());
-    WakelockPlus.enable();
-    unawaited(_syncBackgroundAlarms());
-    setState(() {
-      _isRunning = true;
-    });
-  }
-
-  void _pause() {
-    _remainingMs = math.max(0, _remainingMsNow);
-    _ticker?.cancel();
-    WakelockPlus.disable();
-    unawaited(_scheduler.cancelAll());
-    setState(() {
-      _isRunning = false;
-    });
-  }
-
-  void _addSeconds(int deltaSeconds) {
-    final deltaMs = deltaSeconds * 1000;
-    if (_isRunning && _deadline != null) {
-      final newDeadline = _deadline!.add(Duration(milliseconds: deltaMs));
-      // Ensure at least 1 second remaining
-      if (newDeadline.isAfter(DateTime.now().add(const Duration(seconds: 1)))) {
-        _deadline = newDeadline;
-      }
-    } else {
-      _remainingMs = math.max(1000, _remainingMs + deltaMs);
-    }
-
-    if (_settings.vibrationEnabled) {
-      HapticFeedback.selectionClick();
-    }
-    setState(() {});
-  }
-
-  void _tick() {
-    if (!mounted || !_isRunning) return;
-
-    final remaining = _deadline!.difference(DateTime.now()).inMilliseconds;
-    if (remaining <= 0) {
-      if (_isPreparing) {
-        _finishPreparation();
-      } else {
-        final isFinalStep =
-            _currentTimerIndex == _timers.length - 1 &&
-            !(_loopEnabled && widget.sequence.totalDuration > 0);
-        if (isFinalStep) {
-          _playCompletionAlarm();
-        } else {
-          _playAlarm();
-        }
-        _advance(overshootMs: -remaining);
-      }
-      return;
-    }
-
-    final secondsLeft = (remaining / 1000).ceil();
-    if (secondsLeft <= 3 &&
-        secondsLeft != _lastHapticSecond &&
-        _settings.vibrationEnabled) {
-      _lastHapticSecond = secondsLeft;
-      HapticFeedback.selectionClick();
-    }
-    setState(() {});
-  }
-
-  void _finishPreparation() {
-    _isPreparing = false;
-    _currentTimerIndex = 0;
-    _remainingMs = _currentDurationMs;
-    _lastHapticSecond = -1;
-    _playStartTone();
-    _deadline = DateTime.now().add(Duration(milliseconds: _remainingMs));
-    setState(() {});
-  }
-
-  void _advance({int overshootMs = 0}) {
-    var index = _currentTimerIndex;
-    var carry = overshootMs;
-    var loops = _loopCount;
-
-    final cycleMs = widget.sequence.totalDuration * 1000;
-    while (true) {
-      if (index < _timers.length - 1) {
-        index++;
-      } else if (_loopEnabled && cycleMs > 0) {
-        index = 0;
-        loops++;
-        if (carry >= cycleMs) {
-          loops += carry ~/ cycleMs;
-          carry %= cycleMs;
-        }
-      } else {
-        _complete();
-        return;
-      }
-
-      final durationMs = _timers[index].durationInSeconds * 1000;
-      if (carry < durationMs) {
-        _currentTimerIndex = index;
-        _loopCount = loops;
-        _remainingMs = durationMs - carry;
-        break;
-      }
-      carry -= durationMs;
-    }
-
-    _lastHapticSecond = -1;
-    _deadline = DateTime.now().add(Duration(milliseconds: _remainingMs));
-    setState(() {});
-  }
-
-  void _complete() {
-    _ticker?.cancel();
-    WakelockPlus.disable();
-    unawaited(_scheduler.cancelAll());
-    setState(() {
-      _isRunning = false;
-      _isCompleted = true;
-    });
-    _logSessionCompletion();
-  }
-
-  /// Hands the remaining step boundaries to the OS so a routine keeps
-  /// calling out steps with the phone locked.
-  Future<void> _syncBackgroundAlarms() async {
-    if (!mounted || _isCompleted) {
-      await _scheduler.cancelAll();
-      return;
-    }
-    await _scheduler.ensurePermission();
-    await _scheduler.schedule(pendingAlarms());
-  }
-
-  /// The boundaries still ahead, as wall-clock times. A looping routine
-  /// only schedules the current pass: the OS list is refreshed on every
-  /// start, so the next lap is handed over when it begins.
-  List<ScheduledAlarm> pendingAlarms() {
-    final alarms = <ScheduledAlarm>[];
-    var offsetMs = _isRunning ? _remainingMsNow : _remainingMs;
-    if (offsetMs <= 0) {
-      return alarms;
-    }
-    final from = DateTime.now();
-    final startIndex = _isPreparing ? 0 : _currentTimerIndex + 1;
-
-    if (_isPreparing) {
-      alarms.add(
-        ScheduledAlarm(
-          id: 0,
-          at: from.add(Duration(milliseconds: offsetMs)),
-          title: widget.sequence.name,
-          body: 'Get ready — starting ${_timers.first.name}.',
-        ),
-      );
-    } else {
-      alarms.add(
-        ScheduledAlarm(
-          id: _currentTimerIndex,
-          at: from.add(Duration(milliseconds: offsetMs)),
-          title: widget.sequence.name,
-          body: _bodyFor(_currentTimerIndex),
-        ),
-      );
-    }
-
-    for (var i = startIndex; i < _timers.length; i++) {
-      offsetMs += _timers[i].durationInSeconds * 1000;
-      alarms.add(
-        ScheduledAlarm(
-          id: i + 1,
-          at: from.add(Duration(milliseconds: offsetMs)),
-          title: widget.sequence.name,
-          body: _bodyFor(i),
-        ),
-      );
-    }
-    return alarms;
-  }
-
-  String _bodyFor(int finishedIndex) =>
-      finishedIndex >= _timers.length - 1
-          ? 'Routine complete.'
-          : 'Next: ${_timers[finishedIndex + 1].name}';
-
-  Future<void> _playStartTone() => _cuePlayer.playStart();
-
-  Future<void> _playAlarm() {
-    final currentTimer = _timers[_currentTimerIndex];
-    final sound = currentTimer.alarmSound ?? _settings.defaultAlarmSound;
-    return _cuePlayer.playAlarm(sound);
-  }
-
-  /// The last step of the routine just ended: the session is over, so it
-  /// gets the completion alarm rather than another boundary cue.
-  Future<void> _playCompletionAlarm() => _cuePlayer.playCompletion();
-
-  void _resetTimer() {
-    _ticker?.cancel();
-    WakelockPlus.disable();
-    unawaited(_scheduler.cancelAll());
-    setState(() {
-      _isPreparing = widget.sequence.preparationSeconds > 0;
-      _prepDurationMs = widget.sequence.preparationSeconds * 1000;
-      _currentTimerIndex = 0;
-      _remainingMs = _isPreparing ? _prepDurationMs : _currentDurationMs;
-      _isRunning = false;
-      _isCompleted = false;
-      _loopCount = 0;
-      _lastHapticSecond = -1;
-    });
-  }
-
-  void _logSessionCompletion() {
-    DatabaseService().logSessionHistory(
-      SessionHistory(
-        title: widget.sequence.name,
-        totalDurationInSeconds:
-            widget.sequence.totalDuration * (_loopCount + 1),
-        itemCount: _timers.length,
-        loopCount: _loopCount,
-        sessionType: 'activity',
-        category: widget.sequence.category,
-      ),
-    );
-  }
-
-  void _skipToNextTimer() {
-    if (_isPreparing) {
-      _finishPreparation();
-      return;
-    }
-    if (_currentTimerIndex < _timers.length - 1 || _loopEnabled) {
-      final wasRunning = _isRunning;
-      _ticker?.cancel();
-      _advance();
-      if (wasRunning) {
-        _remainingMs = _remainingMsNow;
-        _start();
-      } else {
-        _deadline = null;
-      }
-    }
-  }
-
-  void _goToPreviousTimer() {
-    if (_isPreparing) return;
-    if (_currentTimerIndex > 0) {
-      final wasRunning = _isRunning;
-      _ticker?.cancel();
-      setState(() {
-        _currentTimerIndex--;
-        _remainingMs = _currentDurationMs;
-        _lastHapticSecond = -1;
-        _isRunning = false;
-      });
-      if (wasRunning) {
-        _start();
-      }
-    }
-  }
-
-  void _toggleLoop() {
-    setState(() {
-      _loopEnabled = !_loopEnabled;
-    });
-    // The toggle is the routine's loop preference: persist it so the
-    // routine remembers it next time.
-    widget.sequence.defaultLoopEnabled = _loopEnabled;
-    unawaited(_saveLoopPreference());
-  }
-
-  Future<void> _saveLoopPreference() async {
-    try {
-      await DatabaseService().updateActivitySequence(widget.sequence);
-    } catch (_) {
-      // Non-fatal: the toggle still applies to the running session.
-    }
   }
 
   void _confirmExit() {
@@ -410,6 +61,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
               TextButton(
                 onPressed: () {
                   Navigator.pop(dialogContext);
+                  ActivitySessionService().clear();
                   Navigator.pop(context);
                 },
                 child: const Text('Exit'),
@@ -421,42 +73,38 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final remainingMs = math.max(0, _remainingMsNow);
-    final remainingSeconds = (remainingMs / 1000).ceil();
-    final double progress =
-        _currentDurationMs > 0
-            ? (1 - (remainingMs / _currentDurationMs)).clamp(0.0, 1.0)
-            : 0.0;
-
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
-    return PopScope(
-      canPop: _isCompleted,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _confirmExit();
-      },
-      child: Scaffold(
+    // Every observable read must happen INSIDE the Obx builder: Obx only
+    // subscribes to what its own closure touches, so reading the clock
+    // above this line would leave the screen frozen.
+    return Obx(() {
+      final remainingMs = math.max(0, _c.remainingMs.value);
+      final remainingSeconds = (remainingMs / 1000).ceil();
+      final double progress =
+          _c.currentDurationMs > 0
+              ? (1 - (remainingMs / _c.currentDurationMs)).clamp(0.0, 1.0)
+              : 0.0;
+
+      return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
           title: Text(widget.sequence.name),
           centerTitle: true,
+          // Popping minimizes: a running routine keeps ticking in the
+          // session service and the floating chip brings it back.
           leading: IconButton(
             icon: Icon(
-              CupertinoIcons.xmark,
+              CupertinoIcons.chevron_down,
               color: colorScheme.onSurface,
               size: 22,
             ),
-            onPressed: () {
-              if (_isCompleted) {
-                Navigator.pop(context);
-              } else {
-                _confirmExit();
-              }
-            },
+            tooltip: 'Minimize',
+            onPressed: () => Navigator.pop(context),
           ),
           actions: [
             IconButton(
@@ -480,24 +128,41 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
             ),
             IconButton(
               icon: Icon(
-                _loopEnabled ? CupertinoIcons.repeat : CupertinoIcons.repeat,
+                CupertinoIcons.xmark,
+                color: colorScheme.onSurface,
+                size: 20,
+              ),
+              tooltip: 'End routine',
+              onPressed: () {
+                if (_c.isCompleted.value) {
+                  Navigator.pop(context);
+                } else {
+                  _confirmExit();
+                }
+              },
+            ),
+            IconButton(
+              icon: Icon(
+                _c.loopEnabled.value
+                    ? CupertinoIcons.repeat
+                    : CupertinoIcons.repeat,
                 color:
-                    _loopEnabled
+                    _c.loopEnabled.value
                         ? colorScheme.primary
                         : colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                 size: 20,
               ),
               onPressed: () {
                 HapticFeedback.selectionClick();
-                _toggleLoop();
+                _c.toggleLoop();
               },
-              tooltip: _loopEnabled ? 'Disable loop' : 'Enable loop',
+              tooltip: _c.loopEnabled.value ? 'Disable loop' : 'Enable loop',
             ),
             const SizedBox(width: 4),
           ],
         ),
         body:
-            _isCompleted
+            _c.isCompleted.value
                 ? _buildCompletedView(textTheme, colorScheme)
                 : isLandscape
                 ? _buildLandscapeLayout(
@@ -512,8 +177,8 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                   textTheme,
                   colorScheme,
                 ),
-      ),
-    );
+      );
+    });
   }
 
   // PORTRAIT LAYOUT
@@ -523,9 +188,9 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     TextTheme textTheme,
     ColorScheme colorScheme,
   ) {
-    final currentTimer = _timers[_currentTimerIndex];
+    final currentTimer = _c.timers[_c.currentIndex.value];
     final activePhase =
-        _isPreparing ? IntervalPhase.prepare : currentTimer.phase;
+        _c.isPreparing.value ? IntervalPhase.prepare : currentTimer.phase;
     final phaseColor = _getPhaseColor(activePhase, progress);
 
     return SafeArea(
@@ -536,9 +201,9 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
             borderRadius: BorderRadius.circular(2),
             child: LinearProgressIndicator(
               value:
-                  _isPreparing
+                  _c.isPreparing.value
                       ? 0.0
-                      : ((_currentTimerIndex + progress) / _timers.length)
+                      : ((_c.currentIndex.value + progress) / _c.timers.length)
                           .clamp(0.0, 1.0),
               minHeight: 4,
               backgroundColor: colorScheme.onSurface.withValues(alpha: 0.06),
@@ -555,7 +220,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
               children: [
                 _buildPhasePill(activePhase, phaseColor),
                 const SizedBox(width: 8),
-                if (!_isPreparing) ...[
+                if (!_c.isPreparing.value) ...[
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -566,13 +231,13 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                       borderRadius: BorderRadius.circular(AppTheme.pillRadius),
                     ),
                     child: Text(
-                      '${_currentTimerIndex + 1} of ${_timers.length}',
+                      '${_c.currentIndex.value + 1} of ${_c.timers.length}',
                       style: textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
-                  if (_loopEnabled && _loopCount > 0) ...[
+                  if (_c.loopEnabled.value && _c.loopCount.value > 0) ...[
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -586,7 +251,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                         ),
                       ),
                       child: Text(
-                        'Loop ${_loopCount + 1}',
+                        'Loop ${_c.loopCount.value + 1}',
                         style: textTheme.bodySmall?.copyWith(
                           color: colorScheme.primary,
                           fontWeight: FontWeight.w700,
@@ -601,14 +266,14 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
 
           const SizedBox(height: 12),
           Text(
-            _isPreparing ? 'GET READY!' : currentTimer.name,
+            _c.isPreparing.value ? 'GET READY!' : currentTimer.name,
             style: textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.w800,
               letterSpacing: -0.6,
             ),
             textAlign: TextAlign.center,
           ),
-          if (!_isPreparing &&
+          if (!_c.isPreparing.value &&
               currentTimer.description != null &&
               currentTimer.description!.isNotEmpty) ...[
             const SizedBox(height: 4),
@@ -642,8 +307,10 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     Text(
-                      _isRunning
-                          ? (_isPreparing ? 'starting soon' : 'remaining')
+                      _c.isRunning.value
+                          ? (_c.isPreparing.value
+                              ? 'starting soon'
+                              : 'remaining')
                           : 'paused',
                       style: textTheme.titleSmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
@@ -665,7 +332,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                 OutlinedButton.icon(
                   onPressed: () {
                     HapticFeedback.selectionClick();
-                    _addSeconds(-15);
+                    _c.addSeconds(-15);
                   },
                   icon: const Icon(CupertinoIcons.minus, size: 14),
                   label: const Text('-15s'),
@@ -683,7 +350,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                 OutlinedButton.icon(
                   onPressed: () {
                     HapticFeedback.selectionClick();
-                    _addSeconds(15);
+                    _c.addSeconds(15);
                   },
                   icon: const Icon(CupertinoIcons.plus, size: 14),
                   label: const Text('+15s'),
@@ -716,7 +383,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                   icon: const Icon(Icons.skip_previous),
                   onPressed: () {
                     unawaited(HapticFeedback.selectionClick());
-                    _goToPreviousTimer();
+                    _c.goToPrevious();
                   },
                   iconSize: 28,
                   color: colorScheme.onSurfaceVariant,
@@ -730,14 +397,14 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                   heroTag: 'timer_screen_play_pause',
                   onPressed: () {
                     unawaited(HapticFeedback.mediumImpact());
-                    _isRunning ? _pause() : _start();
+                    _c.isRunning.value ? _c.pause() : _c.start();
                   },
                   backgroundColor: phaseColor,
                   foregroundColor: Colors.white,
                   elevation: 6,
                   shape: const CircleBorder(),
                   child: Icon(
-                    _isRunning ? Icons.pause : Icons.play_arrow,
+                    _c.isRunning.value ? Icons.pause : Icons.play_arrow,
                     size: 36,
                   ),
                 ),
@@ -746,7 +413,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                   icon: const Icon(Icons.skip_next),
                   onPressed: () {
                     unawaited(HapticFeedback.selectionClick());
-                    _skipToNextTimer();
+                    _c.skipToNext();
                   },
                   iconSize: 28,
                   color: colorScheme.onSurfaceVariant,
@@ -770,9 +437,9 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     TextTheme textTheme,
     ColorScheme colorScheme,
   ) {
-    final currentTimer = _timers[_currentTimerIndex];
+    final currentTimer = _c.timers[_c.currentIndex.value];
     final activePhase =
-        _isPreparing ? IntervalPhase.prepare : currentTimer.phase;
+        _c.isPreparing.value ? IntervalPhase.prepare : currentTimer.phase;
     final phaseColor = _getPhaseColor(activePhase, progress);
 
     return SafeArea(
@@ -794,7 +461,9 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                       const SizedBox(width: 12),
                       Flexible(
                         child: Text(
-                          _isPreparing ? 'GET READY!' : currentTimer.name,
+                          _c.isPreparing.value
+                              ? 'GET READY!'
+                              : currentTimer.name,
                           style: textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
@@ -851,7 +520,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                       OutlinedButton(
                         onPressed: () {
                           unawaited(HapticFeedback.selectionClick());
-                          _addSeconds(-15);
+                          _c.addSeconds(-15);
                         },
                         child: const Text('-15s'),
                       ),
@@ -859,7 +528,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                       OutlinedButton(
                         onPressed: () {
                           unawaited(HapticFeedback.selectionClick());
-                          _addSeconds(15);
+                          _c.addSeconds(15);
                         },
                         child: const Text('+15s'),
                       ),
@@ -875,7 +544,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                         icon: const Icon(Icons.skip_previous),
                         onPressed: () {
                           unawaited(HapticFeedback.selectionClick());
-                          _goToPreviousTimer();
+                          _c.goToPrevious();
                         },
                         iconSize: 26,
                       ),
@@ -884,12 +553,12 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                         heroTag: 'landscape_play_pause',
                         onPressed: () {
                           unawaited(HapticFeedback.mediumImpact());
-                          _isRunning ? _pause() : _start();
+                          _c.isRunning.value ? _c.pause() : _c.start();
                         },
                         backgroundColor: phaseColor,
                         foregroundColor: Colors.white,
                         child: Icon(
-                          _isRunning ? Icons.pause : Icons.play_arrow,
+                          _c.isRunning.value ? Icons.pause : Icons.play_arrow,
                           size: 28,
                         ),
                       ),
@@ -898,7 +567,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                         icon: const Icon(Icons.skip_next),
                         onPressed: () {
                           unawaited(HapticFeedback.selectionClick());
-                          _skipToNextTimer();
+                          _c.skipToNext();
                         },
                         iconSize: 26,
                       ),
@@ -941,8 +610,8 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildNextTimerPreview(ColorScheme colorScheme, TextTheme textTheme) {
-    if (_isPreparing) {
-      final firstTimer = _timers.isNotEmpty ? _timers[0] : null;
+    if (_c.isPreparing.value) {
+      final firstTimer = _c.timers.isNotEmpty ? _c.timers[0] : null;
       if (firstTimer == null) return const SizedBox.shrink();
 
       return Container(
@@ -975,8 +644,8 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
       );
     }
 
-    if (_currentTimerIndex < _timers.length - 1) {
-      final nextTimer = _timers[_currentTimerIndex + 1];
+    if (_c.currentIndex.value < _c.timers.length - 1) {
+      final nextTimer = _c.timers[_c.currentIndex.value + 1];
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
@@ -1007,7 +676,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
       );
     }
 
-    if (_loopEnabled) {
+    if (_c.loopEnabled.value) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
@@ -1022,7 +691,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
             const SizedBox(width: 6),
             Flexible(
               child: Text(
-                'Next Loop: ${_timers[0].name}',
+                'Next Loop: ${_c.timers[0].name}',
                 style: textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -1081,12 +750,12 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 8),
             Text(
-              'Great job! Completed ${_timers.length} intervals.',
+              'Great job! Completed ${_c.timers.length} intervals.',
               style: textTheme.titleMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
             ),
-            if (_loopCount > 0) ...[
+            if (_c.loopCount.value > 0) ...[
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -1098,7 +767,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                   borderRadius: BorderRadius.circular(AppTheme.pillRadius),
                 ),
                 child: Text(
-                  'Loops completed: $_loopCount',
+                  'Loops completed: $_c.loopCount.value',
                   style: textTheme.titleSmall?.copyWith(
                     color: colorScheme.primary,
                     fontWeight: FontWeight.w700,
@@ -1113,7 +782,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
               child: ElevatedButton.icon(
                 onPressed: () {
                   HapticFeedback.selectionClick();
-                  _resetTimer();
+                  _c.reset();
                 },
                 icon: const Icon(CupertinoIcons.restart, size: 18),
                 label: const Text('Restart Activity'),

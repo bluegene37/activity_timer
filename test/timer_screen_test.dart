@@ -4,6 +4,7 @@ import 'package:activity_timer/hive_registrar.g.dart';
 import 'package:activity_timer/models/activity_timer.dart';
 import 'package:activity_timer/models/interval_phase.dart';
 import 'package:activity_timer/screens/timer_screen.dart';
+import 'package:activity_timer/services/activity_session_service.dart';
 import 'package:activity_timer/services/database_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -124,6 +125,10 @@ void main() {
       await tester.tap(find.byIcon(Icons.play_arrow).first);
       await tester.pump();
       expect(find.text('remaining'), findsOneWidget);
+
+      // The pending-timer check runs before addTearDown, so stop the
+      // session inside the body.
+      ActivitySessionService().clear();
     },
   );
 
@@ -152,9 +157,14 @@ void main() {
     await tester.pump();
     expect(find.text('Step One'), findsOneWidget);
     expect(find.text('WORK'), findsOneWidget);
+
+    // The session service keeps the routine ticking after the widget
+    // tree goes away; stop it inside the body, because the pending-
+    // timer check runs before addTearDown.
+    ActivitySessionService().clear();
   });
 
-  testWidgets('system back shows the exit confirmation instead of popping', (
+  testWidgets('system back minimizes and keeps the routine running', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(400, 800);
@@ -166,19 +176,45 @@ void main() {
     );
     await tester.pump();
 
+    final session = ActivitySessionService();
+    final controller = session.active.value;
+    expect(controller, isNotNull, reason: 'the screen borrowed a session');
+
     final dynamic widgetsAppState = tester.state(find.byType(WidgetsApp));
     await widgetsAppState.didPopRoute();
     await tester.pump();
 
-    // Timer screen is still there, with the confirm dialog on top.
+    // Back is minimize, not exit: the routine keeps ticking in the session
+    // service and the floating chip offers the way back.
+    expect(session.active.value, same(controller));
+    expect(controller!.isRunning.value, isTrue);
+
+    ActivitySessionService().clear();
+  });
+
+  testWidgets('the End action asks before throwing the routine away', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      MaterialApp(home: TimerScreen(sequence: buildSequence())),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('End routine'));
+    await tester.pump();
     expect(find.text('Exit Activity?'), findsOneWidget);
-    expect(find.text('Step One'), findsOneWidget);
 
     // Cancel keeps the session alive.
     await tester.tap(find.text('Cancel'));
     await tester.pump();
     expect(find.text('Exit Activity?'), findsNothing);
-    expect(find.text('Step One'), findsOneWidget);
+    expect(ActivitySessionService().active.value, isNotNull);
+
+    ActivitySessionService().clear();
   });
 
   testWidgets('loop toggle persists as the routine default', (tester) async {
@@ -229,5 +265,10 @@ void main() {
       storedAgain!.singleWhere((s) => s.id == sequence.id).defaultLoopEnabled,
       isFalse,
     );
+
+    // The session service keeps the routine ticking after the widget
+    // tree goes away; stop it inside the body, because the pending-
+    // timer check runs before addTearDown.
+    ActivitySessionService().clear();
   });
 }
