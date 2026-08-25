@@ -16,9 +16,13 @@ class _FakeClock {
 
 class _RecordingCuePlayer implements BrewCuePlayer {
   final List<AlarmSound> played = [];
+  int completedCount = 0;
 
   @override
   Future<void> playStepEnd(AlarmSound sound) async => played.add(sound);
+
+  @override
+  Future<void> playCompleted() async => completedCount++;
 
   @override
   Future<void> dispose() async {}
@@ -130,6 +134,7 @@ void main() {
     expect(controller.stepIndex.value, 1);
     expect(controller.currentTarget, 320);
     expect(cues.played, [AlarmSound.bell]);
+    expect(cues.completedCount, 0, reason: 'not finished yet');
 
     controller.reset();
   });
@@ -150,7 +155,12 @@ void main() {
 
     expect(controller.isFinished.value, isTrue);
     expect(controller.isRunning.value, isFalse);
-    expect(cues.played.length, 3, reason: 'one cue per step boundary');
+    expect(cues.played.length, 2, reason: 'one cue per intermediate boundary');
+    expect(
+      cues.completedCount,
+      1,
+      reason: 'the final boundary plays the dedicated completion alarm',
+    );
   });
 
   testWidgets('pause freezes elapsed time and resume continues from there', (

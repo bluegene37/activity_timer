@@ -20,6 +20,9 @@ class _SilentCuePlayer implements BrewCuePlayer {
   Future<void> playStepEnd(AlarmSound sound) async {}
 
   @override
+  Future<void> playCompleted() async {}
+
+  @override
   Future<void> dispose() async {}
 }
 

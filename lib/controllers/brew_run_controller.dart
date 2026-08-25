@@ -116,12 +116,15 @@ class BrewRunController extends GetxController {
     while (!isFinished.value &&
         elapsedInStepMs.value >= currentStep.seconds * 1000) {
       final overflowMs = elapsedInStepMs.value - currentStep.seconds * 1000;
-      unawaited(_cuePlayer.playStepEnd(recipe.alarmSound));
 
       if (stepIndex.value == recipe.steps.length - 1) {
+        // The final boundary gets the dedicated completion alarm rather
+        // than a step cue.
+        unawaited(_cuePlayer.playCompleted());
         _finish();
         return;
       }
+      unawaited(_cuePlayer.playStepEnd(recipe.alarmSound));
 
       stepIndex.value += 1;
       _carriedMs = overflowMs;
