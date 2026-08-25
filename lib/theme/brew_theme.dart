@@ -99,14 +99,23 @@ abstract final class BrewTheme {
         ),
       ),
       dividerTheme: DividerThemeData(color: palette.hairline, thickness: 0.6),
+      // Derive from AppTheme's button style rather than styleFrom: the two
+      // themes' buttons must resolve textStyles with the SAME `inherit` flag,
+      // or the button's AnimatedDefaultTextStyle throws on every theme
+      // switch. AppTheme sets a raw inherit-true textStyle; dropping it here
+      // made coffee buttons fall back to labelLarge (inherit-false, merged
+      // with typography), which cannot lerp against it.
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: palette.lead,
-          foregroundColor: palette.paperRaised,
-          elevation: AppTheme.buttonElevation,
-          padding: AppTheme.buttonPadding,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+        style: (base.elevatedButtonTheme.style ?? const ButtonStyle()).copyWith(
+          backgroundColor: WidgetStatePropertyAll(palette.lead),
+          foregroundColor: WidgetStatePropertyAll(palette.paperRaised),
+          textStyle: const WidgetStatePropertyAll(
+            TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.2,
+              fontFamily: fontFamily,
+            ),
           ),
         ),
       ),
