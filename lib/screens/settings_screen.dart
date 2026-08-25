@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import '../components/color_selector.dart';
 import '../controllers/app_controller.dart';
 import '../controllers/settings_controller.dart';
+import '../models/settings.dart';
 import '../theme/app_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -112,6 +113,58 @@ class SettingsScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Text(
+                            'App Theme',
+                            style: textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Coffee wears the washi look everywhere',
+                            style: textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 14),
+                          Obx(
+                            () => SizedBox(
+                              width: double.infinity,
+                              child: SegmentedButton<AppThemeStyle>(
+                                segments: const [
+                                  ButtonSegment(
+                                    value: AppThemeStyle.ios,
+                                    label: Text('iOS'),
+                                    icon: Icon(
+                                      CupertinoIcons.device_phone_portrait,
+                                      size: 16,
+                                    ),
+                                  ),
+                                  ButtonSegment(
+                                    value: AppThemeStyle.coffee,
+                                    label: Text('Coffee'),
+                                    icon: Icon(Icons.coffee, size: 16),
+                                  ),
+                                ],
+                                selected: {appController.themeStyle.value},
+                                onSelectionChanged: (selection) {
+                                  HapticFeedback.selectionClick();
+                                  appController.setThemeStyle(selection.first);
+                                },
+                                style: SegmentedButton.styleFrom(
+                                  selectedBackgroundColor: colorScheme.primary
+                                      .withValues(alpha: 0.18),
+                                  selectedForegroundColor: colorScheme.primary,
+                                  side: BorderSide(
+                                    color: AppTheme.separator(isDark: isDark),
+                                    width: 0.8,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
                           Text(
                             'Theme Mode',
                             style: textTheme.titleSmall?.copyWith(

@@ -9,6 +9,7 @@ import 'models/settings.dart';
 import 'routes/app_pages.dart';
 import 'services/database_service.dart';
 import 'theme/app_theme.dart';
+import 'theme/brew_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,8 +52,14 @@ class MyApp extends StatelessWidget {
       () => GetMaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Activity Timer',
-        theme: AppTheme.getLightTheme(appController.themeColor.value),
-        darkTheme: AppTheme.getDarkTheme(appController.themeColor.value),
+        theme:
+            appController.themeStyle.value == AppThemeStyle.coffee
+                ? BrewTheme.themeFor(Brightness.light)
+                : AppTheme.getLightTheme(appController.themeColor.value),
+        darkTheme:
+            appController.themeStyle.value == AppThemeStyle.coffee
+                ? BrewTheme.themeFor(Brightness.dark)
+                : AppTheme.getDarkTheme(appController.themeColor.value),
         themeMode:
             appController
                 .themeMode

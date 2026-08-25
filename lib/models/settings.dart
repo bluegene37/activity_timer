@@ -13,6 +13,7 @@ class AppSettingsData extends HiveObject {
     this.vibrationEnabled = true,
     this.themeColor = AppSettings.defaultThemeColorValue,
     this.defaultAlarmSound = 'beep',
+    this.themeStyle = 'ios',
   });
 
   @HiveField(0)
@@ -29,6 +30,22 @@ class AppSettingsData extends HiveObject {
 
   @HiveField(4)
   String defaultAlarmSound;
+
+  @HiveField(5)
+  String themeStyle;
+}
+
+/// Which visual language the whole app wears.
+enum AppThemeStyle {
+  /// The original SF-Pro / system-color look.
+  ios,
+
+  /// The washi-paper look from genexis.dev, shared with the Brew tab.
+  coffee;
+
+  /// Resolves a persisted [Enum.name], falling back to [AppThemeStyle.ios].
+  static AppThemeStyle fromString(String value) => AppThemeStyle.values
+      .firstWhere((style) => style.name == value, orElse: () => AppThemeStyle.ios);
 }
 
 /// Process-wide cache of the persisted [AppSettingsData], backed by Hive.
@@ -50,12 +67,14 @@ class AppSettings {
   bool _vibrationEnabled = true;
   Color _themeColor = defaultThemeColor;
   AlarmSound _defaultAlarmSound = AlarmSound.beep;
+  AppThemeStyle _themeStyle = AppThemeStyle.ios;
 
   ThemeMode get themeMode => _themeMode;
   bool get soundEnabled => _soundEnabled;
   bool get vibrationEnabled => _vibrationEnabled;
   Color get themeColor => _themeColor;
   AlarmSound get defaultAlarmSound => _defaultAlarmSound;
+  AppThemeStyle get themeStyle => _themeStyle;
 
   /// [ThemeMode] values round-trip through their [Enum.name], so persisted
   /// strings ('light' / 'dark' / 'system') need no manual mapping table.
@@ -76,6 +95,7 @@ class AppSettings {
     _vibrationEnabled = settings.vibrationEnabled;
     _themeColor = Color(settings.themeColor);
     _defaultAlarmSound = AlarmSound.fromString(settings.defaultAlarmSound);
+    _themeStyle = AppThemeStyle.fromString(settings.themeStyle);
   }
 
   /// Read-modify-write the single persisted settings record.
@@ -109,5 +129,10 @@ class AppSettings {
   Future<void> setDefaultAlarmSound(AlarmSound sound) async {
     _defaultAlarmSound = sound;
     await _update((settings) => settings.defaultAlarmSound = sound.name);
+  }
+
+  Future<void> setThemeStyle(AppThemeStyle style) async {
+    _themeStyle = style;
+    await _update((settings) => settings.themeStyle = style.name);
   }
 }

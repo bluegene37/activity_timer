@@ -25,13 +25,14 @@ class AppSettingsDataAdapter extends TypeAdapter<AppSettingsData> {
               ? AppSettings.defaultThemeColorValue
               : (fields[3] as num).toInt(),
       defaultAlarmSound: fields[4] == null ? 'beep' : fields[4] as String,
+      themeStyle: fields[5] == null ? 'ios' : fields[5] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, AppSettingsData obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.themeMode)
       ..writeByte(1)
@@ -41,7 +42,9 @@ class AppSettingsDataAdapter extends TypeAdapter<AppSettingsData> {
       ..writeByte(3)
       ..write(obj.themeColor)
       ..writeByte(4)
-      ..write(obj.defaultAlarmSound);
+      ..write(obj.defaultAlarmSound)
+      ..writeByte(5)
+      ..write(obj.themeStyle);
   }
 
   @override

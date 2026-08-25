@@ -14,6 +14,7 @@ class AppController extends GetxController {
   final RxBool soundEnabled = true.obs;
   final RxBool vibrationEnabled = true.obs;
   final Rx<AlarmSound> defaultAlarmSound = AlarmSound.beep.obs;
+  final Rx<AppThemeStyle> themeStyle = AppThemeStyle.ios.obs;
 
   @override
   void onInit() {
@@ -30,6 +31,7 @@ class AppController extends GetxController {
     soundEnabled.value = _settings.soundEnabled;
     vibrationEnabled.value = _settings.vibrationEnabled;
     defaultAlarmSound.value = _settings.defaultAlarmSound;
+    themeStyle.value = _settings.themeStyle;
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
@@ -55,5 +57,10 @@ class AppController extends GetxController {
   Future<void> setDefaultAlarmSound(AlarmSound sound) async {
     defaultAlarmSound.value = sound;
     await _settings.setDefaultAlarmSound(sound);
+  }
+
+  Future<void> setThemeStyle(AppThemeStyle style) async {
+    themeStyle.value = style;
+    await _settings.setThemeStyle(style);
   }
 }
