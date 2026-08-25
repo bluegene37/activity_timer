@@ -1,6 +1,9 @@
+import 'package:activity_timer/models/brew_recipe.dart';
 import 'package:activity_timer/models/interval_timer.dart';
 import 'package:activity_timer/routes/app_pages.dart';
 import 'package:activity_timer/routes/app_routes.dart';
+import 'package:activity_timer/screens/brew_edit_screen.dart';
+import 'package:activity_timer/screens/brew_run_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -20,6 +23,17 @@ void main() {
       intervalType: IntervalType.hour,
     );
   }
+
+  BrewRecipe sampleBrew() => BrewRecipe(
+    name: 'Morning V60',
+    method: BrewMethod.v60,
+    doseGrams: 18,
+    ratio: 16,
+    steps: [
+      BrewStep(name: 'Bloom', seconds: 45, pourToFraction: 0.12, pourSeconds: 10),
+      BrewStep(name: 'Main pour', seconds: 60, pourToFraction: 1, pourSeconds: 30),
+    ],
+  );
 
   /// Pumps a GetX app whose only job is to push [route] with [arguments].
   Future<void> pushRoute(
@@ -51,6 +65,8 @@ void main() {
       Routes.editTimer,
       Routes.intervalTimer,
       Routes.editIntervalTimer,
+      Routes.editBrew,
+      Routes.brew,
       Routes.settings,
     ];
 
@@ -87,5 +103,19 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text(timer.name), findsWidgets);
+  });
+
+  testWidgets('editBrew builds from an EditBrewArgs record', (tester) async {
+    await pushRoute(tester, Routes.editBrew, (recipe: sampleBrew(), isNew: true));
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(BrewEditScreen), findsOneWidget);
+  });
+
+  testWidgets('brew builds from a BrewRecipe argument', (tester) async {
+    await pushRoute(tester, Routes.brew, sampleBrew());
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(BrewRunScreen), findsOneWidget);
   });
 }

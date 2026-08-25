@@ -5,8 +5,11 @@ import '../controllers/interval_timer_controller.dart';
 import '../controllers/settings_controller.dart';
 import '../controllers/timer_list_controller.dart';
 import '../models/activity_timer.dart';
+import '../models/brew_recipe.dart';
 import '../models/interval_timer.dart';
 import '../navigation/main_navigation.dart';
+import '../screens/brew_edit_screen.dart';
+import '../screens/brew_run_screen.dart';
 import '../screens/edit_interval_timer_screen.dart';
 import '../screens/edit_timer_screen.dart';
 import '../screens/interval_timer_screen.dart';
@@ -55,6 +58,17 @@ abstract final class AppPages {
         final args = Get.arguments as EditIntervalTimerArgs;
         return EditIntervalTimerScreen(timer: args.timer, isNew: args.isNew);
       },
+    ),
+    GetPage<void>(
+      name: Routes.editBrew,
+      page: () {
+        final args = Get.arguments as EditBrewArgs;
+        return BrewEditScreen(recipe: args.recipe, isNew: args.isNew);
+      },
+    ),
+    GetPage<void>(
+      name: Routes.brew,
+      page: () => BrewRunScreen(recipe: Get.arguments as BrewRecipe),
     ),
     GetPage<void>(
       name: Routes.settings,
