@@ -1,15 +1,39 @@
+import 'dart:io';
+
+import 'package:activity_timer/controllers/interval_timer_controller.dart';
+import 'package:activity_timer/hive_registrar.g.dart';
 import 'package:activity_timer/models/interval_timer.dart';
 import 'package:activity_timer/routes/app_pages.dart';
 import 'package:activity_timer/routes/app_routes.dart';
+import 'package:activity_timer/services/database_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:hive_ce/hive.dart';
 
 /// The route table casts `Get.arguments` to a concrete type, so a caller that
 /// passes the wrong shape (a `Map` where a record is expected, say) compiles
 /// fine and only blows up when the page is built. These tests pin the
 /// argument contract for the routes that take one.
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late Directory tempDir;
+
+  setUpAll(() async {
+    tempDir = await Directory.systemTemp.createTemp('app_routes_test');
+    Hive.init(tempDir.path);
+    Hive.registerAdapters();
+    await DatabaseService().init();
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+    await tempDir.delete(recursive: true);
+  });
+
+  tearDown(Get.reset);
+
   IntervalTimer sampleIntervalTimer() {
     final start = DateTime(2026, 1, 1, 8);
     return IntervalTimer(
@@ -87,5 +111,35 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text(timer.name), findsWidgets);
+  });
+
+  // GetX generates every named route as `GetPageRoute<dynamic>`, so pushing one
+  // with a concrete result type (`Get.toNamed<bool>`) blows up on a cast inside
+  // `Navigator.pushNamed`. These pin the untyped push plus the `== true` narrowing.
+  testWidgets('addNewIntervalTimer opens the edit screen and reloads on save', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      GetMaterialApp(getPages: AppPages.routes, home: const Scaffold()),
+    );
+    await tester.pumpAndSettle();
+
+    final controller = Get.put(IntervalTimerController());
+    final pending = controller.addNewIntervalTimer();
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Interval Settings'), findsOneWidget);
+
+    // Stand in for the edit screen's own save, so a reload is observable.
+    final saved = sampleIntervalTimer();
+    await tester.runAsync(() => DatabaseService().createIntervalTimer(saved));
+
+    Get.back<bool>(result: true);
+    await tester.pumpAndSettle();
+    await pending;
+
+    expect(tester.takeException(), isNull);
+    expect(controller.intervalTimers.map((timer) => timer.id), contains(saved.id));
   });
 }
