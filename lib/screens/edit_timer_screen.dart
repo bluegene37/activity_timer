@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../components/alarm_sound_picker.dart';
 import '../models/activity_timer.dart';
 import '../models/alarm_sound.dart';
 import '../models/interval_phase.dart';
@@ -230,58 +231,16 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
     );
   }
 
-  void _selectAlarmSound() {
-    showDialog<void>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            title: const Text('Select Alarm Sound'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: RadioGroup<AlarmSound?>(
-                groupValue: _selectedAlarmSound,
-                onChanged: (AlarmSound? value) {
-                  setState(() => _selectedAlarmSound = value);
-                  Navigator.pop(context);
-                },
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: AlarmSound.values.length + 1,
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      return ListTile(
-                        leading: const Radio<AlarmSound?>(value: null),
-                        title: const Text('Use Default App Sound'),
-                        onTap: () {
-                          setState(() => _selectedAlarmSound = null);
-                          Navigator.pop(context);
-                        },
-                      );
-                    }
-                    final sound = AlarmSound.values[index - 1];
-                    return ListTile(
-                      leading: Radio<AlarmSound?>(value: sound),
-                      title: Text(sound.displayName),
-                      onTap: () {
-                        setState(() => _selectedAlarmSound = sound);
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-            ],
-          ),
+  Future<void> _selectAlarmSound() async {
+    final choice = await showAlarmSoundPicker(
+      context,
+      selected: _selectedAlarmSound,
+      allowDefault: true,
+      title: 'Select Alarm Sound',
     );
+    if (choice != null) {
+      setState(() => _selectedAlarmSound = choice.sound);
+    }
   }
 
   String _formatTimeValue(int value) {

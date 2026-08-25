@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../components/alarm_sound_picker.dart';
 import '../models/alarm_sound.dart';
 import '../models/interval_timer.dart';
 import '../services/database_service.dart';
@@ -142,54 +143,15 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
     }
   }
 
-  void _selectAlarmSound() {
-    showDialog<void>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            title: const Text('Select Alarm Sound'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: RadioGroup<AlarmSound>(
-                groupValue: _alarmSound,
-                onChanged: (AlarmSound? value) {
-                  if (value != null) {
-                    setState(() {
-                      _alarmSound = value;
-                    });
-                    Navigator.pop(context);
-                  }
-                },
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: AlarmSound.values.length,
-                  itemBuilder: (context, index) {
-                    final sound = AlarmSound.values[index];
-                    return ListTile(
-                      leading: Radio<AlarmSound>(value: sound),
-                      title: Text(sound.displayName),
-                      onTap: () {
-                        setState(() {
-                          _alarmSound = sound;
-                        });
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-            ],
-          ),
+  Future<void> _selectAlarmSound() async {
+    final choice = await showAlarmSoundPicker(
+      context,
+      selected: _alarmSound,
+      title: 'Select Alarm Sound',
     );
+    if (choice?.sound != null) {
+      setState(() => _alarmSound = choice!.sound!);
+    }
   }
 
   @override

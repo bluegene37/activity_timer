@@ -1,16 +1,19 @@
 import 'package:activity_timer/models/alarm_sound.dart';
 import 'package:activity_timer/models/brew_recipe.dart';
-import 'package:activity_timer/services/brew_cue_player.dart';
 import 'package:activity_timer/services/brew_session_service.dart';
+import 'package:activity_timer/services/cue_player.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class _SilentCuePlayer implements BrewCuePlayer {
+class _SilentCuePlayer implements CuePlayer {
   @override
-  Future<void> playStepEnd(AlarmSound sound) async {}
+  Future<void> playAlarm(AlarmSound sound) async {}
 
   @override
-  Future<void> playCompleted() async {}
+  Future<void> playCompletion() async {}
+
+  @override
+  Future<void> playStart() async {}
 
   @override
   Future<void> dispose() async {}

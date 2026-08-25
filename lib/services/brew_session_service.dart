@@ -2,7 +2,7 @@ import 'package:get/get.dart';
 
 import '../controllers/brew_run_controller.dart';
 import '../models/brew_recipe.dart';
-import 'brew_cue_player.dart';
+import 'cue_player.dart';
 
 /// Owns the one running brew, decoupled from any screen.
 ///
@@ -35,7 +35,7 @@ class BrewSessionService {
   /// The controller for [recipe] — the existing one when the session already
   /// runs this recipe (reopening resumes, never restarts), a fresh one
   /// otherwise. Starting a different recipe replaces the old session.
-  BrewRunController obtain(BrewRecipe recipe, {BrewCuePlayer? cuePlayer}) {
+  BrewRunController obtain(BrewRecipe recipe, {CuePlayer? cuePlayer}) {
     final current = active.value;
     if (current != null && current.recipe.id == recipe.id) {
       return current;

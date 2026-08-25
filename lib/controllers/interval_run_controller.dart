@@ -5,7 +5,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/interval_timer.dart';
 import '../models/session_history.dart';
-import '../services/brew_cue_player.dart';
+import '../services/cue_player.dart';
 import '../services/database_service.dart';
 
 /// Runs an interval timer on the wall clock, decoupled from any screen.
@@ -18,11 +18,11 @@ import '../services/database_service.dart';
 class IntervalRunController extends GetxController {
   IntervalRunController({
     required this.timer,
-    BrewCuePlayer? cuePlayer,
+    CuePlayer? cuePlayer,
     DateTime Function()? clock,
     Future<void> Function(SessionHistory)? historyLogger,
     this.tickInterval = const Duration(seconds: 1),
-  }) : _cuePlayer = cuePlayer ?? AudioBrewCuePlayer(),
+  }) : _cuePlayer = cuePlayer ?? AudioCuePlayer(),
        _now = clock ?? DateTime.now,
        _logHistory =
            historyLogger ?? ((history) => DatabaseService().logSessionHistory(history));
@@ -30,7 +30,7 @@ class IntervalRunController extends GetxController {
   final IntervalTimer timer;
   final Duration tickInterval;
 
-  final BrewCuePlayer _cuePlayer;
+  final CuePlayer _cuePlayer;
   final DateTime Function() _now;
   final Future<void> Function(SessionHistory) _logHistory;
 
@@ -154,9 +154,9 @@ class IntervalRunController extends GetxController {
       _advance();
     }
     if (isCompleted.value) {
-      unawaited(_cuePlayer.playCompleted());
+      unawaited(_cuePlayer.playCompletion());
     } else {
-      unawaited(_cuePlayer.playStepEnd(timer.alarmSound));
+      unawaited(_cuePlayer.playAlarm(timer.alarmSound));
     }
   }
 

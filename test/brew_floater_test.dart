@@ -1,25 +1,28 @@
-import 'dart:io';
 
+import 'dart:io';
 import 'package:activity_timer/controllers/app_controller.dart';
 import 'package:activity_timer/hive_registrar.g.dart';
 import 'package:activity_timer/models/alarm_sound.dart';
 import 'package:activity_timer/models/brew_recipe.dart';
 import 'package:activity_timer/navigation/main_navigation.dart';
 import 'package:activity_timer/routes/app_pages.dart';
-import 'package:activity_timer/services/brew_cue_player.dart';
 import 'package:activity_timer/services/brew_session_service.dart';
+import 'package:activity_timer/services/cue_player.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 
-class _SilentCuePlayer implements BrewCuePlayer {
+class _SilentCuePlayer implements CuePlayer {
   @override
-  Future<void> playStepEnd(AlarmSound sound) async {}
+  Future<void> playAlarm(AlarmSound sound) async {}
 
   @override
-  Future<void> playCompleted() async {}
+  Future<void> playCompletion() async {}
+
+  @override
+  Future<void> playStart() async {}
 
   @override
   Future<void> dispose() async {}

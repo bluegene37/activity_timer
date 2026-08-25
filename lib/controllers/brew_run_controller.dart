@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/brew_recipe.dart';
-import '../services/brew_cue_player.dart';
+import '../services/cue_player.dart';
 
 /// Runs a brew on the clock. Steps advance strictly by time; inside a pour
 /// step the controller also reports whether the pour window is still open, so
@@ -12,16 +12,16 @@ import '../services/brew_cue_player.dart';
 class BrewRunController extends GetxController {
   BrewRunController({
     required this.recipe,
-    BrewCuePlayer? cuePlayer,
+    CuePlayer? cuePlayer,
     DateTime Function()? clock,
     this.tickInterval = const Duration(milliseconds: 200),
-  }) : _cuePlayer = cuePlayer ?? AudioBrewCuePlayer(),
+  }) : _cuePlayer = cuePlayer ?? AudioCuePlayer(),
        _now = clock ?? DateTime.now;
 
   final BrewRecipe recipe;
   final Duration tickInterval;
 
-  final BrewCuePlayer _cuePlayer;
+  final CuePlayer _cuePlayer;
   final DateTime Function() _now;
 
   final RxInt stepIndex = 0.obs;
@@ -120,11 +120,11 @@ class BrewRunController extends GetxController {
       if (stepIndex.value == recipe.steps.length - 1) {
         // The final boundary gets the dedicated completion alarm rather
         // than a step cue.
-        unawaited(_cuePlayer.playCompleted());
+        unawaited(_cuePlayer.playCompletion());
         _finish();
         return;
       }
-      unawaited(_cuePlayer.playStepEnd(recipe.alarmSound));
+      unawaited(_cuePlayer.playAlarm(recipe.alarmSound));
 
       stepIndex.value += 1;
       _carriedMs = overflowMs;

@@ -1,13 +1,14 @@
 import 'dart:async';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../components/alarm_sound_picker.dart';
 import '../models/alarm_sound.dart';
+import '../services/cue_player.dart';
 import 'app_controller.dart';
 
 class SettingsController extends GetxController {
-  final _audioPlayer = AudioPlayer();
+  final CuePlayer _cuePlayer = AudioCuePlayer();
   late final AppController _appController;
 
   @override
@@ -18,7 +19,7 @@ class SettingsController extends GetxController {
 
   @override
   void onClose() {
-    _audioPlayer.dispose();
+    unawaited(_cuePlayer.dispose());
     super.onClose();
   }
 
@@ -42,59 +43,24 @@ class SettingsController extends GetxController {
   }
 
   Future<void> selectDefaultAlarmSound() async {
-    final selectedSound = await Get.dialog<AlarmSound>(
-      AlertDialog(
-        title: const Text('Select Default Alarm Sound'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Obx(
-            () => RadioGroup<AlarmSound>(
-              groupValue: _appController.defaultAlarmSound.value,
-              onChanged: (AlarmSound? value) {
-                if (value != null) {
-                  Get.back<AlarmSound>(result: value);
-                }
-              },
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: AlarmSound.values.length,
-                itemBuilder: (context, index) {
-                  final sound = AlarmSound.values[index];
-                  return ListTile(
-                    leading: Radio<AlarmSound>(value: sound),
-                    title: Text(sound.displayName),
-                    onTap: () => Get.back<AlarmSound>(result: sound),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.play_arrow),
-                      onPressed: () => previewAlarmSound(sound),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back<AlarmSound>(),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
+    final context = Get.context;
+    if (context == null) {
+      return;
+    }
+    final choice = await showAlarmSoundPicker(
+      context,
+      selected: _appController.defaultAlarmSound.value,
+      title: 'Default Alarm Sound',
+      cuePlayer: _cuePlayer,
     );
-
-    if (selectedSound != null) {
-      await _appController.setDefaultAlarmSound(selectedSound);
+    final sound = choice?.sound;
+    if (sound != null) {
+      await _appController.setDefaultAlarmSound(sound);
     }
   }
 
-  Future<void> previewAlarmSound(AlarmSound sound) async {
-    try {
-      await _audioPlayer.stop();
-      await _audioPlayer.setSource(AssetSource('sounds/${sound.fileName}'));
-      await _audioPlayer.resume();
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to play sound: $e');
-    }
-  }
+  /// Previews through the same player the timers use, so what you hear
+  /// while picking is what you get while running.
+  Future<void> previewAlarmSound(AlarmSound sound) =>
+      _cuePlayer.playAlarm(sound);
 }

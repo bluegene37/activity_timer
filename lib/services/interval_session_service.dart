@@ -2,7 +2,7 @@ import 'package:get/get.dart';
 
 import '../controllers/interval_run_controller.dart';
 import '../models/interval_timer.dart';
-import 'brew_cue_player.dart';
+import 'cue_player.dart';
 
 /// Owns the one running interval session, decoupled from any screen.
 ///
@@ -34,7 +34,7 @@ class IntervalSessionService {
   /// The controller for [timer] — the existing one when the session already
   /// runs this timer (reopening resumes, never restarts), a fresh one
   /// otherwise. Starting a different timer replaces the old session.
-  IntervalRunController obtain(IntervalTimer timer, {BrewCuePlayer? cuePlayer}) {
+  IntervalRunController obtain(IntervalTimer timer, {CuePlayer? cuePlayer}) {
     final current = active.value;
     if (current != null && current.timer.id == timer.id) {
       return current;

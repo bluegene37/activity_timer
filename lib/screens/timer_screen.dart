@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +11,7 @@ import '../models/activity_timer.dart';
 import '../models/interval_phase.dart';
 import '../models/session_history.dart';
 import '../models/settings.dart';
+import '../services/cue_player.dart';
 import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/time_format.dart';
@@ -43,7 +43,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
   int _loopCount = 0;
   int _lastHapticSecond = -1;
   Timer? _ticker;
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  final CuePlayer _cuePlayer = AudioCuePlayer();
   final _settings = AppSettings();
 
   int get _currentDurationMs {
@@ -85,8 +85,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
       _remainingMs = _currentDurationMs;
     }
 
-    _updateAudioSource();
-    _audioPlayer.setReleaseMode(ReleaseMode.stop);
+
     _start();
   }
 
@@ -94,7 +93,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();
-    _audioPlayer.dispose();
+    unawaited(_cuePlayer.dispose());
     WakelockPlus.disable();
     super.dispose();
   }
@@ -104,18 +103,6 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed && _isRunning) {
       _tick();
     }
-  }
-
-  void _updateAudioSource() {
-    if (_timers.isEmpty) return;
-    final sound =
-        _isPreparing
-            ? _settings.defaultAlarmSound
-            : (_timers[_currentTimerIndex].alarmSound ??
-                _settings.defaultAlarmSound);
-    try {
-      _audioPlayer.setSource(AssetSource('sounds/${sound.fileName}'));
-    } catch (_) {}
   }
 
   void _start() {
@@ -163,7 +150,14 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
       if (_isPreparing) {
         _finishPreparation();
       } else {
-        _playAlarm();
+        final isFinalStep =
+            _currentTimerIndex == _timers.length - 1 &&
+            !(_loopEnabled && widget.sequence.totalDuration > 0);
+        if (isFinalStep) {
+          _playCompletionAlarm();
+        } else {
+          _playAlarm();
+        }
         _advance(overshootMs: -remaining);
       }
       return;
@@ -186,7 +180,6 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     _lastHapticSecond = -1;
     _playStartTone();
     _deadline = DateTime.now().add(Duration(milliseconds: _remainingMs));
-    _updateAudioSource();
     setState(() {});
   }
 
@@ -223,7 +216,6 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
 
     _lastHapticSecond = -1;
     _deadline = DateTime.now().add(Duration(milliseconds: _remainingMs));
-    _updateAudioSource();
     setState(() {});
   }
 
@@ -237,40 +229,17 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     _logSessionCompletion();
   }
 
-  Future<void> _playStartTone() async {
-    if (_settings.soundEnabled) {
-      try {
-        await _audioPlayer.stop();
-        await _audioPlayer.setSource(AssetSource('sounds/beep.mp3'));
-        await _audioPlayer.resume();
-      } catch (_) {}
-    }
-    if (_settings.vibrationEnabled) {
-      unawaited(HapticFeedback.heavyImpact());
-    }
-  }
+  Future<void> _playStartTone() => _cuePlayer.playStart();
 
-  Future<void> _playAlarm() async {
+  Future<void> _playAlarm() {
     final currentTimer = _timers[_currentTimerIndex];
     final sound = currentTimer.alarmSound ?? _settings.defaultAlarmSound;
-
-    if (_settings.soundEnabled) {
-      try {
-        await _audioPlayer.stop();
-        await _audioPlayer.setSource(AssetSource('sounds/${sound.fileName}'));
-        await _audioPlayer.resume();
-      } catch (_) {}
-    }
-
-    if (_settings.vibrationEnabled) {
-      unawaited(HapticFeedback.heavyImpact());
-      unawaited(
-        Future<void>.delayed(const Duration(milliseconds: 200), () {
-          HapticFeedback.heavyImpact();
-        }),
-      );
-    }
+    return _cuePlayer.playAlarm(sound);
   }
+
+  /// The last step of the routine just ended: the session is over, so it
+  /// gets the completion alarm rather than another boundary cue.
+  Future<void> _playCompletionAlarm() => _cuePlayer.playCompletion();
 
   void _resetTimer() {
     _ticker?.cancel();
@@ -285,7 +254,6 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
       _loopCount = 0;
       _lastHapticSecond = -1;
     });
-    _updateAudioSource();
   }
 
   void _logSessionCompletion() {
@@ -331,7 +299,6 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
         _lastHapticSecond = -1;
         _isRunning = false;
       });
-      _updateAudioSource();
       if (wasRunning) {
         _start();
       }

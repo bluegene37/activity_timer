@@ -23,6 +23,12 @@ class AlarmSoundAdapter extends TypeAdapter<AlarmSound> {
         return AlarmSound.digital;
       case 4:
         return AlarmSound.gentle;
+      case 5:
+        return AlarmSound.alert;
+      case 6:
+        return AlarmSound.siren;
+      case 7:
+        return AlarmSound.marimba;
       default:
         return AlarmSound.beep;
     }
@@ -41,6 +47,12 @@ class AlarmSoundAdapter extends TypeAdapter<AlarmSound> {
         writer.writeByte(3);
       case AlarmSound.gentle:
         writer.writeByte(4);
+      case AlarmSound.alert:
+        writer.writeByte(5);
+      case AlarmSound.siren:
+        writer.writeByte(6);
+      case AlarmSound.marimba:
+        writer.writeByte(7);
     }
   }
 

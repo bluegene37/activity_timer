@@ -25,7 +25,7 @@ class AppSettingsDataAdapter extends TypeAdapter<AppSettingsData> {
               ? AppSettings.defaultThemeColorValue
               : (fields[3] as num).toInt(),
       defaultAlarmSound: fields[4] == null ? 'beep' : fields[4] as String,
-      themeStyle: fields[5] == null ? 'ios' : fields[5] as String,
+      themeStyle: fields[5] == null ? 'coffee' : fields[5] as String,
     );
   }
 

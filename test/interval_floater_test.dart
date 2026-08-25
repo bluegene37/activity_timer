@@ -6,7 +6,7 @@ import 'package:activity_timer/models/alarm_sound.dart';
 import 'package:activity_timer/models/interval_timer.dart';
 import 'package:activity_timer/navigation/main_navigation.dart';
 import 'package:activity_timer/routes/app_pages.dart';
-import 'package:activity_timer/services/brew_cue_player.dart';
+import 'package:activity_timer/services/cue_player.dart';
 import 'package:activity_timer/services/database_service.dart';
 import 'package:activity_timer/services/interval_session_service.dart';
 import 'package:flutter/material.dart';
@@ -15,12 +15,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 
-class _SilentCuePlayer implements BrewCuePlayer {
+class _SilentCuePlayer implements CuePlayer {
   @override
-  Future<void> playStepEnd(AlarmSound sound) async {}
+  Future<void> playAlarm(AlarmSound sound) async {}
 
   @override
-  Future<void> playCompleted() async {}
+  Future<void> playCompletion() async {}
+
+  @override
+  Future<void> playStart() async {}
 
   @override
   Future<void> dispose() async {}

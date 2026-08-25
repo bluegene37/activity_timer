@@ -1,7 +1,7 @@
 import 'package:activity_timer/controllers/brew_run_controller.dart';
 import 'package:activity_timer/models/alarm_sound.dart';
 import 'package:activity_timer/models/brew_recipe.dart';
-import 'package:activity_timer/services/brew_cue_player.dart';
+import 'package:activity_timer/services/cue_player.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,15 +14,18 @@ class _FakeClock {
   void advance(Duration delta) => value = value.add(delta);
 }
 
-class _RecordingCuePlayer implements BrewCuePlayer {
+class _RecordingCuePlayer implements CuePlayer {
   final List<AlarmSound> played = [];
   int completedCount = 0;
 
   @override
-  Future<void> playStepEnd(AlarmSound sound) async => played.add(sound);
+  Future<void> playAlarm(AlarmSound sound) async => played.add(sound);
 
   @override
-  Future<void> playCompleted() async => completedCount++;
+  Future<void> playCompletion() async => completedCount++;
+
+  @override
+  Future<void> playStart() async {}
 
   @override
   Future<void> dispose() async {}
