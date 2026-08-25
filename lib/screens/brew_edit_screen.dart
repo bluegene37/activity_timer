@@ -27,7 +27,14 @@ class _BrewEditScreenState extends State<BrewEditScreen> {
     text: widget.recipe.ratio.toStringAsFixed(1),
   );
 
-  late final BrewRecipe _draft = widget.recipe;
+  // Deep copy, not an alias: `widget.recipe` is the exact live instance held
+  // by BrewController.recipes (and Hive), so mutating it directly would
+  // apply every keystroke immediately with no way to back out on cancel.
+  // `copyWith` preserves id/createdAt, so `updateBrewRecipe(_draft)` still
+  // overwrites the right row on save.
+  late final BrewRecipe _draft = widget.recipe.copyWith(
+    steps: [for (final step in widget.recipe.steps) step.copyWith()],
+  );
   List<String> _errors = const [];
 
   double get _totalWater => _draft.doseGrams * _draft.ratio;
@@ -116,10 +123,14 @@ class _BrewEditScreenState extends State<BrewEditScreen> {
           title: Text(widget.isNew ? 'New Brew' : 'Edit Brew'),
           actions: [TextButton(onPressed: _save, child: const Text('Save'))],
         ),
-        // A SingleChildScrollView + Column (rather than a lazy ListView) keeps
-        // every child mounted in the element tree regardless of scroll
-        // position, so off-screen content like validation errors is still
-        // present for widget tests to find without an explicit scroll.
+        // SingleChildScrollView + Column, not a lazy ListView: this is a
+        // single form whose trailing validation errors are part of the same
+        // page as the fields above, and a recipe only ever has a handful of
+        // steps, so building all of it eagerly costs nothing measurable.
+        // Do not "optimize" this back to a lazy list -- a lazy list only
+        // materializes children near the viewport, so it would silently stop
+        // rendering the trailing error text (and step rows below the fold)
+        // without a scroll.
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -164,7 +175,14 @@ class _BrewEditScreenState extends State<BrewEditScreen> {
               const SizedBox(height: 20),
               for (var i = 0; i < _draft.steps.length; i++)
                 _StepRow(
-                  key: ValueKey(i),
+                  // Keyed by step identity, not position: BrewStep has no ==
+                  // override, so this is reference identity. Reorder and
+                  // delete shift which index a step sits at; keying by index
+                  // would make Flutter reuse the old State object (and its
+                  // TextFormField.initialValue, which only seeds on first
+                  // build) for the new occupant of that slot, leaving stale
+                  // text on screen even though _draft.steps is correct.
+                  key: ValueKey(_draft.steps[i]),
                   index: i,
                   step: _draft.steps[i],
                   targetGrams: _draft.targetGramsAt(i),
