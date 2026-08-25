@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/activity_timer.dart';
+import '../models/alarm_sound.dart';
 import '../models/interval_phase.dart';
 import '../models/session_history.dart';
 import '../models/settings.dart';
@@ -353,6 +354,7 @@ class ActivityRunController extends GetxController {
           at: from.add(Duration(milliseconds: offsetMs)),
           title: sequence.name,
           body: 'Get ready — starting ${timers.first.name}.',
+          sound: _soundFor(0),
         ),
       );
     } else {
@@ -362,6 +364,8 @@ class ActivityRunController extends GetxController {
           at: from.add(Duration(milliseconds: offsetMs)),
           title: sequence.name,
           body: _bodyFor(currentIndex.value),
+          sound: _soundFor(currentIndex.value),
+          isCompletion: _endsSessionAt(currentIndex.value),
         ),
       );
       for (var i = currentIndex.value + 1; i < timers.length; i++) {
@@ -372,12 +376,22 @@ class ActivityRunController extends GetxController {
             at: from.add(Duration(milliseconds: offsetMs)),
             title: sequence.name,
             body: _bodyFor(i),
+            sound: _soundFor(i),
+            isCompletion: _endsSessionAt(i),
           ),
         );
       }
     }
     return alarms;
   }
+
+  /// The cue that marks the end of step [index] — its own sound when it has
+  /// one, the app default otherwise.
+  AlarmSound _soundFor(int index) =>
+      timers[index].alarmSound ?? AppSettings().defaultAlarmSound;
+
+  bool _endsSessionAt(int index) =>
+      index >= timers.length - 1 && !loopEnabled.value;
 
   String _bodyFor(int finishedIndex) =>
       finishedIndex >= timers.length - 1

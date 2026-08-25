@@ -1,9 +1,15 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
+
+import '../models/alarm_sound.dart';
+import 'cue_player.dart';
 
 /// One alarm the OS should raise on its own, at [at].
 @immutable
@@ -13,6 +19,8 @@ class ScheduledAlarm {
     required this.at,
     required this.title,
     required this.body,
+    this.sound,
+    this.isCompletion = false,
   });
 
   /// Stable within a session; ids are reused across reschedules so a stale
@@ -22,16 +30,24 @@ class ScheduledAlarm {
   final String title;
   final String body;
 
+  /// The routine's chosen cue. Null falls back to the system default.
+  final AlarmSound? sound;
+
+  /// The end of the whole session, which uses the dedicated completion cue.
+  final bool isCompletion;
+
   @override
   bool operator ==(Object other) =>
       other is ScheduledAlarm &&
       other.id == id &&
       other.at == at &&
       other.title == title &&
-      other.body == body;
+      other.body == body &&
+      other.sound == sound &&
+      other.isCompletion == isCompletion;
 
   @override
-  int get hashCode => Object.hash(id, at, title, body);
+  int get hashCode => Object.hash(id, at, title, body, sound, isCompletion);
 
   @override
   String toString() => 'ScheduledAlarm($id, $at, $title)';
@@ -76,6 +92,56 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
   bool _initialized = false;
   final Set<int> _pending = <int>{};
 
+  /// iOS plays notification audio only from the app bundle or the app
+  /// container's Library/Sounds directory — a Flutter asset is neither. So
+  /// the cues are copied there once, which keeps the sounds in `assets/`
+  /// as the single source of truth instead of duplicating them into the
+  /// Xcode project.
+  Future<void> _installDarwinSounds() async {
+    if (!Platform.isIOS && !Platform.isMacOS) {
+      return;
+    }
+    try {
+      final library = await getLibraryDirectory();
+      final sounds = Directory('${library.path}/Sounds');
+      if (!sounds.existsSync()) {
+        sounds.createSync(recursive: true);
+      }
+      for (final fileName in _cueFileNames) {
+        final target = File('${sounds.path}/$fileName');
+        if (target.existsSync()) {
+          continue;
+        }
+        final data = await rootBundle.load('assets/sounds/$fileName');
+        await target.writeAsBytes(
+          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+          flush: true,
+        );
+      }
+    } catch (_) {
+      // Without the copy iOS falls back to the default alert sound.
+    }
+  }
+
+  static Iterable<String> get _cueFileNames sync* {
+    for (final sound in AlarmSound.values) {
+      yield sound.fileName;
+    }
+    yield AudioCuePlayer.completionSound;
+  }
+
+  /// Android ties a sound to its channel and will not let it change
+  /// afterwards, so each cue gets its own channel.
+  static String channelIdFor(AlarmSound? sound, {required bool isCompletion}) {
+    if (isCompletion) {
+      return '${channelId}_complete';
+    }
+    return sound == null ? channelId : '${channelId}_${sound.name}';
+  }
+
+  static String _rawResourceFor(String fileName) =>
+      fileName.split('.').first.toLowerCase().replaceAll('-', '_');
+
   Future<void> _init() async {
     if (_initialized) {
       return;
@@ -93,6 +159,7 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
         ),
       ),
     );
+    await _installDarwinSounds();
     _initialized = true;
   }
 
@@ -141,21 +208,7 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
           title: alarm.title,
           body: alarm.body,
           scheduledDate: tz.TZDateTime.from(alarm.at, tz.local),
-          notificationDetails: const NotificationDetails(
-            android: AndroidNotificationDetails(
-              channelId,
-              channelName,
-              channelDescription: channelDescription,
-              importance: Importance.max,
-              priority: Priority.high,
-              // An alarm should read as an alarm on the lock screen.
-              category: AndroidNotificationCategory.alarm,
-              fullScreenIntent: true,
-            ),
-            iOS: DarwinNotificationDetails(
-              interruptionLevel: InterruptionLevel.timeSensitive,
-            ),
-          ),
+          notificationDetails: _detailsFor(alarm),
           // Exact timing is the entire point of a timer; inexact scheduling
           // would drift by minutes under Doze.
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -165,6 +218,39 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
     } catch (_) {
       // Scheduling is best-effort; the in-app cue still fires.
     }
+  }
+
+  /// The alarm's own cue, on both platforms, so a background alarm sounds
+  /// like the one the routine was set up with.
+  NotificationDetails _detailsFor(ScheduledAlarm alarm) {
+    final fileName =
+        alarm.isCompletion
+            ? AudioCuePlayer.completionSound
+            : alarm.sound?.fileName;
+
+    return NotificationDetails(
+      android: AndroidNotificationDetails(
+        channelIdFor(alarm.sound, isCompletion: alarm.isCompletion),
+        channelName,
+        channelDescription: channelDescription,
+        importance: Importance.max,
+        priority: Priority.high,
+        // An alarm should read as an alarm on the lock screen.
+        category: AndroidNotificationCategory.alarm,
+        fullScreenIntent: true,
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+        sound:
+            fileName == null
+                ? null
+                : RawResourceAndroidNotificationSound(
+                  _rawResourceFor(fileName),
+                ),
+      ),
+      iOS: DarwinNotificationDetails(
+        interruptionLevel: InterruptionLevel.timeSensitive,
+        sound: fileName,
+      ),
+    );
   }
 
   @override

@@ -125,6 +125,8 @@ class BrewRunController extends GetxController {
                   : (nextTarget == null
                       ? 'Next: ${recipe.steps[i + 1].name}'
                       : 'Next: pour to ${nextTarget}g'),
+          sound: recipe.alarmSound,
+          isCompletion: isLast,
         ),
       );
     }

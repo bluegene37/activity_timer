@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:activity_timer/controllers/brew_run_controller.dart';
 import 'package:activity_timer/controllers/interval_run_controller.dart';
 import 'package:activity_timer/models/alarm_sound.dart';
@@ -214,6 +216,78 @@ void main() {
 
       controller.pause();
       expect(scheduler.cancelCount, greaterThan(0));
+
+      controller.onClose();
+    });
+  });
+
+  group('custom notification sounds', () {
+    test('each cue gets its own Android channel', () {
+      // Android ties a sound to its channel and will not let it change
+      // afterwards, so two different cues must not share one channel.
+      final ids =
+          AlarmSound.values
+              .map(
+                (s) => LocalNotificationAlarmScheduler.channelIdFor(
+                  s,
+                  isCompletion: false,
+                ),
+              )
+              .toList();
+      expect(ids.toSet(), hasLength(AlarmSound.values.length));
+
+      final completion = LocalNotificationAlarmScheduler.channelIdFor(
+        null,
+        isCompletion: true,
+      );
+      expect(ids, isNot(contains(completion)));
+    });
+
+    test('a raw resource exists on Android for every cue', () {
+      // RawResourceAndroidNotificationSound resolves by res/raw name, which
+      // is the file's stem, lowercased.
+      final raw =
+          Directory('android/app/src/main/res/raw')
+              .listSync()
+              .whereType<File>()
+              .map((f) => f.uri.pathSegments.last.split('.').first)
+              .toSet();
+
+      for (final sound in AlarmSound.values) {
+        expect(
+          raw,
+          contains(sound.fileName.split('.').first.toLowerCase()),
+          reason: '${sound.displayName} has no res/raw copy to play',
+        );
+      }
+      expect(raw, contains('timer_complete'));
+    });
+
+    test('interval alarms carry the timer\'s sound and mark the last one', () {
+      final scheduler = _RecordingScheduler();
+      final timer = IntervalTimer(
+        name: 'Stretch',
+        startTime: DateTime(2026, 1, 1, 8),
+        endTime: DateTime(2026, 1, 1, 8, 2),
+        intervalValue: 1,
+        intervalType: IntervalType.minute,
+        alarmSoundName: AlarmSound.siren.name,
+      );
+      final controller = IntervalRunController(
+        timer: timer,
+        cuePlayer: _SilentCuePlayer(),
+        scheduler: scheduler,
+        clock: () => DateTime(2026, 1, 1, 7, 59),
+        historyLogger: (_) async {},
+      )..onInit();
+
+      final alarms = controller.pendingAlarms();
+      expect(alarms.every((a) => a.sound == AlarmSound.siren), isTrue);
+      expect(alarms.last.isCompletion, isTrue);
+      expect(
+        alarms.take(alarms.length - 1).every((a) => !a.isCompletion),
+        isTrue,
+      );
 
       controller.onClose();
     });

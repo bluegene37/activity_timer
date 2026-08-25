@@ -89,9 +89,9 @@ differ in kind:
 | | Activity routine | Interval schedule | Brew |
 | --- | --- | --- | --- |
 | Clock | countdown per step | wall-clock alarm times | countdown per step |
-| Engine lives in | `screens/timer_screen.dart` | `controllers/interval_run_controller.dart` | `controllers/brew_run_controller.dart` |
-| Survives screen close | ❌ not yet | ✅ via `IntervalSessionService` | ✅ via `BrewSessionService` |
-| Minimizes to a chip | ❌ not yet | ✅ | ✅ |
+| Engine lives in | `controllers/activity_run_controller.dart` | `controllers/interval_run_controller.dart` | `controllers/brew_run_controller.dart` |
+| Survives screen close | ✅ via `ActivitySessionService` | ✅ via `IntervalSessionService` | ✅ via `BrewSessionService` |
+| Minimizes to a chip | ✅ | ✅ | ✅ |
 
 **The session-service pattern** (use it for any new long-running timer):
 
@@ -106,10 +106,16 @@ The screen *borrows* the controller and takes a `controller` parameter as a
 test seam. `MainNavigation` watches the service's `active` value and renders a
 floating chip whenever a session is live.
 
-> **Known debt:** `timer_screen.dart` still owns its engine inline (~1,100
-> lines), which is why activity routines cannot minimize. Extracting an
-> `ActivityRunController` + `ActivitySessionService` is the next refactor, and
-> the interval extraction is the worked example to copy.
+All three now follow the same shape. `timer_screen.dart` used to own its
+engine inline (1,159 lines, 12 business-state fields on the `State`, and a
+`setState` that rebuilt the whole tree every 100 ms); it is now 819
+presentational lines driving `ActivityRunController`.
+
+> **Obx subscribes only to what its own closure reads.** Compute observable
+> values *inside* the `Obx(() { ... })` builder, never above it — a read in
+> the enclosing `build` leaves the widget subscribed to nothing, and the
+> clock silently freezes. This bit during the extraction and is exactly the
+> kind of bug a widget test catches and a glance does not.
 
 ---
 
@@ -135,10 +141,46 @@ Two audio-session decisions worth knowing before you change them:
   with the ringer switch off.** That is the point of an alarm.
 - `duckOthers` → music and podcasts dip for the cue instead of being stopped.
 
-Notification sounds use the **system default**, not our custom WAVs: iOS
-requires notification audio to be bundled as an Xcode resource, not a Flutter
-asset. Adding custom sounds means editing `project.pbxproj` (iOS) and
-`res/raw/` (Android). Decide it is worth that before starting.
+**Background alarms use the routine's own cue, not the system default.**
+Each platform reaches its copy differently, and neither can read a Flutter
+asset directly:
+
+| Platform | Where the sound must live | How it is put there |
+| --- | --- | --- |
+| Android | `android/app/src/main/res/raw/` | committed build-time copies, referenced by `RawResourceAndroidNotificationSound` |
+| iOS | the app bundle, or `Library/Sounds` in the app container | copied out of `assets/` on first scheduler init, so `assets/` stays the single source of truth and no `project.pbxproj` surgery is needed |
+
+**Android ties a sound to its notification channel and will not let it
+change afterwards**, so each cue gets its own channel
+(`activity_timer_alarms_<sound>`). Adding a sound therefore means: add the
+enum value, drop the file in `assets/sounds/`, *and* copy it into
+`res/raw/` with a lowercase name. `test/alarm_scheduler_test.dart` fails if
+you forget the last step.
+
+### Can we use the device's own alarm sounds?
+
+Asked often, so the answer is written down:
+
+| | Pick from the device's sounds | Create an alarm in the system Clock app |
+| --- | --- | --- |
+| **Android** | **Yes** — `RingtoneManager.ACTION_RINGTONE_PICKER` returns a content URI, usable via `UriAndroidNotificationSound`. Needs a small platform channel; no maintained plugin covers it well. | **Yes** — `AlarmClock.ACTION_SET_ALARM`, but it is a one-way hand-off: the alarm lives in the Clock app, outside our control, so it cannot drive interval or step boundaries. |
+| **iOS** | **No.** Apple exposes no API to enumerate or pick system ringtones and alarm sounds. Notification audio must ship inside the app. | **No.** Third-party apps cannot add entries to the Clock app. |
+
+So a cross-platform "choose from your device" picker is not possible; it
+would be an Android-only affordance. That is why the app bundles its own
+cues — the one approach that behaves identically on both platforms — and
+why the loud ones (Alert, Siren) were synthesized rather than borrowed.
+
+Two iOS notes worth knowing before someone proposes them:
+
+- **Critical alerts** (bypassing Silent and Focus, at a fixed volume) need
+  the `com.apple.developer.usernotifications.critical-alerts` entitlement,
+  which Apple grants case by case and effectively reserves for medical,
+  health and safety apps. Not available to a timer.
+- **Keeping the app alive in the background** by holding an audio session
+  open is a real technique, but App Review guideline 2.5.4 expects the
+  `audio` background mode to mean actual continuous playback. Scheduled
+  notifications are the sanctioned route.
 
 ---
 
@@ -286,6 +328,15 @@ end of the test body.
 future from an `async` function hangs the test until the dialog closes; assign
 it to a variable the test reads instead.
 
+**Observable reads must sit inside the `Obx` closure.** Reading `x.value` in
+the enclosing `build` subscribes the widget to nothing; the screen renders
+once and then freezes. Compute inside `Obx(() { ... })`.
+
+**A session service outlives the widget tree.** The pending-timer check runs
+before `addTearDown`, so any test that pumps a screen backed by a session
+service must call `XSessionService().clear()` as the last statement of the
+test body.
+
 **Assert on bytes, not filenames.** `test/alarm_assets_test.dart` exists
 because a cue once shipped as a 154-byte text file named `.mp3`: the code ran,
 the exception was swallowed, and the alarm was silent.
@@ -316,9 +367,10 @@ has been "coming" for years, and an API sharp enough that it has already cost
 this project a production crash (typed named routes). The 2026 default for a
 new app would be **Riverpod + go_router**.
 
-**Recommendation: do not migrate now.** GetX is load-bearing across ~20 files
-and 149 tests; a rewrite would burn days and re-open settled behavior for no
-user-visible gain. Instead, *contain* it:
+**Recommendation: do not migrate in one go.** GetX is load-bearing across
+~20 files and 169 tests; a big-bang rewrite would burn days and re-open
+settled behavior for no user-visible gain. Instead, *contain* it now and
+migrate incrementally when it earns its keep:
 
 - New engines stay plain classes with injected edges — only their observable
   fields use `Rx`. Both session services already follow this.
@@ -326,8 +378,55 @@ user-visible gain. Instead, *contain* it:
 - Route pushes use `Get.toNamed<dynamic>` (below).
 
 Revisit if GetX goes a full year without a release, or if a second crash
-traces to its API. The containment above keeps that migration to controllers
-and routes rather than the whole app.
+traces to its API.
+
+### If we do replace GetX: signals is the right fit here
+
+GetX is really four tools in one, and each part has a separate, simpler
+replacement. **`signals` is the recommended choice for the state half** —
+not because it is fashionable, but because it maps almost one-to-one onto
+what this codebase already writes, which makes the migration mechanical
+instead of architectural:
+
+| GetX today | signals equivalent | Notes |
+| --- | --- | --- |
+| `final x = 0.obs;` | `final x = signal(0);` | same `.value` access |
+| `Obx(() => ...)` | `Watch((_) => ...)` | same "reads inside the closure" rule |
+| `Rxn<T>` | `signal<T?>(null)` | — |
+| `ever(x, cb)` | `effect(() => cb(x.value))` | — |
+| — | `computed(() => ...)` | derived values GetX has no clean answer for |
+
+The other three parts do **not** come from signals, and pretending otherwise
+is how migrations stall:
+
+| GetX role | Replacement | Effort |
+| --- | --- | --- |
+| State | `signals` | Low — mechanical, one controller at a time |
+| Routing (`Get.toNamed`) | `go_router` | Medium — also retires the typed-route crash class for good |
+| DI (`Get.put` / `Get.find`) | plain singletons, or `get_it` | Low — the services already are plain singletons |
+| Dialogs / snackbars (`Get.dialog`, `Get.snackbar`) | `showDialog`, `ScaffoldMessenger` | Low — and removes the `Get.context` dependency |
+
+**Suggested order**, each step shippable on its own with the suite green:
+
+1. **Dialogs and snackbars first.** Smallest surface, no state involved, and
+   it removes every `Get.context` call — the most fragile GetX usage here.
+2. **Routing to `go_router`.** Self-contained in `routes/`; delete the
+   `Get.toNamed<dynamic>` workaround along with it.
+3. **State, controller by controller.** Start with `BrewRunController` — it
+   is the smallest engine with the best test coverage, so the tests prove
+   the swap. Then interval, then activity, then the list controllers.
+4. **Drop `get` from pubspec** once nothing imports it.
+
+Both libraries can coexist during steps 1–3, which is what makes this
+tractable: there is never a commit where the app is half-migrated and
+untestable. Rough size: the three run controllers expose 20-odd observables
+between them, so step 3 is a day's careful work, not a rewrite.
+
+Why not Riverpod? It is the more common answer and a fine one, but it asks
+you to restructure ownership around providers — a genuine architectural
+change. signals leaves this app's structure exactly as it is and swaps only
+the reactive primitive, which is the cheaper, lower-risk path for a codebase
+that is already shipping.
 
 ### Gaps worth deciding on
 

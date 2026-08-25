@@ -89,6 +89,8 @@ class IntervalRunController extends GetxController {
               isLast
                   ? 'Final alarm — the schedule is complete.'
                   : 'Alarm ${i + 1} of ${allAlarmTimes.length}',
+          sound: timer.alarmSound,
+          isCompletion: isLast,
         ),
       );
     }
