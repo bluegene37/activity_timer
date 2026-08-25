@@ -1,5 +1,5 @@
 name: activity_timer
-description: "A timer with different intervals and settings for all kinds of activities."
+description: "A versatile, offline activity and interval timer for workouts, productivity routines, and custom sequences."
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
