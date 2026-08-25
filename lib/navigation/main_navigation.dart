@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import '../controllers/activity_list_controller.dart';
 import '../controllers/brew_controller.dart';
 import '../controllers/brew_run_controller.dart';
+import '../controllers/interval_run_controller.dart';
 import '../controllers/interval_timer_controller.dart';
 import '../routes/app_routes.dart';
 import '../screens/activity_list_screen.dart';
@@ -14,6 +15,7 @@ import '../screens/brew_list_screen.dart';
 import '../screens/interval_timer_list_screen.dart';
 import '../screens/settings_screen.dart';
 import '../services/brew_session_service.dart';
+import '../services/interval_session_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/brew_theme.dart';
 
@@ -112,7 +114,24 @@ class _MainNavigationState extends State<MainNavigation> {
       body: Stack(
         children: [
           IndexedStack(index: _currentIndex, children: _screens),
-          _BrewFloater(),
+          // The Builder matters: with extendBody on, the Scaffold injects the
+          // nav bar's height as bottom padding INTO the body's MediaQuery, so
+          // the inset must be read from a context inside the Stack.
+          Builder(
+            builder:
+                (bodyContext) => Positioned(
+                  left: 16,
+                  right: 16,
+                  // Clear the nav bar plus breathing room (the body
+                  // padding already includes the bar; the offset keeps the
+                  // chips clear of each tab's FAB).
+                  bottom: 68 + MediaQuery.paddingOf(bodyContext).bottom,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [_IntervalFloater(), _BrewFloater()],
+                  ),
+                ),
+          ),
         ],
       ),
       floatingActionButton: _buildFloatingActionButton(colorScheme),
@@ -240,11 +259,9 @@ class _BrewFloater extends StatelessWidget {
               ? controller.currentStep.name
               : '${controller.currentStep.name} · pour to ${target}g';
 
-      return Positioned(
-        left: 16,
-        right: 16,
-        // Clear the 52px nav bar plus breathing room; extendBody is on.
-        bottom: 68 + MediaQuery.paddingOf(context).bottom,
+      return Padding(
+        // Gap above this chip when it shares the column with another.
+        padding: const EdgeInsets.only(top: 8),
         child: Material(
           key: const Key('brew-floater'),
           color: palette.paperRaised,
@@ -300,6 +317,114 @@ class _BrewFloater extends StatelessWidget {
                       minHeight: 32,
                     ),
                     tooltip: 'End brew',
+                    onPressed: session.clear,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    });
+  }
+}
+
+/// The minimized interval schedule: a pill floating above the nav bar
+/// whenever an unfinished session lives in [IntervalSessionService].
+/// Tapping it reopens the full run screen on the same controller; the close
+/// button ends the session.
+class _IntervalFloater extends StatelessWidget {
+  String _clock(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+    final seconds = duration.inSeconds % 60;
+    final mmss =
+        '${minutes.toString().padLeft(2, '0')}:'
+        '${seconds.toString().padLeft(2, '0')}';
+    return hours > 0 ? '$hours:$mmss' : mmss;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = IntervalSessionService();
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Obx(() {
+      final IntervalRunController? controller = session.active.value;
+      if (controller == null || !session.hasSessionInProgress) {
+        return const SizedBox.shrink();
+      }
+
+      final label =
+          '${controller.timer.name} · alarm '
+          '${controller.currentAlarmIndex.value + 1} of '
+          '${controller.allAlarmTimes.length}';
+
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Material(
+          key: const Key('interval-floater'),
+          color: colorScheme.surfaceContainerHigh,
+          elevation: 6,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+            side: BorderSide(color: colorScheme.outlineVariant),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+            onTap:
+                () => unawaited(
+                  Get.toNamed<dynamic>(
+                    Routes.intervalTimer,
+                    arguments: controller.timer,
+                  ),
+                ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(
+                    CupertinoIcons.stopwatch,
+                    size: 18,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    _clock(controller.untilNextAlarm),
+                    style: TextStyle(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    key: const Key('interval-floater-close'),
+                    icon: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                    tooltip: 'End interval timer',
                     onPressed: session.clear,
                   ),
                 ],

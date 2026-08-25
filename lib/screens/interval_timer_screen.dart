@@ -1,234 +1,38 @@
 import 'dart:async';
 
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../components/glowing_timer_ring.dart';
+import '../controllers/interval_run_controller.dart';
 import '../models/interval_timer.dart';
-import '../models/session_history.dart';
 import '../models/settings.dart';
-import '../services/database_service.dart';
+import '../services/interval_session_service.dart';
 import '../theme/app_theme.dart';
 
 class IntervalTimerScreen extends StatefulWidget {
-  const IntervalTimerScreen({super.key, required this.timer});
+  const IntervalTimerScreen({super.key, required this.timer, this.controller});
 
   final IntervalTimer timer;
+
+  /// Test seam: production borrows the controller from
+  /// [IntervalSessionService].
+  final IntervalRunController? controller;
 
   @override
   State<IntervalTimerScreen> createState() => _IntervalTimerScreenState();
 }
 
 class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
-  late DateTime _currentTime;
-  late DateTime _nextAlarmTime;
-  late List<DateTime> _allAlarmTimes;
-  late int _currentAlarmIndex;
-  late Timer _timer;
-  bool _isRunning = true;
-  bool _isCompleted = false;
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  // The session service owns the production controller, so popping this
+  // screen minimizes a running schedule instead of killing it. The engine —
+  // schedule normalization, ticking, alarms — lives in the controller.
+  late final IntervalRunController _c =
+      widget.controller ?? IntervalSessionService().obtain(widget.timer);
   final _settings = AppSettings();
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeTimer();
-
-    // Load the alarm sound
-    _audioPlayer.setSource(
-      AssetSource('sounds/${widget.timer.alarmSound.fileName}'),
-    );
-    _audioPlayer.setReleaseMode(ReleaseMode.stop);
-  }
-
-  void _initializeTimer() {
-    final now = DateTime.now();
-    _currentTime = now;
-
-    // Normalize start and end times to the current day
-    DateTime normalizedStart = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      widget.timer.startTime.hour,
-      widget.timer.startTime.minute,
-      widget.timer.startTime.second,
-    );
-
-    DateTime normalizedEnd = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      widget.timer.endTime.hour,
-      widget.timer.endTime.minute,
-      widget.timer.endTime.second,
-    );
-
-    // If normalized end time is before normalized start time,
-    // it means the range crosses midnight. Adjust the end time
-    // to the next day.
-    if (normalizedEnd.isBefore(normalizedStart)) {
-      normalizedEnd = normalizedEnd.add(const Duration(days: 1));
-    }
-
-    // If the entire window is in the past, shift it to the next day
-    if (now.isAfter(normalizedEnd)) {
-      normalizedStart = normalizedStart.add(const Duration(days: 1));
-      normalizedEnd = normalizedEnd.add(const Duration(days: 1));
-    }
-
-    // Create a temporary timer model with normalized dates to calculate alarms
-    final tempTimer = IntervalTimer(
-      id: widget.timer.id,
-      name: widget.timer.name,
-      startTime: normalizedStart,
-      endTime: normalizedEnd,
-      intervalValue: widget.timer.intervalValue,
-      intervalType: widget.timer.intervalType,
-    );
-
-    _allAlarmTimes = tempTimer.getAllAlarmTimes();
-
-    // Find the next alarm time
-    if (_currentTime.isBefore(normalizedStart)) {
-      // If current time is before start time, first alarm is at start time
-      _nextAlarmTime = normalizedStart;
-      _currentAlarmIndex = 0;
-    } else if (_currentTime.isAfter(normalizedEnd)) {
-      // Should not happen with the normalization logic above, but for safety:
-      _nextAlarmTime = normalizedEnd;
-      _currentAlarmIndex = _allAlarmTimes.length - 1;
-      _isCompleted = true;
-    } else {
-      // Find the next alarm time using the normalized timer
-      _nextAlarmTime = tempTimer.getNextAlarmTime(_currentTime);
-      _currentAlarmIndex = _allAlarmTimes.indexWhere(
-        (time) =>
-            time.year == _nextAlarmTime.year &&
-            time.month == _nextAlarmTime.month &&
-            time.day == _nextAlarmTime.day &&
-            time.hour == _nextAlarmTime.hour &&
-            time.minute == _nextAlarmTime.minute &&
-            time.second == _nextAlarmTime.second,
-      );
-
-      if (_currentAlarmIndex == -1) {
-        // If no exact match, find the closest future alarm
-        _currentAlarmIndex = _allAlarmTimes.indexWhere(
-          (time) => time.isAfter(_currentTime),
-        );
-
-        if (_currentAlarmIndex == -1) {
-          // If all alarms are in the past, timer is completed
-          _currentAlarmIndex = _allAlarmTimes.length - 1;
-          _isCompleted = true;
-        } else {
-          _nextAlarmTime = _allAlarmTimes[_currentAlarmIndex];
-        }
-      }
-    }
-
-    // Start the timer
-    _startTimer();
-  }
-
-  void _startTimer() {
-    WakelockPlus.enable();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        _currentTime = DateTime.now();
-
-        // Check if it's time for the alarm
-        if (!_currentTime.isBefore(_nextAlarmTime)) {
-          _triggerAlarm();
-          // Advance past every alarm that already elapsed (several may have
-          // passed at once if the app was backgrounded), sounding only once.
-          while (!_isCompleted && !_currentTime.isBefore(_nextAlarmTime)) {
-            _moveToNextAlarm();
-          }
-        }
-      });
-    });
-  }
-
-  void _triggerAlarm() {
-    // Play sound if enabled
-    if (_settings.soundEnabled) {
-      try {
-        _audioPlayer.stop().then((_) {
-          _audioPlayer
-              .setSource(
-                AssetSource('sounds/${widget.timer.alarmSound.fileName}'),
-              )
-              .then((_) => _audioPlayer.resume());
-        });
-      } catch (_) {}
-    }
-
-    // Vibrate if enabled
-    if (_settings.vibrationEnabled) {
-      HapticFeedback.heavyImpact();
-      Future.delayed(const Duration(milliseconds: 200), () {
-        HapticFeedback.heavyImpact();
-      });
-    }
-  }
-
-  void _moveToNextAlarm() {
-    setState(() {
-      if (_currentAlarmIndex < _allAlarmTimes.length - 1) {
-        _currentAlarmIndex++;
-        _nextAlarmTime = _allAlarmTimes[_currentAlarmIndex];
-      } else {
-        // All alarms completed
-        _isCompleted = true;
-        _timer.cancel();
-        WakelockPlus.disable();
-        _logSessionCompletion();
-      }
-    });
-  }
-
-  void _logSessionCompletion() {
-    final durationInSeconds =
-        _allAlarmTimes.last.difference(_allAlarmTimes.first).inSeconds;
-    DatabaseService().logSessionHistory(
-      SessionHistory(
-        title: widget.timer.name,
-        totalDurationInSeconds: durationInSeconds > 0 ? durationInSeconds : 60,
-        itemCount: _allAlarmTimes.length,
-        loopCount: 0,
-        sessionType: 'interval',
-      ),
-    );
-  }
-
-  void _toggleTimer() {
-    if (_isRunning) {
-      _timer.cancel();
-      WakelockPlus.disable();
-    } else {
-      _startTimer();
-    }
-
-    setState(() {
-      _isRunning = !_isRunning;
-    });
-  }
-
-  void _resetTimer() {
-    _timer.cancel();
-    setState(() {
-      _isCompleted = false;
-      _isRunning = true;
-    });
-    _initializeTimer();
-  }
 
   Color _getTimerColor(double progress, ColorScheme colorScheme) {
     final baseColor = HSLColor.fromColor(colorScheme.primary);
@@ -241,9 +45,11 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
 
   @override
   void dispose() {
-    _timer.cancel();
-    _audioPlayer.dispose();
-    WakelockPlus.disable();
+    if (widget.controller == null) {
+      // A running schedule survives the pop (the floater offers the way
+      // back); a completed one has nothing to keep alive.
+      IntervalSessionService().releaseIfIdle();
+    }
     super.dispose();
   }
 
@@ -262,6 +68,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
               TextButton(
                 onPressed: () {
                   Navigator.pop(dialogContext); // Close dialog
+                  IntervalSessionService().clear(); // End the session
                   Navigator.pop(context); // Close timer screen
                 },
                 child: const Text('Exit'),
@@ -279,29 +86,22 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
     final timeFormat = DateFormat('h:mm:ss a');
     final timeFormatShort = DateFormat('h:mm a');
 
-    return PopScope(
-      canPop: _isCompleted,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _confirmExit();
-      },
-      child: Scaffold(
+    return Obx(
+      () => Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
           title: Text(widget.timer.name),
           centerTitle: true,
+          // Popping minimizes: a running schedule keeps ticking in the
+          // session service and the floating chip brings it back.
           leading: IconButton(
             icon: Icon(
-              CupertinoIcons.xmark,
+              CupertinoIcons.chevron_down,
               color: colorScheme.onSurface,
               size: 22,
             ),
-            onPressed: () {
-              if (_isCompleted) {
-                Navigator.pop(context);
-              } else {
-                _confirmExit();
-              }
-            },
+            tooltip: 'Minimize',
+            onPressed: () => Navigator.pop(context),
           ),
           actions: [
             // Sound toggle button
@@ -324,11 +124,26 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
               },
               tooltip: _settings.soundEnabled ? 'Mute sound' : 'Enable sound',
             ),
+            IconButton(
+              icon: Icon(
+                CupertinoIcons.xmark,
+                color: colorScheme.onSurface,
+                size: 20,
+              ),
+              tooltip: 'End timer',
+              onPressed: () {
+                if (_c.isCompleted.value) {
+                  Navigator.pop(context);
+                } else {
+                  _confirmExit();
+                }
+              },
+            ),
             const SizedBox(width: 4),
           ],
         ),
         body:
-            _isCompleted
+            _c.isCompleted.value
                 ? _buildCompletedView(textTheme, colorScheme, timeFormatShort)
                 : _buildRunningView(
                   textTheme,
@@ -346,7 +161,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
     DateFormat timeFormat,
     DateFormat timeFormatShort,
   ) {
-    final timeDifference = _nextAlarmTime.difference(_currentTime);
+    final timeDifference = _c.nextAlarmTime.value.difference(_c.currentTime.value);
     final hours = timeDifference.inHours;
     final minutes = timeDifference.inMinutes % 60;
     final seconds = timeDifference.inSeconds % 60;
@@ -367,8 +182,8 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
             borderRadius: BorderRadius.circular(2),
             child: LinearProgressIndicator(
               value:
-                  _allAlarmTimes.length > 1
-                      ? (_currentAlarmIndex / (_allAlarmTimes.length - 1))
+                  _c.allAlarmTimes.length > 1
+                      ? (_c.currentAlarmIndex.value / (_c.allAlarmTimes.length - 1))
                           .clamp(0.0, 1.0)
                       : 0.0,
               minHeight: 4,
@@ -390,7 +205,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  timeFormat.format(_currentTime),
+                  timeFormat.format(_c.currentTime.value),
                   style: textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.4,
@@ -410,7 +225,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Alarm ${_currentAlarmIndex + 1} of ${_allAlarmTimes.length}',
+                        'Alarm ${_c.currentAlarmIndex.value + 1} of ${_c.allAlarmTimes.length}',
                         style: textTheme.bodySmall?.copyWith(
                           color: colorScheme.primary,
                           fontWeight: FontWeight.w700,
@@ -500,11 +315,15 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      Text(
-                        'Next: ${timeFormatShort.format(_nextAlarmTime)}',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w700,
+                      Flexible(
+                        child: Text(
+                          'Next: ${timeFormatShort.format(_c.nextAlarmTime.value)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ],
@@ -514,12 +333,12 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                 Expanded(
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    itemCount: _allAlarmTimes.length,
+                    itemCount: _c.allAlarmTimes.length,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemBuilder: (context, index) {
-                      final alarmTime = _allAlarmTimes[index];
-                      final isCurrentAlarm = index == _currentAlarmIndex;
-                      final isPastAlarm = index < _currentAlarmIndex;
+                      final alarmTime = _c.allAlarmTimes[index];
+                      final isCurrentAlarm = index == _c.currentAlarmIndex.value;
+                      final isPastAlarm = index < _c.currentAlarmIndex.value;
 
                       return Container(
                         width: 78,
@@ -609,7 +428,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                   icon: const Icon(CupertinoIcons.restart),
                   onPressed: () {
                     HapticFeedback.selectionClick();
-                    _resetTimer();
+                    _c.reset();
                   },
                   iconSize: 24,
                   color: colorScheme.onSurfaceVariant,
@@ -623,14 +442,14 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                   heroTag: 'play_pause',
                   onPressed: () {
                     HapticFeedback.mediumImpact();
-                    _toggleTimer();
+                    _c.toggle();
                   },
                   backgroundColor: colorScheme.primary,
                   foregroundColor: Colors.white,
                   elevation: 6,
                   shape: const CircleBorder(),
                   child: Icon(
-                    _isRunning
+                    _c.isRunning.value
                         ? CupertinoIcons.pause_fill
                         : CupertinoIcons.play_fill,
                     size: 36,
@@ -641,7 +460,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                   icon: const Icon(CupertinoIcons.forward_fill),
                   onPressed: () {
                     HapticFeedback.selectionClick();
-                    _moveToNextAlarm();
+                    _c.skipToNext();
                   },
                   iconSize: 24,
                   color: colorScheme.onSurfaceVariant,
@@ -706,7 +525,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'All ${_allAlarmTimes.length} alarms have been triggered',
+              'All ${_c.allAlarmTimes.length} alarms have been triggered',
               style: textTheme.titleMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -719,7 +538,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                 borderRadius: BorderRadius.circular(AppTheme.pillRadius),
               ),
               child: Text(
-                'Time Range: ${DateFormat('h:mm a').format(_allAlarmTimes.first)} - ${DateFormat('h:mm a').format(_allAlarmTimes.last)}',
+                'Time Range: ${DateFormat('h:mm a').format(_c.allAlarmTimes.first)} - ${DateFormat('h:mm a').format(_c.allAlarmTimes.last)}',
                 style: textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -732,7 +551,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
               child: ElevatedButton.icon(
                 onPressed: () {
                   HapticFeedback.selectionClick();
-                  _resetTimer();
+                  _c.reset();
                 },
                 icon: const Icon(CupertinoIcons.restart, size: 18),
                 label: const Text('Restart Timer'),
