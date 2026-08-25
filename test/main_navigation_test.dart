@@ -46,7 +46,11 @@ void main() {
       Get.put(AppController());
 
       await tester.pumpWidget(const GetMaterialApp(home: MainNavigation()));
-      await tester.pumpAndSettle();
+      // This screen animates continuously, so pumpAndSettle never settles;
+      // bounded pumps are the established idiom for this widget tree.
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
 
       // Tab 0: Activities -> New Routine FAB is visible
       expect(find.text('Activities'), findsOneWidget);
@@ -57,7 +61,9 @@ void main() {
 
       // Tap Intervals Tab
       await tester.tap(find.text('Intervals'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
 
       // Tab 1: Intervals -> New Interval FAB is visible, New Routine is gone
       expect(find.text('New Interval'), findsOneWidget);
@@ -65,7 +71,9 @@ void main() {
 
       // Tap Settings Tab
       await tester.tap(find.text('Settings'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
 
       // Tab 2: Settings -> No FAB is visible
       expect(find.text('New Interval'), findsNothing);
@@ -74,7 +82,9 @@ void main() {
 
       // Switch back to Activities
       await tester.tap(find.text('Activities'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
 
       expect(find.text('New Routine'), findsOneWidget);
       expect(find.text('New Interval'), findsNothing);
