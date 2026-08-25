@@ -230,30 +230,44 @@ class SettingsScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Divider(
-                      height: 1,
-                      color: AppTheme.separator(isDark: isDark),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(18),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Accent Color',
-                            style: textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Obx(
-                            () => ColorSelector(
-                              selectedColor: appController.themeColor.value,
-                              onColorSelected: controller.setThemeColor,
-                            ),
-                          ),
-                        ],
-                      ),
+                    // The accent color only drives the iOS theme; Coffee has
+                    // its own fixed washi palette.
+                    Obx(
+                      () =>
+                          appController.themeStyle.value ==
+                                  AppThemeStyle.coffee
+                              ? const SizedBox.shrink()
+                              : Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Divider(
+                                    height: 1,
+                                    color: AppTheme.separator(isDark: isDark),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(18),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Accent Color',
+                                          style: textTheme.titleSmall?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        ColorSelector(
+                                          selectedColor:
+                                              appController.themeColor.value,
+                                          onColorSelected:
+                                              controller.setThemeColor,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                     ),
                   ],
                 ),

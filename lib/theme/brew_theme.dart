@@ -74,15 +74,17 @@ abstract final class BrewTheme {
       onError: palette.paperRaised,
     );
 
-    final base = ThemeData(
-      brightness: brightness,
-      colorScheme: colorScheme,
-      fontFamily: fontFamily,
-      scaffoldBackgroundColor: palette.paper,
-      useMaterial3: true,
-    );
+    // Derive from AppTheme so the two app themes share an identical
+    // TextTheme structure: MaterialApp animates theme switches with
+    // TextStyle.lerp, which throws when the styles' `inherit` flags differ.
+    final base =
+        brightness == Brightness.dark
+            ? AppTheme.getDarkTheme(palette.lead)
+            : AppTheme.getLightTheme(palette.lead);
 
     return base.copyWith(
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: palette.paper,
       textTheme: base.textTheme.apply(
         fontFamily: fontFamily,
         bodyColor: palette.ink,

@@ -312,10 +312,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Delete the middle step ("Second").
-    await tester.tap(
-      find.widgetWithIcon(IconButton, Icons.delete_outline).at(1),
-    );
+    // Delete the middle step ("Second"). The row may sit below the fold, so
+    // bring it into view before tapping.
+    final deleteButton =
+        find.widgetWithIcon(IconButton, Icons.delete_outline).at(1);
+    await tester.ensureVisible(deleteButton);
+    await tester.pumpAndSettle();
+    await tester.tap(deleteButton);
     await tester.pumpAndSettle();
 
     expect(_renderedFieldText(tester, 'brew-step-0-name'), 'First');

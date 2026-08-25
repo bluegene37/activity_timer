@@ -14,7 +14,7 @@ class AppController extends GetxController {
   final RxBool soundEnabled = true.obs;
   final RxBool vibrationEnabled = true.obs;
   final Rx<AlarmSound> defaultAlarmSound = AlarmSound.beep.obs;
-  final Rx<AppThemeStyle> themeStyle = AppThemeStyle.ios.obs;
+  final Rx<AppThemeStyle> themeStyle = AppThemeStyle.coffee.obs;
 
   @override
   void onInit() {

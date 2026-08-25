@@ -13,7 +13,7 @@ class AppSettingsData extends HiveObject {
     this.vibrationEnabled = true,
     this.themeColor = AppSettings.defaultThemeColorValue,
     this.defaultAlarmSound = 'beep',
-    this.themeStyle = 'ios',
+    this.themeStyle = 'coffee',
   });
 
   @HiveField(0)
@@ -45,7 +45,7 @@ enum AppThemeStyle {
 
   /// Resolves a persisted [Enum.name], falling back to [AppThemeStyle.ios].
   static AppThemeStyle fromString(String value) => AppThemeStyle.values
-      .firstWhere((style) => style.name == value, orElse: () => AppThemeStyle.ios);
+      .firstWhere((style) => style.name == value, orElse: () => AppThemeStyle.coffee);
 }
 
 /// Process-wide cache of the persisted [AppSettingsData], backed by Hive.
@@ -67,7 +67,7 @@ class AppSettings {
   bool _vibrationEnabled = true;
   Color _themeColor = defaultThemeColor;
   AlarmSound _defaultAlarmSound = AlarmSound.beep;
-  AppThemeStyle _themeStyle = AppThemeStyle.ios;
+  AppThemeStyle _themeStyle = AppThemeStyle.coffee;
 
   ThemeMode get themeMode => _themeMode;
   bool get soundEnabled => _soundEnabled;

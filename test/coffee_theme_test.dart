@@ -4,6 +4,8 @@ import 'package:activity_timer/controllers/app_controller.dart';
 import 'package:activity_timer/hive_registrar.g.dart';
 import 'package:activity_timer/main.dart';
 import 'package:activity_timer/models/settings.dart';
+import 'package:activity_timer/theme/app_theme.dart';
+import 'package:activity_timer/theme/brew_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -27,19 +29,19 @@ void main() {
 
   tearDown(Get.reset);
 
-  test('themeStyle persists and defaults to ios', () async {
+  test('themeStyle persists and defaults to coffee', () async {
     final settings = AppSettings();
     await settings.loadSettings();
-    expect(settings.themeStyle, AppThemeStyle.ios, reason: 'default style');
+    expect(settings.themeStyle, AppThemeStyle.coffee, reason: 'default style');
 
-    await settings.setThemeStyle(AppThemeStyle.coffee);
-    expect(settings.themeStyle, AppThemeStyle.coffee);
+    await settings.setThemeStyle(AppThemeStyle.ios);
+    expect(settings.themeStyle, AppThemeStyle.ios);
 
     // A fresh load must read the persisted value back.
     await settings.loadSettings();
-    expect(settings.themeStyle, AppThemeStyle.coffee);
+    expect(settings.themeStyle, AppThemeStyle.ios);
 
-    await settings.setThemeStyle(AppThemeStyle.ios);
+    await settings.setThemeStyle(AppThemeStyle.coffee);
   });
 
   testWidgets('coffee style paints the whole app washi', (tester) async {
@@ -80,5 +82,24 @@ void main() {
       theme.scaffoldBackgroundColor,
       isNot(const Color(0xFFF2EDE3)),
     );
+  });
+
+  test('coffee and iOS themes can animate into each other', () {
+    // MaterialApp lerps ThemeData over ~200ms on a theme switch;
+    // TextStyle.lerp throws when two styles disagree on `inherit`. This
+    // walks every slot of both text themes in both brightnesses, which is
+    // exactly what the transition frames do.
+    for (final brightness in Brightness.values) {
+      final ios = brightness == Brightness.dark
+          ? AppTheme.getDarkTheme(AppSettings.defaultThemeColor)
+          : AppTheme.getLightTheme(AppSettings.defaultThemeColor);
+      final coffee = BrewTheme.themeFor(brightness);
+
+      expect(
+        () => ThemeData.lerp(ios, coffee, 0.3),
+        returnsNormally,
+        reason: 'theme switch must be lerp-safe ($brightness)',
+      );
+    }
   });
 }

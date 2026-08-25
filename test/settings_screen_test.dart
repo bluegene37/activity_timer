@@ -48,7 +48,15 @@ void main() {
     expect(find.text('System'), findsOneWidget);
     expect(find.text('Light'), findsOneWidget);
     expect(find.text('Dark'), findsOneWidget);
+    // Coffee is the default style, and its washi palette is fixed, so the
+    // accent color picker stays hidden until the iOS style is selected.
+    expect(find.text('Accent Color'), findsNothing);
+    final appController = Get.find<AppController>();
+    appController.themeStyle.value = AppThemeStyle.ios;
+    await tester.pumpAndSettle();
     expect(find.text('Accent Color'), findsOneWidget);
+    appController.themeStyle.value = AppThemeStyle.coffee;
+    await tester.pumpAndSettle();
 
     // Notification settings
     expect(find.text('Sound Alerts'), findsOneWidget);
@@ -62,7 +70,6 @@ void main() {
     expect(find.text('genexis.dev'), findsOneWidget);
 
     // Switching theme mode updates the controller
-    final appController = Get.find<AppController>();
     await tester.tap(find.text('Light'));
     await tester.pumpAndSettle();
     expect(appController.themeMode.value, ThemeMode.light);
