@@ -5,6 +5,7 @@
 import 'package:hive_ce/hive_ce.dart';
 import 'package:activity_timer/models/activity_timer.dart';
 import 'package:activity_timer/models/alarm_sound.dart';
+import 'package:activity_timer/models/brew_recipe.dart';
 import 'package:activity_timer/models/interval_phase.dart';
 import 'package:activity_timer/models/interval_timer.dart';
 import 'package:activity_timer/models/session_history.dart';
@@ -15,6 +16,10 @@ extension HiveRegistrar on HiveInterface {
     registerAdapter(ActivityTimerAdapter());
     registerAdapter(AlarmSoundAdapter());
     registerAdapter(AppSettingsDataAdapter());
+    registerAdapter(BrewMethodAdapter());
+    registerAdapter(BrewRecipeAdapter());
+    registerAdapter(BrewStepAdapter());
+    registerAdapter(BrewStepKindAdapter());
     registerAdapter(IntervalPhaseAdapter());
     registerAdapter(IntervalTimerAdapter());
     registerAdapter(IntervalTypeAdapter());
@@ -28,6 +33,10 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
     registerAdapter(ActivityTimerAdapter());
     registerAdapter(AlarmSoundAdapter());
     registerAdapter(AppSettingsDataAdapter());
+    registerAdapter(BrewMethodAdapter());
+    registerAdapter(BrewRecipeAdapter());
+    registerAdapter(BrewStepAdapter());
+    registerAdapter(BrewStepKindAdapter());
     registerAdapter(IntervalPhaseAdapter());
     registerAdapter(IntervalTimerAdapter());
     registerAdapter(IntervalTypeAdapter());
