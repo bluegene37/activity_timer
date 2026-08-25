@@ -5,6 +5,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/interval_timer.dart';
 import '../models/session_history.dart';
+import '../services/alarm_scheduler.dart';
 import '../services/cue_player.dart';
 import '../services/database_service.dart';
 
@@ -19,18 +20,22 @@ class IntervalRunController extends GetxController {
   IntervalRunController({
     required this.timer,
     CuePlayer? cuePlayer,
+    AlarmScheduler? scheduler,
     DateTime Function()? clock,
     Future<void> Function(SessionHistory)? historyLogger,
     this.tickInterval = const Duration(seconds: 1),
   }) : _cuePlayer = cuePlayer ?? AudioCuePlayer(),
+       _scheduler = scheduler ?? LocalNotificationAlarmScheduler(),
        _now = clock ?? DateTime.now,
        _logHistory =
-           historyLogger ?? ((history) => DatabaseService().logSessionHistory(history));
+           historyLogger ??
+           ((history) => DatabaseService().logSessionHistory(history));
 
   final IntervalTimer timer;
   final Duration tickInterval;
 
   final CuePlayer _cuePlayer;
+  final AlarmScheduler _scheduler;
   final DateTime Function() _now;
   final Future<void> Function(SessionHistory) _logHistory;
 
@@ -55,6 +60,39 @@ class IntervalRunController extends GetxController {
     super.onInit();
     _initialize();
     _startTicker();
+    unawaited(_syncBackgroundAlarms());
+  }
+
+  /// Hands every future alarm to the OS so a locked phone still rings, and
+  /// withdraws them the moment the session stops being live.
+  Future<void> _syncBackgroundAlarms() async {
+    if (!isRunning.value || isCompleted.value) {
+      await _scheduler.cancelAll();
+      return;
+    }
+    await _scheduler.ensurePermission();
+    await _scheduler.schedule(pendingAlarms());
+  }
+
+  /// The alarms still ahead of the current position, as the OS should see
+  /// them. Exposed for tests.
+  List<ScheduledAlarm> pendingAlarms() {
+    final alarms = <ScheduledAlarm>[];
+    for (var i = currentAlarmIndex.value; i < allAlarmTimes.length; i++) {
+      final isLast = i == allAlarmTimes.length - 1;
+      alarms.add(
+        ScheduledAlarm(
+          id: i,
+          at: allAlarmTimes[i],
+          title: timer.name,
+          body:
+              isLast
+                  ? 'Final alarm — the schedule is complete.'
+                  : 'Alarm ${i + 1} of ${allAlarmTimes.length}',
+        ),
+      );
+    }
+    return alarms;
   }
 
   void _initialize() {
@@ -170,12 +208,16 @@ class IntervalRunController extends GetxController {
       _ticker?.cancel();
       _ticker = null;
       unawaited(WakelockPlus.disable());
+      unawaited(_scheduler.cancelAll());
       _logSessionCompletion();
     }
   }
 
   /// The forward button: silently skip to the next alarm.
-  void skipToNext() => _advance();
+  void skipToNext() {
+    _advance();
+    unawaited(_syncBackgroundAlarms());
+  }
 
   void toggle() {
     if (isCompleted.value) {
@@ -189,6 +231,7 @@ class IntervalRunController extends GetxController {
       _startTicker();
     }
     isRunning.value = !isRunning.value;
+    unawaited(_syncBackgroundAlarms());
   }
 
   void reset() {
@@ -197,6 +240,7 @@ class IntervalRunController extends GetxController {
     isRunning.value = true;
     _initialize();
     _startTicker();
+    unawaited(_syncBackgroundAlarms());
   }
 
   void _logSessionCompletion() {
@@ -224,6 +268,7 @@ class IntervalRunController extends GetxController {
   void onClose() {
     _ticker?.cancel();
     unawaited(_cuePlayer.dispose());
+    unawaited(_scheduler.cancelAll());
     unawaited(WakelockPlus.disable());
     super.onClose();
   }

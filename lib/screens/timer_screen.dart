@@ -11,15 +11,19 @@ import '../models/activity_timer.dart';
 import '../models/interval_phase.dart';
 import '../models/session_history.dart';
 import '../models/settings.dart';
+import '../services/alarm_scheduler.dart';
 import '../services/cue_player.dart';
 import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/time_format.dart';
 
 class TimerScreen extends StatefulWidget {
-  const TimerScreen({super.key, required this.sequence});
+  const TimerScreen({super.key, required this.sequence, this.scheduler});
 
   final TimerSequence sequence;
+
+  /// Test seam: production schedules through the OS.
+  final AlarmScheduler? scheduler;
 
   @override
   State<TimerScreen> createState() => _TimerScreenState();
@@ -44,6 +48,8 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
   int _lastHapticSecond = -1;
   Timer? _ticker;
   final CuePlayer _cuePlayer = AudioCuePlayer();
+  late final AlarmScheduler _scheduler =
+      widget.scheduler ?? LocalNotificationAlarmScheduler();
   final _settings = AppSettings();
 
   int get _currentDurationMs {
@@ -85,7 +91,6 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
       _remainingMs = _currentDurationMs;
     }
 
-
     _start();
   }
 
@@ -94,6 +99,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();
     unawaited(_cuePlayer.dispose());
+    unawaited(_scheduler.cancelAll());
     WakelockPlus.disable();
     super.dispose();
   }
@@ -110,6 +116,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(milliseconds: 100), (_) => _tick());
     WakelockPlus.enable();
+    unawaited(_syncBackgroundAlarms());
     setState(() {
       _isRunning = true;
     });
@@ -119,6 +126,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     _remainingMs = math.max(0, _remainingMsNow);
     _ticker?.cancel();
     WakelockPlus.disable();
+    unawaited(_scheduler.cancelAll());
     setState(() {
       _isRunning = false;
     });
@@ -222,12 +230,75 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
   void _complete() {
     _ticker?.cancel();
     WakelockPlus.disable();
+    unawaited(_scheduler.cancelAll());
     setState(() {
       _isRunning = false;
       _isCompleted = true;
     });
     _logSessionCompletion();
   }
+
+  /// Hands the remaining step boundaries to the OS so a routine keeps
+  /// calling out steps with the phone locked.
+  Future<void> _syncBackgroundAlarms() async {
+    if (!mounted || _isCompleted) {
+      await _scheduler.cancelAll();
+      return;
+    }
+    await _scheduler.ensurePermission();
+    await _scheduler.schedule(pendingAlarms());
+  }
+
+  /// The boundaries still ahead, as wall-clock times. A looping routine
+  /// only schedules the current pass: the OS list is refreshed on every
+  /// start, so the next lap is handed over when it begins.
+  List<ScheduledAlarm> pendingAlarms() {
+    final alarms = <ScheduledAlarm>[];
+    var offsetMs = _isRunning ? _remainingMsNow : _remainingMs;
+    if (offsetMs <= 0) {
+      return alarms;
+    }
+    final from = DateTime.now();
+    final startIndex = _isPreparing ? 0 : _currentTimerIndex + 1;
+
+    if (_isPreparing) {
+      alarms.add(
+        ScheduledAlarm(
+          id: 0,
+          at: from.add(Duration(milliseconds: offsetMs)),
+          title: widget.sequence.name,
+          body: 'Get ready — starting ${_timers.first.name}.',
+        ),
+      );
+    } else {
+      alarms.add(
+        ScheduledAlarm(
+          id: _currentTimerIndex,
+          at: from.add(Duration(milliseconds: offsetMs)),
+          title: widget.sequence.name,
+          body: _bodyFor(_currentTimerIndex),
+        ),
+      );
+    }
+
+    for (var i = startIndex; i < _timers.length; i++) {
+      offsetMs += _timers[i].durationInSeconds * 1000;
+      alarms.add(
+        ScheduledAlarm(
+          id: i + 1,
+          at: from.add(Duration(milliseconds: offsetMs)),
+          title: widget.sequence.name,
+          body: _bodyFor(i),
+        ),
+      );
+    }
+    return alarms;
+  }
+
+  String _bodyFor(int finishedIndex) =>
+      finishedIndex >= _timers.length - 1
+          ? 'Routine complete.'
+          : 'Next: ${_timers[finishedIndex + 1].name}';
 
   Future<void> _playStartTone() => _cuePlayer.playStart();
 
@@ -244,6 +315,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
   void _resetTimer() {
     _ticker?.cancel();
     WakelockPlus.disable();
+    unawaited(_scheduler.cancelAll());
     setState(() {
       _isPreparing = widget.sequence.preparationSeconds > 0;
       _prepDurationMs = widget.sequence.preparationSeconds * 1000;

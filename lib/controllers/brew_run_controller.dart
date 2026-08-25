@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/brew_recipe.dart';
+import '../services/alarm_scheduler.dart';
 import '../services/cue_player.dart';
 
 /// Runs a brew on the clock. Steps advance strictly by time; inside a pour
@@ -13,15 +14,18 @@ class BrewRunController extends GetxController {
   BrewRunController({
     required this.recipe,
     CuePlayer? cuePlayer,
+    AlarmScheduler? scheduler,
     DateTime Function()? clock,
     this.tickInterval = const Duration(milliseconds: 200),
   }) : _cuePlayer = cuePlayer ?? AudioCuePlayer(),
+       _scheduler = scheduler ?? LocalNotificationAlarmScheduler(),
        _now = clock ?? DateTime.now;
 
   final BrewRecipe recipe;
   final Duration tickInterval;
 
   final CuePlayer _cuePlayer;
+  final AlarmScheduler _scheduler;
   final DateTime Function() _now;
 
   final RxInt stepIndex = 0.obs;
@@ -51,8 +55,10 @@ class BrewRunController extends GetxController {
   }
 
   Duration get stepRemaining => Duration(
-    milliseconds:
-        (currentStep.seconds * 1000 - elapsedInStepMs.value).clamp(0, 1 << 30),
+    milliseconds: (currentStep.seconds * 1000 - elapsedInStepMs.value).clamp(
+      0,
+      1 << 30,
+    ),
   );
 
   Duration get totalElapsed {
@@ -82,6 +88,47 @@ class BrewRunController extends GetxController {
     _ticker = Timer.periodic(tickInterval, (_) => _tick());
     unawaited(WakelockPlus.enable());
     isRunning.value = true;
+    unawaited(_syncBackgroundAlarms());
+  }
+
+  /// Hands the remaining step boundaries to the OS so a brew keeps calling
+  /// the next pour even with the phone locked.
+  Future<void> _syncBackgroundAlarms() async {
+    if (!isRunning.value || isFinished.value) {
+      await _scheduler.cancelAll();
+      return;
+    }
+    await _scheduler.ensurePermission();
+    await _scheduler.schedule(pendingAlarms());
+  }
+
+  /// The step boundaries still ahead, as wall-clock times. Exposed for tests.
+  List<ScheduledAlarm> pendingAlarms() {
+    final alarms = <ScheduledAlarm>[];
+    var offsetMs = currentStep.seconds * 1000 - elapsedInStepMs.value;
+    final from = _now();
+
+    for (var i = stepIndex.value; i < recipe.steps.length; i++) {
+      if (i > stepIndex.value) {
+        offsetMs += recipe.steps[i].seconds * 1000;
+      }
+      final isLast = i == recipe.steps.length - 1;
+      final nextTarget = isLast ? null : recipe.targetGramsAt(i + 1);
+      alarms.add(
+        ScheduledAlarm(
+          id: i,
+          at: from.add(Duration(milliseconds: offsetMs)),
+          title: recipe.name,
+          body:
+              isLast
+                  ? 'Brew complete.'
+                  : (nextTarget == null
+                      ? 'Next: ${recipe.steps[i + 1].name}'
+                      : 'Next: pour to ${nextTarget}g'),
+        ),
+      );
+    }
+    return alarms;
   }
 
   void pause() {
@@ -91,6 +138,7 @@ class BrewRunController extends GetxController {
     _ticker = null;
     unawaited(WakelockPlus.disable());
     isRunning.value = false;
+    unawaited(_scheduler.cancelAll());
   }
 
   void reset() {
@@ -103,6 +151,7 @@ class BrewRunController extends GetxController {
     isRunning.value = false;
     isFinished.value = false;
     unawaited(WakelockPlus.disable());
+    unawaited(_scheduler.cancelAll());
   }
 
   void _tick() {
@@ -141,12 +190,14 @@ class BrewRunController extends GetxController {
     isRunning.value = false;
     isFinished.value = true;
     unawaited(WakelockPlus.disable());
+    unawaited(_scheduler.cancelAll());
   }
 
   @override
   void onClose() {
     _ticker?.cancel();
     unawaited(_cuePlayer.dispose());
+    unawaited(_scheduler.cancelAll());
     unawaited(WakelockPlus.disable());
     super.onClose();
   }

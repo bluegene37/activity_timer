@@ -38,8 +38,18 @@ BrewRecipe threeStepBrew() => BrewRecipe(
   ratio: 16,
   alarmSoundName: AlarmSound.bell.name,
   steps: [
-    BrewStep(name: 'Bloom', seconds: 30, pourToFraction: 0.1875, pourSeconds: 10),
-    BrewStep(name: 'Main pour', seconds: 30, pourToFraction: 1, pourSeconds: 15),
+    BrewStep(
+      name: 'Bloom',
+      seconds: 30,
+      pourToFraction: 0.1875,
+      pourSeconds: 10,
+    ),
+    BrewStep(
+      name: 'Main pour',
+      seconds: 30,
+      pourToFraction: 1,
+      pourSeconds: 15,
+    ),
     BrewStep(name: 'Drawdown', seconds: 20, kind: BrewStepKind.drawdown),
   ],
 );
@@ -115,12 +125,18 @@ void main() {
 
     await advance(tester, clock, const Duration(seconds: 2));
     expect(controller.isPouring, isFalse, reason: '10s pour window has closed');
-    expect(controller.stepIndex.value, 0, reason: 'the step itself is still running');
+    expect(
+      controller.stepIndex.value,
+      0,
+      reason: 'the step itself is still running',
+    );
 
     controller.reset();
   });
 
-  testWidgets('advances at the step boundary and plays the cue', (tester) async {
+  testWidgets('advances at the step boundary and plays the cue', (
+    tester,
+  ) async {
     await tester.pumpWidget(const SizedBox());
     final clock = _FakeClock();
     final cues = _RecordingCuePlayer();
