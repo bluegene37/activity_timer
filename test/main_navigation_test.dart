@@ -81,7 +81,7 @@ void main() {
     },
   );
 
-  testWidgets('Brew tab sits between Intervals and Settings with its own FAB', (
+  testWidgets('Brew tab sits second, between Activities and Intervals', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(400, 800);
@@ -96,6 +96,13 @@ void main() {
     }
 
     expect(find.text('Brew'), findsOneWidget);
+
+    // Pin the order: Activities < Brew < Intervals along the nav bar.
+    final activitiesX = tester.getCenter(find.text('Activities')).dx;
+    final brewX = tester.getCenter(find.text('Brew')).dx;
+    final intervalsX = tester.getCenter(find.text('Intervals')).dx;
+    expect(activitiesX, lessThan(brewX));
+    expect(brewX, lessThan(intervalsX));
 
     await tester.tap(find.text('Brew'));
     for (var i = 0; i < 5; i++) {

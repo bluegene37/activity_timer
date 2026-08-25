@@ -25,8 +25,8 @@ class _MainNavigationState extends State<MainNavigation> {
 
   final List<Widget> _screens = [
     const ActivityListScreen(),
-    const IntervalTimerListScreen(),
     const BrewListScreen(),
+    const IntervalTimerListScreen(),
     const SettingsScreen(),
   ];
 
@@ -58,22 +58,6 @@ class _MainNavigationState extends State<MainNavigation> {
       );
     } else if (_currentIndex == 1) {
       return FloatingActionButton.extended(
-        heroTag: 'interval_timer_list_fab',
-        onPressed: () {
-          HapticFeedback.selectionClick();
-          Get.find<IntervalTimerController>().addNewIntervalTimer();
-        },
-        backgroundColor: colorScheme.primary,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        icon: const Icon(CupertinoIcons.plus, size: 18),
-        label: const Text(
-          'New Interval',
-          style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.2),
-        ),
-      );
-    } else if (_currentIndex == 2) {
-      return FloatingActionButton.extended(
         heroTag: 'brew_list_fab',
         onPressed: () {
           HapticFeedback.selectionClick();
@@ -85,6 +69,22 @@ class _MainNavigationState extends State<MainNavigation> {
         icon: const Icon(CupertinoIcons.plus, size: 18),
         label: const Text(
           'New Brew',
+          style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.2),
+        ),
+      );
+    } else if (_currentIndex == 2) {
+      return FloatingActionButton.extended(
+        heroTag: 'interval_timer_list_fab',
+        onPressed: () {
+          HapticFeedback.selectionClick();
+          Get.find<IntervalTimerController>().addNewIntervalTimer();
+        },
+        backgroundColor: colorScheme.primary,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        icon: const Icon(CupertinoIcons.plus, size: 18),
+        label: const Text(
+          'New Interval',
           style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.2),
         ),
       );
@@ -130,16 +130,16 @@ class _MainNavigationState extends State<MainNavigation> {
                     ),
                     _buildNavItem(
                       index: 1,
-                      label: 'Intervals',
-                      icon: CupertinoIcons.stopwatch,
-                      selectedIcon: CupertinoIcons.stopwatch_fill,
+                      label: 'Brew',
+                      icon: Icons.coffee_outlined,
+                      selectedIcon: Icons.coffee,
                       colorScheme: colorScheme,
                     ),
                     _buildNavItem(
                       index: 2,
-                      label: 'Brew',
-                      icon: Icons.coffee_outlined,
-                      selectedIcon: Icons.coffee,
+                      label: 'Intervals',
+                      icon: CupertinoIcons.stopwatch,
+                      selectedIcon: CupertinoIcons.stopwatch_fill,
                       colorScheme: colorScheme,
                     ),
                     _buildNavItem(
