@@ -7,6 +7,10 @@ keep the screen awake during a running timer.
 Layout: `lib/{models,controllers,services,screens,components,navigation,routes,theme,utils}`,
 widget and unit tests in `test/` (12 files).
 
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the layer rules, the
+step-by-step playbook for adding a feature, the Hive type-id table, and the
+dependency review.
+
 ## Skills
 
 Invoke these without being asked — they match how this project is actually worked on:
