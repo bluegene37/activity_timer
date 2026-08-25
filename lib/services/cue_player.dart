@@ -58,9 +58,7 @@ class AudioCuePlayer implements CuePlayer {
       //    instead of stopping it outright, which is what every timer app
       //    people run alongside audio does.
       await AudioPlayer.global.setAudioContext(
-        AudioContextConfig(
-          focus: AudioContextConfigFocus.duckOthers,
-        ).build(),
+        AudioContextConfig(focus: AudioContextConfigFocus.duckOthers).build(),
       );
     } catch (_) {
       // Audio is best-effort; haptics still fire below.

@@ -44,8 +44,11 @@ enum AppThemeStyle {
   coffee;
 
   /// Resolves a persisted [Enum.name], falling back to [AppThemeStyle.ios].
-  static AppThemeStyle fromString(String value) => AppThemeStyle.values
-      .firstWhere((style) => style.name == value, orElse: () => AppThemeStyle.coffee);
+  static AppThemeStyle fromString(String value) =>
+      AppThemeStyle.values.firstWhere(
+        (style) => style.name == value,
+        orElse: () => AppThemeStyle.coffee,
+      );
 }
 
 /// Process-wide cache of the persisted [AppSettingsData], backed by Hive.

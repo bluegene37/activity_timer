@@ -25,8 +25,18 @@ BrewRecipe recipe({String name = 'Morning V60'}) => BrewRecipe(
   doseGrams: 20,
   ratio: 16,
   steps: [
-    BrewStep(name: 'Bloom', seconds: 30, pourToFraction: 0.1875, pourSeconds: 10),
-    BrewStep(name: 'Main pour', seconds: 30, pourToFraction: 1, pourSeconds: 15),
+    BrewStep(
+      name: 'Bloom',
+      seconds: 30,
+      pourToFraction: 0.1875,
+      pourSeconds: 10,
+    ),
+    BrewStep(
+      name: 'Main pour',
+      seconds: 30,
+      pourToFraction: 1,
+      pourSeconds: 15,
+    ),
   ],
 );
 
@@ -61,7 +71,11 @@ void main() {
     final first = session.obtain(brew, cuePlayer: _SilentCuePlayer());
     final second = session.obtain(brew, cuePlayer: _SilentCuePlayer());
 
-    expect(second, same(first), reason: 'reopening the screen must resume, not restart');
+    expect(
+      second,
+      same(first),
+      reason: 'reopening the screen must resume, not restart',
+    );
   });
 
   test('obtain for a different recipe replaces the session', () {

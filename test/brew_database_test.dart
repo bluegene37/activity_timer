@@ -29,8 +29,18 @@ void main() {
     doseGrams: 18,
     ratio: 16,
     steps: [
-      BrewStep(name: 'Bloom', seconds: 45, pourToFraction: 0.12, pourSeconds: 10),
-      BrewStep(name: 'Main pour', seconds: 60, pourToFraction: 1, pourSeconds: 30),
+      BrewStep(
+        name: 'Bloom',
+        seconds: 45,
+        pourToFraction: 0.12,
+        pourSeconds: 10,
+      ),
+      BrewStep(
+        name: 'Main pour',
+        seconds: 60,
+        pourToFraction: 1,
+        pourSeconds: 30,
+      ),
     ],
   );
 

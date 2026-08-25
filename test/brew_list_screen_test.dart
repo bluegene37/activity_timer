@@ -83,6 +83,9 @@ void main() {
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
 
-    expect(Get.find<BrewController>().recipes.map((r) => r.name), contains('Chemex'));
+    expect(
+      Get.find<BrewController>().recipes.map((r) => r.name),
+      contains('Chemex'),
+    );
   });
 }

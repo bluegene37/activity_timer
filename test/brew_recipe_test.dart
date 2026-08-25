@@ -14,9 +14,24 @@ BrewRecipe kalita({double dose = 20, double ratio = 16}) => BrewRecipe(
       pourSeconds: 10,
       description: 'Wet the bed evenly, then leave it alone.',
     ),
-    BrewStep(name: 'Second pour', seconds: 30, pourToFraction: 0.5, pourSeconds: 15),
-    BrewStep(name: 'Third pour', seconds: 30, pourToFraction: 0.75, pourSeconds: 15),
-    BrewStep(name: 'Final pour', seconds: 30, pourToFraction: 1, pourSeconds: 15),
+    BrewStep(
+      name: 'Second pour',
+      seconds: 30,
+      pourToFraction: 0.5,
+      pourSeconds: 15,
+    ),
+    BrewStep(
+      name: 'Third pour',
+      seconds: 30,
+      pourToFraction: 0.75,
+      pourSeconds: 15,
+    ),
+    BrewStep(
+      name: 'Final pour',
+      seconds: 30,
+      pourToFraction: 1,
+      pourSeconds: 15,
+    ),
     BrewStep(name: 'Drawdown', seconds: 60, kind: BrewStepKind.drawdown),
   ],
 );
@@ -98,7 +113,10 @@ void main() {
     test('rejects a pour with no pour window', () {
       final recipe = kalita();
       recipe.steps[1].pourSeconds = null;
-      expect(recipe.validationErrors(), contains(contains('needs a pour time')));
+      expect(
+        recipe.validationErrors(),
+        contains(contains('needs a pour time')),
+      );
     });
 
     test('rejects a final pour that stops short of the total', () {
@@ -116,7 +134,14 @@ void main() {
         method: BrewMethod.v60,
         doseGrams: 0,
         ratio: 0,
-        steps: [BrewStep(name: 'Bloom', seconds: 0, pourToFraction: 1, pourSeconds: 5)],
+        steps: [
+          BrewStep(
+            name: 'Bloom',
+            seconds: 0,
+            pourToFraction: 1,
+            pourSeconds: 5,
+          ),
+        ],
       );
       final errors = recipe.validationErrors();
       expect(errors, contains(contains('Name cannot be empty')));
@@ -133,6 +158,10 @@ void main() {
     expect(copy.steps.length, original.steps.length);
     expect(copy.steps.first, isNot(same(original.steps.first)));
     copy.steps.first.seconds = 99;
-    expect(original.steps.first.seconds, 30, reason: 'steps must be deep-copied');
+    expect(
+      original.steps.first.seconds,
+      30,
+      reason: 'steps must be deep-copied',
+    );
   });
 }

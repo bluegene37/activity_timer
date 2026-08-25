@@ -301,7 +301,8 @@ class _BrewFloater extends StatelessWidget {
                   Text(
                     _clock(controller.stepRemaining),
                     style: TextStyle(
-                      color: controller.isPouring ? palette.lead : palette.inkSoft,
+                      color:
+                          controller.isPouring ? palette.lead : palette.inkSoft,
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
                       fontFeatures: const [FontFeature.tabularFigures()],

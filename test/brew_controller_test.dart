@@ -102,7 +102,11 @@ void main() {
     final pending = controller.addNewBrew();
     await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull, reason: 'named routes must be pushed untyped');
+    expect(
+      tester.takeException(),
+      isNull,
+      reason: 'named routes must be pushed untyped',
+    );
     expect(Get.currentRoute, '/edit-brew');
 
     final saved = BrewController.starterRecipe()..name = 'Saved from editor';

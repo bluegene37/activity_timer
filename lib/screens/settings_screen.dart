@@ -234,8 +234,7 @@ class SettingsScreen extends StatelessWidget {
                     // its own fixed washi palette.
                     Obx(
                       () =>
-                          appController.themeStyle.value ==
-                                  AppThemeStyle.coffee
+                          appController.themeStyle.value == AppThemeStyle.coffee
                               ? const SizedBox.shrink()
                               : Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,

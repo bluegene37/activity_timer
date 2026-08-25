@@ -129,12 +129,7 @@ void main() {
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
-    await openPicker(
-      tester,
-      cues,
-      selected: null,
-      allowAppDefault: true,
-    );
+    await openPicker(tester, cues, selected: null, allowAppDefault: true);
     final chosen = pending;
     expect(find.text('Use default app sound'), findsOneWidget);
 

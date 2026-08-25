@@ -152,8 +152,7 @@ class BrewRecipe extends HiveObject {
 
   int get totalWaterGrams => totalWater.round();
 
-  int get totalSeconds =>
-      steps.fold(0, (total, step) => total + step.seconds);
+  int get totalSeconds => steps.fold(0, (total, step) => total + step.seconds);
 
   int get pourCount => steps.where((step) => step.isPour).length;
 

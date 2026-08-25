@@ -42,7 +42,12 @@ BrewRecipe brew() => BrewRecipe(
       pourSeconds: 10,
       description: 'Wet the bed evenly.',
     ),
-    BrewStep(name: 'Main pour', seconds: 30, pourToFraction: 1, pourSeconds: 15),
+    BrewStep(
+      name: 'Main pour',
+      seconds: 30,
+      pourToFraction: 1,
+      pourSeconds: 15,
+    ),
     BrewStep(name: 'Drawdown', seconds: 20, kind: BrewStepKind.drawdown),
   ],
 );
@@ -81,7 +86,9 @@ void main() {
     );
 
     await tester.pumpWidget(
-      GetMaterialApp(home: BrewRunScreen(recipe: brew(), controller: controller)),
+      GetMaterialApp(
+        home: BrewRunScreen(recipe: brew(), controller: controller),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -104,7 +111,9 @@ void main() {
     );
 
     await tester.pumpWidget(
-      GetMaterialApp(home: BrewRunScreen(recipe: brew(), controller: controller)),
+      GetMaterialApp(
+        home: BrewRunScreen(recipe: brew(), controller: controller),
+      ),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Start'));
@@ -130,7 +139,9 @@ void main() {
     );
 
     await tester.pumpWidget(
-      GetMaterialApp(home: BrewRunScreen(recipe: brew(), controller: controller)),
+      GetMaterialApp(
+        home: BrewRunScreen(recipe: brew(), controller: controller),
+      ),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Start'));
@@ -154,7 +165,9 @@ void main() {
     );
 
     await tester.pumpWidget(
-      GetMaterialApp(home: BrewRunScreen(recipe: brew(), controller: controller)),
+      GetMaterialApp(
+        home: BrewRunScreen(recipe: brew(), controller: controller),
+      ),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Start'));

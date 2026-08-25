@@ -54,8 +54,18 @@ void main() {
     doseGrams: 18,
     ratio: 16,
     steps: [
-      BrewStep(name: 'Bloom', seconds: 45, pourToFraction: 0.12, pourSeconds: 10),
-      BrewStep(name: 'Main pour', seconds: 60, pourToFraction: 1, pourSeconds: 30),
+      BrewStep(
+        name: 'Bloom',
+        seconds: 45,
+        pourToFraction: 0.12,
+        pourSeconds: 10,
+      ),
+      BrewStep(
+        name: 'Main pour',
+        seconds: 60,
+        pourToFraction: 1,
+        pourSeconds: 30,
+      ),
     ],
   );
 
@@ -130,7 +140,10 @@ void main() {
   });
 
   testWidgets('editBrew builds from an EditBrewArgs record', (tester) async {
-    await pushRoute(tester, Routes.editBrew, (recipe: sampleBrew(), isNew: true));
+    await pushRoute(tester, Routes.editBrew, (
+      recipe: sampleBrew(),
+      isNew: true,
+    ));
 
     expect(tester.takeException(), isNull);
     expect(find.byType(BrewEditScreen), findsOneWidget);
@@ -170,6 +183,9 @@ void main() {
     await pending;
 
     expect(tester.takeException(), isNull);
-    expect(controller.intervalTimers.map((timer) => timer.id), contains(saved.id));
+    expect(
+      controller.intervalTimers.map((timer) => timer.id),
+      contains(saved.id),
+    );
   });
 }

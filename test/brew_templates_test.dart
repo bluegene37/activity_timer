@@ -9,7 +9,13 @@ void main() {
     expect(db.getBrewTemplates().length, 5);
     expect(
       db.getBrewTemplates().map((r) => r.name),
-      containsAll(<String>['Hoffmann V60', 'Kasuya 4:6', 'Chemex', 'Kalita Wave', 'AeroPress']),
+      containsAll(<String>[
+        'Hoffmann V60',
+        'Kasuya 4:6',
+        'Chemex',
+        'Kalita Wave',
+        'AeroPress',
+      ]),
     );
   });
 
@@ -30,24 +36,28 @@ void main() {
   });
 
   test('Hoffmann V60 pours 60g, 300g, 500g at 30g of coffee', () {
-    final recipe = db.getBrewTemplates().firstWhere((r) => r.name == 'Hoffmann V60');
+    final recipe = db.getBrewTemplates().firstWhere(
+      (r) => r.name == 'Hoffmann V60',
+    );
     expect(recipe.totalWaterGrams, 500);
     expect(
-      [for (var i = 0; i < recipe.steps.length; i++) recipe.targetGramsAt(i)]
-          .whereType<int>()
-          .toList(),
+      [
+        for (var i = 0; i < recipe.steps.length; i++) recipe.targetGramsAt(i),
+      ].whereType<int>().toList(),
       [60, 300, 500],
     );
     expect(recipe.totalSeconds, 225);
   });
 
   test('Kasuya 4:6 pours five even fifths', () {
-    final recipe = db.getBrewTemplates().firstWhere((r) => r.name == 'Kasuya 4:6');
+    final recipe = db.getBrewTemplates().firstWhere(
+      (r) => r.name == 'Kasuya 4:6',
+    );
     expect(recipe.totalWaterGrams, 300);
     expect(
-      [for (var i = 0; i < recipe.steps.length; i++) recipe.targetGramsAt(i)]
-          .whereType<int>()
-          .toList(),
+      [
+        for (var i = 0; i < recipe.steps.length; i++) recipe.targetGramsAt(i),
+      ].whereType<int>().toList(),
       [60, 120, 180, 240, 300],
     );
   });

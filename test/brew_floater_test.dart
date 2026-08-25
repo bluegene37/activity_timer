@@ -1,4 +1,3 @@
-
 import 'dart:io';
 import 'package:activity_timer/controllers/app_controller.dart';
 import 'package:activity_timer/hive_registrar.g.dart';
@@ -34,8 +33,18 @@ BrewRecipe recipe() => BrewRecipe(
   doseGrams: 20,
   ratio: 16,
   steps: [
-    BrewStep(name: 'Bloom', seconds: 300, pourToFraction: 0.1875, pourSeconds: 200),
-    BrewStep(name: 'Main pour', seconds: 300, pourToFraction: 1, pourSeconds: 200),
+    BrewStep(
+      name: 'Bloom',
+      seconds: 300,
+      pourToFraction: 0.1875,
+      pourSeconds: 200,
+    ),
+    BrewStep(
+      name: 'Main pour',
+      seconds: 300,
+      pourToFraction: 1,
+      pourSeconds: 200,
+    ),
   ],
 );
 
@@ -146,7 +155,11 @@ void main() {
     await tester.tap(find.byTooltip('Minimize'));
     await settle(tester);
 
-    expect(session.active.value, same(controller), reason: 'brew survives the pop');
+    expect(
+      session.active.value,
+      same(controller),
+      reason: 'brew survives the pop',
+    );
     expect(controller.isRunning.value, isTrue);
     expect(find.byKey(const Key('brew-floater')), findsOneWidget);
 

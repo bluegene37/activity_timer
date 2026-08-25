@@ -21,12 +21,13 @@ class BrewListScreen extends StatelessWidget {
       return ratio.toStringAsFixed(0);
     }
     final twoDecimals = ratio.toStringAsFixed(2);
-    return twoDecimals.endsWith('0')
-        ? ratio.toStringAsFixed(1)
-        : twoDecimals;
+    return twoDecimals.endsWith('0') ? ratio.toStringAsFixed(1) : twoDecimals;
   }
 
-  Future<void> _confirmDelete(BrewController controller, BrewRecipe recipe) async {
+  Future<void> _confirmDelete(
+    BrewController controller,
+    BrewRecipe recipe,
+  ) async {
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         title: const Text('Delete Brew'),
@@ -72,7 +73,10 @@ class BrewListScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 for (final template in templates)
                   ListTile(
-                    title: Text(template.name, style: TextStyle(color: palette.ink)),
+                    title: Text(
+                      template.name,
+                      style: TextStyle(color: palette.ink),
+                    ),
                     subtitle: Text(
                       '${template.method.displayName} · '
                       '${template.totalWaterGrams}g · '
@@ -127,9 +131,13 @@ class BrewListScreen extends StatelessWidget {
                   Card(
                     margin: const EdgeInsets.only(bottom: 14),
                     child: InkWell(
-                      onTap: () => unawaited(
-                        Get.toNamed<dynamic>(Routes.brew, arguments: recipe),
-                      ),
+                      onTap:
+                          () => unawaited(
+                            Get.toNamed<dynamic>(
+                              Routes.brew,
+                              arguments: recipe,
+                            ),
+                          ),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
@@ -147,16 +155,26 @@ class BrewListScreen extends StatelessWidget {
                                   ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(CupertinoIcons.pencil, size: 18),
+                                  icon: const Icon(
+                                    CupertinoIcons.pencil,
+                                    size: 18,
+                                  ),
                                   color: palette.inkSoft,
-                                  onPressed: () =>
-                                      unawaited(controller.editBrew(recipe)),
+                                  onPressed:
+                                      () => unawaited(
+                                        controller.editBrew(recipe),
+                                      ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(CupertinoIcons.trash, size: 18),
+                                  icon: const Icon(
+                                    CupertinoIcons.trash,
+                                    size: 18,
+                                  ),
                                   color: palette.inkSoft,
-                                  onPressed: () =>
-                                      unawaited(_confirmDelete(controller, recipe)),
+                                  onPressed:
+                                      () => unawaited(
+                                        _confirmDelete(controller, recipe),
+                                      ),
                                 ),
                               ],
                             ),
@@ -174,7 +192,10 @@ class BrewListScreen extends StatelessWidget {
                               '${recipe.pourCount} pours · '
                               'bloom ${recipe.targetGramsAt(0) ?? 0}g '
                               '→ ${recipe.totalWaterGrams}g',
-                              style: TextStyle(color: palette.inkSoft, fontSize: 13),
+                              style: TextStyle(
+                                color: palette.inkSoft,
+                                fontSize: 13,
+                              ),
                             ),
                           ],
                         ),

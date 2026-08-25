@@ -161,7 +161,9 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
     DateFormat timeFormat,
     DateFormat timeFormatShort,
   ) {
-    final timeDifference = _c.nextAlarmTime.value.difference(_c.currentTime.value);
+    final timeDifference = _c.nextAlarmTime.value.difference(
+      _c.currentTime.value,
+    );
     final hours = timeDifference.inHours;
     final minutes = timeDifference.inMinutes % 60;
     final seconds = timeDifference.inSeconds % 60;
@@ -183,7 +185,8 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
             child: LinearProgressIndicator(
               value:
                   _c.allAlarmTimes.length > 1
-                      ? (_c.currentAlarmIndex.value / (_c.allAlarmTimes.length - 1))
+                      ? (_c.currentAlarmIndex.value /
+                              (_c.allAlarmTimes.length - 1))
                           .clamp(0.0, 1.0)
                       : 0.0,
               minHeight: 4,
@@ -337,7 +340,8 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemBuilder: (context, index) {
                       final alarmTime = _c.allAlarmTimes[index];
-                      final isCurrentAlarm = index == _c.currentAlarmIndex.value;
+                      final isCurrentAlarm =
+                          index == _c.currentAlarmIndex.value;
                       final isPastAlarm = index < _c.currentAlarmIndex.value;
 
                       return Container(

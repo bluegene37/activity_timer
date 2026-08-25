@@ -78,10 +78,7 @@ void main() {
     final context = tester.element(find.byType(Navigator).first);
     final theme = Theme.of(context);
     expect(theme.textTheme.bodyMedium?.fontFamily, isNot('Literata'));
-    expect(
-      theme.scaffoldBackgroundColor,
-      isNot(const Color(0xFFF2EDE3)),
-    );
+    expect(theme.scaffoldBackgroundColor, isNot(const Color(0xFFF2EDE3)));
   });
 
   test('coffee and iOS themes can animate into each other', () {
@@ -90,9 +87,10 @@ void main() {
     // walks every slot of both text themes in both brightnesses, which is
     // exactly what the transition frames do.
     for (final brightness in Brightness.values) {
-      final ios = brightness == Brightness.dark
-          ? AppTheme.getDarkTheme(AppSettings.defaultThemeColor)
-          : AppTheme.getLightTheme(AppSettings.defaultThemeColor);
+      final ios =
+          brightness == Brightness.dark
+              ? AppTheme.getDarkTheme(AppSettings.defaultThemeColor)
+              : AppTheme.getLightTheme(AppSettings.defaultThemeColor);
       final coffee = BrewTheme.themeFor(brightness);
 
       expect(
@@ -113,9 +111,10 @@ void main() {
         theme.textTheme.labelLarge;
 
     for (final brightness in Brightness.values) {
-      final ios = brightness == Brightness.dark
-          ? AppTheme.getDarkTheme(AppSettings.defaultThemeColor)
-          : AppTheme.getLightTheme(AppSettings.defaultThemeColor);
+      final ios =
+          brightness == Brightness.dark
+              ? AppTheme.getDarkTheme(AppSettings.defaultThemeColor)
+              : AppTheme.getLightTheme(AppSettings.defaultThemeColor);
       final coffee = BrewTheme.themeFor(brightness);
 
       final iosStyle = resolved(ios);
