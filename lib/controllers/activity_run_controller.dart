@@ -13,6 +13,7 @@ import '../models/settings.dart';
 import '../services/alarm_scheduler.dart';
 import '../services/cue_player.dart';
 import '../services/database_service.dart';
+import '../services/ui_messenger.dart';
 
 /// Runs an activity routine on the clock, decoupled from any screen.
 ///
@@ -311,17 +312,34 @@ class ActivityRunController {
   /// The loop toggle is the routine's saved preference, not just a switch
   /// for this run.
   void toggleLoop() {
-    loopEnabled.value = !loopEnabled.value;
-    sequence.defaultLoopEnabled = loopEnabled.value;
+    // Flip relative to the routine, not to the cached signal: the list
+    // screen can change the routine while this session is minimized, and
+    // toggling off a stale value would write the old setting back.
+    final next = !sequence.defaultLoopEnabled;
+    sequence.defaultLoopEnabled = next;
+    loopEnabled.value = next;
     unawaited(_persistLoop());
     unawaited(_syncBackgroundAlarms());
+  }
+
+  /// Re-reads the routine's saved preference. The session service calls this
+  /// when a screen reopens an existing session, so the loop icon shows what
+  /// the routine actually says.
+  void refreshFromSequence() {
+    loopEnabled.value = sequence.defaultLoopEnabled;
   }
 
   Future<void> _persistLoop() async {
     try {
       await _saveSequence(sequence);
-    } catch (_) {
-      // Non-fatal: the toggle still applies to the running session.
+    } catch (e) {
+      // The toggle still applies to this run, but it will not be there next
+      // time — and a silent failure here is exactly how "it didn't save"
+      // goes unexplained.
+      UiMessenger().showMessage(
+        'Could not save the loop setting: $e',
+        title: 'Not saved',
+      );
     }
   }
 

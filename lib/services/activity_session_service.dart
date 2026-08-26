@@ -38,6 +38,9 @@ class ActivitySessionService {
   ActivityRunController obtain(TimerSequence sequence, {CuePlayer? cuePlayer}) {
     final current = active.value;
     if (current != null && current.sequence.id == sequence.id) {
+      // The routine may have been edited elsewhere while this session was
+      // minimized; pick up its saved preferences before handing it back.
+      current.refreshFromSequence();
       return current;
     }
     clear();

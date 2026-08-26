@@ -195,4 +195,34 @@ void main() {
     expect(session.active.value, isNull);
     expect(find.byKey(const Key('activity-floater')), findsNothing);
   });
+
+  testWidgets('the chip never sits under the New Routine button', (
+    tester,
+  ) async {
+    await pumpNav(tester);
+
+    final session = ActivitySessionService();
+    session.obtain(routine(), cuePlayer: _SilentCuePlayer());
+    await settle(tester);
+
+    // The chip lives in the bottom bar and the FAB is placed above it, so
+    // the two rectangles must not intersect — a chip hidden behind the FAB
+    // is a chip whose close button cannot be tapped.
+    final chip = tester.getRect(find.byKey(const Key('activity-floater')));
+    final fab = tester.getRect(find.byType(FloatingActionButton));
+
+    expect(
+      fab.overlaps(chip),
+      isFalse,
+      reason: 'FAB $fab overlaps the session chip $chip',
+    );
+    expect(
+      fab.bottom,
+      lessThanOrEqualTo(chip.top),
+      reason: 'the FAB should sit above the chip, not beside or over it',
+    );
+
+    session.clear();
+    await settle(tester);
+  });
 }

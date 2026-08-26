@@ -117,82 +117,78 @@ class _MainNavigationState extends State<MainNavigation> {
 
     return Scaffold(
       extendBody: true,
-      body: Stack(
+      body: IndexedStack(index: _currentIndex, children: _screens),
+      floatingActionButton: _buildFloatingActionButton(colorScheme),
+      // The session chips live in the bottom bar rather than floating over
+      // the body, so the Scaffold lifts the FAB above them instead of
+      // letting the two overlap. Each chip renders nothing when its session
+      // is idle, so the bar collapses back to the nav strip.
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          IndexedStack(index: _currentIndex, children: _screens),
-          // The Builder matters: with extendBody on, the Scaffold injects the
-          // nav bar's height as bottom padding INTO the body's MediaQuery, so
-          // the inset must be read from a context inside the Stack.
-          Builder(
-            builder:
-                (bodyContext) => Positioned(
-                  left: 16,
-                  right: 16,
-                  // Clear the nav bar plus breathing room (the body
-                  // padding already includes the bar; the offset keeps the
-                  // chips clear of each tab's FAB).
-                  bottom: 68 + MediaQuery.paddingOf(bodyContext).bottom,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _ActivityFloater(),
-                      _IntervalFloater(),
-                      _BrewFloater(),
-                    ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _ActivityFloater(),
+                _IntervalFloater(),
+                _BrewFloater(),
+              ],
+            ),
+          ),
+          ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: barBackground,
+                  border: Border(
+                    top: BorderSide(color: borderColor, width: 0.6),
                   ),
                 ),
-          ),
-        ],
-      ),
-      floatingActionButton: _buildFloatingActionButton(colorScheme),
-      bottomNavigationBar: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: barBackground,
-              border: Border(top: BorderSide(color: borderColor, width: 0.6)),
-            ),
-            child: SafeArea(
-              top: false,
-              child: SizedBox(
-                height: 52,
-                child: Row(
-                  children: [
-                    _buildNavItem(
-                      index: 0,
-                      label: 'Activities',
-                      icon: CupertinoIcons.timer,
-                      selectedIcon: CupertinoIcons.timer_fill,
-                      colorScheme: colorScheme,
+                child: SafeArea(
+                  top: false,
+                  child: SizedBox(
+                    height: 52,
+                    child: Row(
+                      children: [
+                        _buildNavItem(
+                          index: 0,
+                          label: 'Activities',
+                          icon: CupertinoIcons.timer,
+                          selectedIcon: CupertinoIcons.timer_fill,
+                          colorScheme: colorScheme,
+                        ),
+                        _buildNavItem(
+                          index: 1,
+                          label: 'Brew',
+                          icon: Icons.coffee_outlined,
+                          selectedIcon: Icons.coffee,
+                          colorScheme: colorScheme,
+                        ),
+                        _buildNavItem(
+                          index: 2,
+                          label: 'Intervals',
+                          icon: CupertinoIcons.stopwatch,
+                          selectedIcon: CupertinoIcons.stopwatch_fill,
+                          colorScheme: colorScheme,
+                        ),
+                        _buildNavItem(
+                          index: 3,
+                          label: 'Settings',
+                          icon: CupertinoIcons.gear_alt,
+                          selectedIcon: CupertinoIcons.gear_alt_fill,
+                          colorScheme: colorScheme,
+                        ),
+                      ],
                     ),
-                    _buildNavItem(
-                      index: 1,
-                      label: 'Brew',
-                      icon: Icons.coffee_outlined,
-                      selectedIcon: Icons.coffee,
-                      colorScheme: colorScheme,
-                    ),
-                    _buildNavItem(
-                      index: 2,
-                      label: 'Intervals',
-                      icon: CupertinoIcons.stopwatch,
-                      selectedIcon: CupertinoIcons.stopwatch_fill,
-                      colorScheme: colorScheme,
-                    ),
-                    _buildNavItem(
-                      index: 3,
-                      label: 'Settings',
-                      icon: CupertinoIcons.gear_alt,
-                      selectedIcon: CupertinoIcons.gear_alt_fill,
-                      colorScheme: colorScheme,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

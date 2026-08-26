@@ -323,21 +323,15 @@ class ActivityListController {
 
   Future<void> toggleDefaultLoop(int index) async {
     final sequence = sequences[index];
-    final updatedSequence = TimerSequence(
-      id: sequence.id,
-      name: sequence.name,
-      description: sequence.description,
-      category: sequence.category,
-      preparationSeconds: sequence.preparationSeconds,
-      timers: sequence.timers,
-      defaultLoopEnabled: !sequence.defaultLoopEnabled,
-      createdAt: sequence.createdAt,
-      updatedAt: DateTime.now(),
-    );
+    // Mutate in place rather than replacing the object: a minimized run
+    // session holds this same instance, and swapping in a copy would leave
+    // it showing — and later re-saving — the stale flag.
+    sequence.defaultLoopEnabled = !sequence.defaultLoopEnabled;
 
     try {
-      await _databaseService.updateActivitySequence(updatedSequence);
-      sequences[index] = updatedSequence;
+      await _databaseService.updateActivitySequence(sequence);
+      // Same object, but the assignment is what tells the signal to rebuild.
+      sequences[index] = sequence;
     } catch (e) {
       UiMessenger().showMessage(
         'Failed to update loop setting: $e',
