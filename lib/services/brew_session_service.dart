@@ -1,4 +1,4 @@
-import 'package:get/get.dart';
+import 'package:signals/signals.dart';
 
 import '../controllers/brew_run_controller.dart';
 import '../models/brew_recipe.dart';
@@ -18,7 +18,7 @@ class BrewSessionService {
   static final BrewSessionService _instance = BrewSessionService._internal();
 
   /// The controller of the current session, or null when there is none.
-  final Rxn<BrewRunController> active = Rxn<BrewRunController>();
+  final active = signal<BrewRunController?>(null);
 
   /// True while a brew has been started and has not finished — exactly the
   /// window in which the floater should be visible.

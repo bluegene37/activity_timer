@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:activity_timer/controllers/app_controller.dart';
+
 import 'package:activity_timer/hive_registrar.g.dart';
 import 'package:activity_timer/models/alarm_sound.dart';
 import 'package:activity_timer/models/brew_recipe.dart';
@@ -7,6 +7,7 @@ import 'package:activity_timer/navigation/main_navigation.dart';
 import 'package:activity_timer/routes/app_pages.dart';
 import 'package:activity_timer/services/brew_session_service.dart';
 import 'package:activity_timer/services/cue_player.dart';
+import 'package:activity_timer/services/locator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -86,9 +87,9 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  tearDown(() {
+  tearDown(() async {
     BrewSessionService().clear();
-    Get.reset();
+    await resetLocator();
   });
 
   Future<void> pumpNav(WidgetTester tester) async {
@@ -96,7 +97,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
-    Get.put(AppController());
+    setUpLocator();
     await tester.pumpWidget(
       GetMaterialApp(getPages: AppPages.routes, home: const MainNavigation()),
     );

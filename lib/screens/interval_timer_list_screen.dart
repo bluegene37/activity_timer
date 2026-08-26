@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:signals/signals_flutter.dart';
 
 import '../controllers/interval_timer_controller.dart';
 import '../models/alarm_sound.dart';
 import '../models/interval_timer.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
+import '../services/locator.dart';
 import '../services/ui_messenger.dart';
 import '../theme/app_theme.dart';
 
@@ -38,7 +40,7 @@ class IntervalTimerListScreen extends StatelessWidget {
     );
 
     await DatabaseService().createIntervalTimer(newTimer);
-    unawaited(Get.find<IntervalTimerController>().refreshTimers());
+    unawaited(locator<IntervalTimerController>().refreshTimers());
     UiMessenger().showMessage(
       'Interval alarms active from ${DateFormat('h:mm a').format(startTime)} '
       'to ${DateFormat('h:mm a').format(endTime)}',
@@ -55,7 +57,7 @@ class IntervalTimerListScreen extends StatelessWidget {
     );
 
     if (result == true) {
-      unawaited(Get.find<IntervalTimerController>().refreshTimers());
+      unawaited(locator<IntervalTimerController>().refreshTimers());
     }
   }
 
@@ -66,7 +68,7 @@ class IntervalTimerListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(IntervalTimerController());
+    final controller = locator<IntervalTimerController>();
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -231,291 +233,301 @@ class IntervalTimerListScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              Obx(() {
-                if (controller.isLoading.value) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 40),
-                      child: CupertinoActivityIndicator(radius: 14),
-                    ),
-                  );
-                }
-
-                if (controller.intervalTimers.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 40),
-                      child: Column(
-                        children: [
-                          Icon(
-                            CupertinoIcons.clock,
-                            size: 56,
-                            color: colorScheme.onSurfaceVariant.withValues(
-                              alpha: 0.4,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            'No interval timers yet',
-                            style: textTheme.titleMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Tap a quick preset above or press + to create one',
-                            style: textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                return ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: controller.intervalTimers.length,
-                  separatorBuilder:
-                      (context, index) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final timer = controller.intervalTimers[index];
-                    final timeFormat = DateFormat('h:mm a');
-
-                    return DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: AppTheme.cardBackground(isDark: isDark),
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.cardRadius,
-                        ),
-                        border: Border.all(
-                          color: AppTheme.separator(isDark: isDark),
-                          width: 0.8,
-                        ),
-                      ),
+              SignalBuilder(
+                builder: (_) {
+                  if (controller.isLoading.value) {
+                    return const Center(
                       child: Padding(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.symmetric(vertical: 40),
+                        child: CupertinoActivityIndicator(radius: 14),
+                      ),
+                    );
+                  }
+
+                  if (controller.intervalTimers.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 40),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    timer.name,
-                                    style: textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: -0.2,
-                                    ),
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(
-                                        CupertinoIcons.pencil,
-                                        size: 18,
-                                        color: colorScheme.onSurfaceVariant,
-                                      ),
-                                      constraints: const BoxConstraints(),
-                                      padding: EdgeInsets.zero,
-                                      onPressed:
-                                          () => _editIntervalTimer(timer),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    IconButton(
-                                      icon: Icon(
-                                        CupertinoIcons.trash,
-                                        size: 18,
-                                        color: colorScheme.onSurfaceVariant,
-                                      ),
-                                      constraints: const BoxConstraints(),
-                                      padding: EdgeInsets.zero,
-                                      onPressed: () async {
-                                        final confirm = await showDialog<bool>(
-                                          context: context,
-                                          builder:
-                                              (dialogContext) => AlertDialog(
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(18),
-                                                ),
-                                                title: const Text(
-                                                  'Delete Interval Timer',
-                                                ),
-                                                content: Text(
-                                                  'Are you sure you want to delete "${timer.name}"?',
-                                                ),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed:
-                                                        () => Navigator.pop(
-                                                          dialogContext,
-                                                          false,
-                                                        ),
-                                                    child: const Text('Cancel'),
-                                                  ),
-                                                  TextButton(
-                                                    onPressed:
-                                                        () => Navigator.pop(
-                                                          dialogContext,
-                                                          true,
-                                                        ),
-                                                    child: const Text(
-                                                      'Delete',
-                                                      style: TextStyle(
-                                                        color: Colors.red,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                        );
-                                        if (confirm == true) {
-                                          unawaited(
-                                            controller.deleteIntervalTimer(
-                                              timer.id,
-                                            ),
-                                          );
-                                        }
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-
-                            // Badges row
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 9,
-                                    vertical: 5,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.primary.withValues(
-                                      alpha: 0.12,
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        CupertinoIcons.clock,
-                                        size: 13,
-                                        color: colorScheme.primary,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '${timeFormat.format(timer.startTime)} - ${timeFormat.format(timer.endTime)}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: colorScheme.primary,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 9,
-                                    vertical: 5,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.iosBlue.withValues(
-                                      alpha: 0.12,
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        CupertinoIcons.repeat,
-                                        size: 13,
-                                        color: AppTheme.iosBlue,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        timer.intervalString,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: AppTheme.iosBlue,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 9,
-                                    vertical: 5,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        CupertinoIcons.bell_fill,
-                                        size: 13,
-                                        color: colorScheme.onSurfaceVariant,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '${timer.totalAlarms} alarms',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: colorScheme.onSurfaceVariant,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Open button
-                            SizedBox(
-                              width: double.infinity,
-                              height: 46,
-                              child: ElevatedButton.icon(
-                                onPressed: () => _startIntervalTimer(timer),
-                                icon: const Icon(
-                                  CupertinoIcons.play_fill,
-                                  size: 16,
-                                ),
-                                label: const Text('Start Periodic Session'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: colorScheme.primary,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
+                            Icon(
+                              CupertinoIcons.clock,
+                              size: 56,
+                              color: colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.4,
                               ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              'No interval timers yet',
+                              style: textTheme.titleMedium?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Tap a quick preset above or press + to create one',
+                              style: textTheme.bodySmall,
                             ),
                           ],
                         ),
                       ),
                     );
-                  },
-                );
-              }),
+                  }
+
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: controller.intervalTimers.length,
+                    separatorBuilder:
+                        (context, index) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final timer = controller.intervalTimers[index];
+                      final timeFormat = DateFormat('h:mm a');
+
+                      return DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppTheme.cardBackground(isDark: isDark),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.cardRadius,
+                          ),
+                          border: Border.all(
+                            color: AppTheme.separator(isDark: isDark),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      timer.name,
+                                      style: textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: -0.2,
+                                      ),
+                                    ),
+                                  ),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(
+                                          CupertinoIcons.pencil,
+                                          size: 18,
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
+                                        constraints: const BoxConstraints(),
+                                        padding: EdgeInsets.zero,
+                                        onPressed:
+                                            () => _editIntervalTimer(timer),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      IconButton(
+                                        icon: Icon(
+                                          CupertinoIcons.trash,
+                                          size: 18,
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
+                                        constraints: const BoxConstraints(),
+                                        padding: EdgeInsets.zero,
+                                        onPressed: () async {
+                                          final confirm = await showDialog<
+                                            bool
+                                          >(
+                                            context: context,
+                                            builder:
+                                                (dialogContext) => AlertDialog(
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          18,
+                                                        ),
+                                                  ),
+                                                  title: const Text(
+                                                    'Delete Interval Timer',
+                                                  ),
+                                                  content: Text(
+                                                    'Are you sure you want to delete "${timer.name}"?',
+                                                  ),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            dialogContext,
+                                                            false,
+                                                          ),
+                                                      child: const Text(
+                                                        'Cancel',
+                                                      ),
+                                                    ),
+                                                    TextButton(
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            dialogContext,
+                                                            true,
+                                                          ),
+                                                      child: const Text(
+                                                        'Delete',
+                                                        style: TextStyle(
+                                                          color: Colors.red,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                          );
+                                          if (confirm == true) {
+                                            unawaited(
+                                              controller.deleteIntervalTimer(
+                                                timer.id,
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Badges row
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 9,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.primary.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          CupertinoIcons.clock,
+                                          size: 13,
+                                          color: colorScheme.primary,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${timeFormat.format(timer.startTime)} - ${timeFormat.format(timer.endTime)}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: colorScheme.primary,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 9,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.iosBlue.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          CupertinoIcons.repeat,
+                                          size: 13,
+                                          color: AppTheme.iosBlue,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          timer.intervalString,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppTheme.iosBlue,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 9,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          colorScheme.surfaceContainerHighest,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          CupertinoIcons.bell_fill,
+                                          size: 13,
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${timer.totalAlarms} alarms',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: colorScheme.onSurfaceVariant,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Open button
+                              SizedBox(
+                                width: double.infinity,
+                                height: 46,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _startIntervalTimer(timer),
+                                  icon: const Icon(
+                                    CupertinoIcons.play_fill,
+                                    size: 16,
+                                  ),
+                                  label: const Text('Start Periodic Session'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: colorScheme.primary,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ],
           ),
         ),

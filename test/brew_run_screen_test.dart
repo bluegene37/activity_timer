@@ -3,6 +3,7 @@ import 'package:activity_timer/models/alarm_sound.dart';
 import 'package:activity_timer/models/brew_recipe.dart';
 import 'package:activity_timer/screens/brew_run_screen.dart';
 import 'package:activity_timer/services/cue_player.dart';
+import 'package:activity_timer/services/locator.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -73,7 +74,7 @@ void main() {
     );
   });
 
-  tearDown(Get.reset);
+  tearDown(resetLocator);
 
   testWidgets('shows the target, the delta, the rate and the description', (
     tester,

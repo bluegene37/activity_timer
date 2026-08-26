@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:get/get.dart';
+import 'package:signals/signals_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/interval_timer.dart';
@@ -16,7 +16,7 @@ import '../services/database_service.dart';
 /// a cue at every alarm boundary, and logging the session when the last alarm
 /// fires. Owning it here (via `IntervalSessionService`) lets the screen be
 /// popped — minimized — without stopping the schedule.
-class IntervalRunController extends GetxController {
+class IntervalRunController {
   IntervalRunController({
     required this.timer,
     CuePlayer? cuePlayer,
@@ -39,11 +39,11 @@ class IntervalRunController extends GetxController {
   final DateTime Function() _now;
   final Future<void> Function(SessionHistory) _logHistory;
 
-  late final Rx<DateTime> currentTime = _now().obs;
-  late final Rx<DateTime> nextAlarmTime = _now().obs;
-  final RxInt currentAlarmIndex = 0.obs;
-  final RxBool isRunning = true.obs;
-  final RxBool isCompleted = false.obs;
+  late final currentTime = signal(_now());
+  late final nextAlarmTime = signal(_now());
+  final currentAlarmIndex = signal(0);
+  final isRunning = signal(true);
+  final isCompleted = signal(false);
 
   /// Today's full alarm schedule, computed once per (re)initialization.
   List<DateTime> allAlarmTimes = const [];
@@ -55,9 +55,7 @@ class IntervalRunController extends GetxController {
     return difference.isNegative ? Duration.zero : difference;
   }
 
-  @override
   void onInit() {
-    super.onInit();
     _initialize();
     _startTicker();
     unawaited(_syncBackgroundAlarms());
@@ -266,12 +264,10 @@ class IntervalRunController extends GetxController {
     }
   }
 
-  @override
   void onClose() {
     _ticker?.cancel();
     unawaited(_cuePlayer.dispose());
     unawaited(_scheduler.cancelAll());
     unawaited(WakelockPlus.disable());
-    super.onClose();
   }
 }

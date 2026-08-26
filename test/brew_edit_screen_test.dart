@@ -4,6 +4,7 @@ import 'package:activity_timer/hive_registrar.g.dart';
 import 'package:activity_timer/models/brew_recipe.dart';
 import 'package:activity_timer/screens/brew_edit_screen.dart';
 import 'package:activity_timer/services/database_service.dart';
+import 'package:activity_timer/services/locator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -41,7 +42,7 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  tearDown(Get.reset);
+  tearDown(resetLocator);
 
   BrewRecipe recipe() => BrewRecipe(
     name: 'Morning V60',

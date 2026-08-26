@@ -1,20 +1,19 @@
 import 'package:get/get.dart';
+import 'package:signals/signals_flutter.dart';
 
 import '../models/interval_timer.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
 import '../services/ui_messenger.dart';
 
-class IntervalTimerController extends GetxController {
+class IntervalTimerController {
   final _databaseService = DatabaseService();
 
   // Reactive variables
-  final RxList<IntervalTimer> intervalTimers = <IntervalTimer>[].obs;
-  final RxBool isLoading = true.obs;
+  final intervalTimers = listSignal<IntervalTimer>([]);
+  final isLoading = signal(true);
 
-  @override
   void onInit() {
-    super.onInit();
     loadIntervalTimers();
   }
 

@@ -1,13 +1,17 @@
 import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:signals/signals_flutter.dart';
+
 import '../controllers/activity_list_controller.dart';
 import '../models/activity_timer.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
+import '../services/locator.dart';
 import '../theme/app_theme.dart';
 
 /// Actions offered in a routine card's overflow menu.
@@ -29,7 +33,7 @@ class ActivityListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(ActivityListController());
+    final controller = locator<ActivityListController>();
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -163,41 +167,44 @@ class ActivityListScreen extends StatelessWidget {
               const SizedBox(height: 14),
 
               // Category Filter Bar (iOS Pill Tabs)
-              Obx(
-                () => SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildCategoryChip(
-                        label: 'All Routines',
-                        icon: CupertinoIcons.square_grid_2x2,
-                        value: 'all',
-                        selected: controller.selectedCategory.value == 'all',
-                        onTap: () => controller.setCategory('all'),
-                        colorScheme: colorScheme,
+              SignalBuilder(
+                builder:
+                    (_) => SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildCategoryChip(
+                            label: 'All Routines',
+                            icon: CupertinoIcons.square_grid_2x2,
+                            value: 'all',
+                            selected:
+                                controller.selectedCategory.value == 'all',
+                            onTap: () => controller.setCategory('all'),
+                            colorScheme: colorScheme,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildCategoryChip(
+                            label: 'Fitness & Sports',
+                            icon: CupertinoIcons.bolt_fill,
+                            value: 'fitness',
+                            selected:
+                                controller.selectedCategory.value == 'fitness',
+                            onTap: () => controller.setCategory('fitness'),
+                            colorScheme: colorScheme,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildCategoryChip(
+                            label: 'Work & Focus',
+                            icon: CupertinoIcons.briefcase_fill,
+                            value: 'work',
+                            selected:
+                                controller.selectedCategory.value == 'work',
+                            onTap: () => controller.setCategory('work'),
+                            colorScheme: colorScheme,
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      _buildCategoryChip(
-                        label: 'Fitness & Sports',
-                        icon: CupertinoIcons.bolt_fill,
-                        value: 'fitness',
-                        selected:
-                            controller.selectedCategory.value == 'fitness',
-                        onTap: () => controller.setCategory('fitness'),
-                        colorScheme: colorScheme,
-                      ),
-                      const SizedBox(width: 8),
-                      _buildCategoryChip(
-                        label: 'Work & Focus',
-                        icon: CupertinoIcons.briefcase_fill,
-                        value: 'work',
-                        selected: controller.selectedCategory.value == 'work',
-                        onTap: () => controller.setCategory('work'),
-                        colorScheme: colorScheme,
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
               ),
               const SizedBox(height: 22),
 
@@ -236,325 +243,336 @@ class ActivityListScreen extends StatelessWidget {
               const SizedBox(height: 10),
 
               // Activity List (iOS Inset Grouped style)
-              Obx(() {
-                if (controller.isLoading.value) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 40),
-                      child: CupertinoActivityIndicator(radius: 14),
-                    ),
-                  );
-                }
-
-                final list = controller.filteredSequences;
-
-                if (list.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 40),
-                      child: Column(
-                        children: [
-                          Icon(
-                            CupertinoIcons.timer,
-                            size: 56,
-                            color: colorScheme.onSurfaceVariant.withValues(
-                              alpha: 0.4,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            controller.sequences.isEmpty
-                                ? 'No routines created yet'
-                                : 'No routines match your filter',
-                            style: textTheme.titleMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed:
-                                () => _showPresetsBottomSheet(
-                                  context,
-                                  controller,
-                                ),
-                            icon: const Icon(CupertinoIcons.sparkles, size: 18),
-                            label: const Text('Add from Preset Library'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                return ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: list.length,
-                  separatorBuilder:
-                      (context, index) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final sequence = list[index];
-                    final originalIndex = controller.sequences.indexOf(
-                      sequence,
-                    );
-                    final totalDuration = controller.formatTotalDuration(
-                      sequence.totalDuration,
-                    );
-                    final isFitness = sequence.category == 'fitness';
-                    final isWork = sequence.category == 'work';
-
-                    final categoryColor =
-                        isFitness
-                            ? AppTheme.iosOrange
-                            : isWork
-                            ? AppTheme.iosBlue
-                            : colorScheme.primary;
-
-                    return DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: AppTheme.cardBackground(isDark: isDark),
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.cardRadius,
-                        ),
-                        border: Border.all(
-                          color: AppTheme.separator(isDark: isDark),
-                          width: 0.8,
-                        ),
-                      ),
+              SignalBuilder(
+                builder: (_) {
+                  if (controller.isLoading.value) {
+                    return const Center(
                       child: Padding(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.symmetric(vertical: 40),
+                        child: CupertinoActivityIndicator(radius: 14),
+                      ),
+                    );
+                  }
+
+                  final list = controller.filteredSequences;
+
+                  if (list.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 40),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Card Top: Name + Category badge + Menu
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Row(
-                                    children: [
-                                      Flexible(
-                                        child: Text(
-                                          sequence.name,
-                                          style: textTheme.titleMedium
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.w700,
-                                                letterSpacing: -0.2,
-                                              ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      _buildSmallCategoryBadge(switch (sequence
-                                          .category
-                                          .toLowerCase()) {
-                                        'fitness' => 'FITNESS',
-                                        'work' => 'WORK',
-                                        _ => 'CUSTOM',
-                                      }, categoryColor),
-                                    ],
-                                  ),
-                                ),
-                                PopupMenuButton<_RoutineAction>(
-                                  icon: Icon(
-                                    CupertinoIcons.ellipsis,
-                                    size: 18,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  onSelected: (action) {
-                                    switch (action) {
-                                      case _RoutineAction.edit:
-                                        _showEditDialog(
-                                          context,
-                                          controller,
-                                          originalIndex,
-                                        );
-                                      case _RoutineAction.duplicate:
-                                        controller.duplicateSequence(
-                                          originalIndex,
-                                        );
-                                      case _RoutineAction.share:
-                                        controller.exportSequenceToClipboard(
-                                          sequence,
-                                        );
-                                      case _RoutineAction.delete:
-                                        _showDeleteDialog(
-                                          context,
-                                          controller,
-                                          originalIndex,
-                                          sequence.name,
-                                        );
-                                    }
-                                  },
-                                  itemBuilder:
-                                      (context) => [
-                                        for (final action
-                                            in _RoutineAction.values)
-                                          PopupMenuItem(
-                                            value: action,
-                                            child: Row(
-                                              children: [
-                                                Icon(
-                                                  action.icon,
-                                                  size: 18,
-                                                  color:
-                                                      action.isDestructive
-                                                          ? Colors.red
-                                                          : null,
-                                                ),
-                                                const SizedBox(width: 10),
-                                                Text(
-                                                  action.label,
-                                                  style:
-                                                      action.isDestructive
-                                                          ? const TextStyle(
-                                                            color: Colors.red,
-                                                          )
-                                                          : null,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                      ],
-                                ),
-                              ],
-                            ),
-
-                            if (sequence.description != null &&
-                                sequence.description!.isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                sequence.description!,
-                                style: textTheme.bodyMedium,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                            Icon(
+                              CupertinoIcons.timer,
+                              size: 56,
+                              color: colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.4,
                               ),
-                            ],
-
-                            const SizedBox(height: 12),
-
-                            // Meta Info Row
-                            Row(
-                              children: [
-                                Icon(
-                                  CupertinoIcons.stopwatch,
-                                  size: 14,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  totalDuration,
-                                  style: textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Text('•', style: textTheme.bodySmall),
-                                const SizedBox(width: 10),
-                                Icon(
-                                  CupertinoIcons.list_number,
-                                  size: 14,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${sequence.timers.length} steps',
-                                  style: textTheme.bodySmall,
-                                ),
-                                if (sequence.defaultLoopEnabled) ...[
-                                  const SizedBox(width: 10),
-                                  Text('•', style: textTheme.bodySmall),
-                                  const SizedBox(width: 10),
-                                  Icon(
-                                    CupertinoIcons.repeat,
-                                    size: 14,
-                                    color: colorScheme.primary,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Loop',
-                                    style: textTheme.bodySmall?.copyWith(
-                                      color: colorScheme.primary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ],
                             ),
                             const SizedBox(height: 14),
-
-                            // Open & Start Buttons
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed:
-                                        () => Get.toNamed<void>(
-                                          Routes.timerList,
-                                          arguments: sequence,
-                                        ),
-                                    icon: const Icon(
-                                      CupertinoIcons.slider_horizontal_3,
-                                      size: 15,
-                                    ),
-                                    label: const Text('Customize'),
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
+                            Text(
+                              controller.sequences.isEmpty
+                                  ? 'No routines created yet'
+                                  : 'No routines match your filter',
+                              style: textTheme.titleMedium?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed:
+                                  () => _showPresetsBottomSheet(
+                                    context,
+                                    controller,
                                   ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      unawaited(
-                                        HapticFeedback.selectionClick(),
-                                      );
-                                      if (sequence.timers.isEmpty) {
-                                        Get.toNamed<void>(
-                                          Routes.timerList,
-                                          arguments: sequence,
-                                        );
-                                      } else {
-                                        Get.toNamed<void>(
-                                          Routes.timer,
-                                          arguments: sequence,
-                                        );
-                                      }
-                                    },
-                                    icon: const Icon(
-                                      CupertinoIcons.play_fill,
-                                      size: 15,
-                                    ),
-                                    label: const Text('Start'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: colorScheme.primary,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              icon: const Icon(
+                                CupertinoIcons.sparkles,
+                                size: 18,
+                              ),
+                              label: const Text('Add from Preset Library'),
                             ),
                           ],
                         ),
                       ),
                     );
-                  },
-                );
-              }),
+                  }
+
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: list.length,
+                    separatorBuilder:
+                        (context, index) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final sequence = list[index];
+                      final originalIndex = controller.sequences.indexOf(
+                        sequence,
+                      );
+                      final totalDuration = controller.formatTotalDuration(
+                        sequence.totalDuration,
+                      );
+                      final isFitness = sequence.category == 'fitness';
+                      final isWork = sequence.category == 'work';
+
+                      final categoryColor =
+                          isFitness
+                              ? AppTheme.iosOrange
+                              : isWork
+                              ? AppTheme.iosBlue
+                              : colorScheme.primary;
+
+                      return DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppTheme.cardBackground(isDark: isDark),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.cardRadius,
+                          ),
+                          border: Border.all(
+                            color: AppTheme.separator(isDark: isDark),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Card Top: Name + Category badge + Menu
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            sequence.name,
+                                            style: textTheme.titleMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w700,
+                                                  letterSpacing: -0.2,
+                                                ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        _buildSmallCategoryBadge(
+                                          switch (sequence.category
+                                              .toLowerCase()) {
+                                            'fitness' => 'FITNESS',
+                                            'work' => 'WORK',
+                                            _ => 'CUSTOM',
+                                          },
+                                          categoryColor,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  PopupMenuButton<_RoutineAction>(
+                                    icon: Icon(
+                                      CupertinoIcons.ellipsis,
+                                      size: 18,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    onSelected: (action) {
+                                      switch (action) {
+                                        case _RoutineAction.edit:
+                                          _showEditDialog(
+                                            context,
+                                            controller,
+                                            originalIndex,
+                                          );
+                                        case _RoutineAction.duplicate:
+                                          controller.duplicateSequence(
+                                            originalIndex,
+                                          );
+                                        case _RoutineAction.share:
+                                          controller.exportSequenceToClipboard(
+                                            sequence,
+                                          );
+                                        case _RoutineAction.delete:
+                                          _showDeleteDialog(
+                                            context,
+                                            controller,
+                                            originalIndex,
+                                            sequence.name,
+                                          );
+                                      }
+                                    },
+                                    itemBuilder:
+                                        (context) => [
+                                          for (final action
+                                              in _RoutineAction.values)
+                                            PopupMenuItem(
+                                              value: action,
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    action.icon,
+                                                    size: 18,
+                                                    color:
+                                                        action.isDestructive
+                                                            ? Colors.red
+                                                            : null,
+                                                  ),
+                                                  const SizedBox(width: 10),
+                                                  Text(
+                                                    action.label,
+                                                    style:
+                                                        action.isDestructive
+                                                            ? const TextStyle(
+                                                              color: Colors.red,
+                                                            )
+                                                            : null,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                        ],
+                                  ),
+                                ],
+                              ),
+
+                              if (sequence.description != null &&
+                                  sequence.description!.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  sequence.description!,
+                                  style: textTheme.bodyMedium,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+
+                              const SizedBox(height: 12),
+
+                              // Meta Info Row
+                              Row(
+                                children: [
+                                  Icon(
+                                    CupertinoIcons.stopwatch,
+                                    size: 14,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    totalDuration,
+                                    style: textTheme.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text('•', style: textTheme.bodySmall),
+                                  const SizedBox(width: 10),
+                                  Icon(
+                                    CupertinoIcons.list_number,
+                                    size: 14,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${sequence.timers.length} steps',
+                                    style: textTheme.bodySmall,
+                                  ),
+                                  if (sequence.defaultLoopEnabled) ...[
+                                    const SizedBox(width: 10),
+                                    Text('•', style: textTheme.bodySmall),
+                                    const SizedBox(width: 10),
+                                    Icon(
+                                      CupertinoIcons.repeat,
+                                      size: 14,
+                                      color: colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Loop',
+                                      style: textTheme.bodySmall?.copyWith(
+                                        color: colorScheme.primary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Open & Start Buttons
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed:
+                                          () => Get.toNamed<void>(
+                                            Routes.timerList,
+                                            arguments: sequence,
+                                          ),
+                                      icon: const Icon(
+                                        CupertinoIcons.slider_horizontal_3,
+                                        size: 15,
+                                      ),
+                                      label: const Text('Customize'),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 10,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        unawaited(
+                                          HapticFeedback.selectionClick(),
+                                        );
+                                        if (sequence.timers.isEmpty) {
+                                          Get.toNamed<void>(
+                                            Routes.timerList,
+                                            arguments: sequence,
+                                          );
+                                        } else {
+                                          Get.toNamed<void>(
+                                            Routes.timer,
+                                            arguments: sequence,
+                                          );
+                                        }
+                                      },
+                                      icon: const Icon(
+                                        CupertinoIcons.play_fill,
+                                        size: 15,
+                                      ),
+                                      label: const Text('Start'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: colorScheme.primary,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 10,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -913,293 +931,297 @@ class ActivityListScreen extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder:
-          (context) => Obx(() {
-            final historyList = controller.sessionHistory;
-            final int totalSeconds = historyList.fold(
-              0,
-              (sum, s) => sum + s.totalDurationInSeconds,
-            );
-            final formattedTotalTime = controller.formatTotalDuration(
-              totalSeconds,
-            );
+          (context) => SignalBuilder(
+            builder: (_) {
+              final historyList = controller.sessionHistory;
+              final int totalSeconds = historyList.fold(
+                0,
+                (sum, s) => sum + s.totalDurationInSeconds,
+              );
+              final formattedTotalTime = controller.formatTotalDuration(
+                totalSeconds,
+              );
 
-            final fitnessSeconds = historyList
-                .where((s) => s.category == 'fitness')
-                .fold(0, (sum, s) => sum + s.totalDurationInSeconds);
-            final workSeconds = historyList
-                .where((s) => s.category == 'work')
-                .fold(0, (sum, s) => sum + s.totalDurationInSeconds);
+              final fitnessSeconds = historyList
+                  .where((s) => s.category == 'fitness')
+                  .fold(0, (sum, s) => sum + s.totalDurationInSeconds);
+              final workSeconds = historyList
+                  .where((s) => s.category == 'work')
+                  .fold(0, (sum, s) => sum + s.totalDurationInSeconds);
 
-            return DraggableScrollableSheet(
-              expand: false,
-              initialChildSize: 0.75,
-              maxChildSize: 0.9,
-              builder:
-                  (context, scrollController) => Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: ListView(
-                      controller: scrollController,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 36,
-                            height: 5,
-                            decoration: BoxDecoration(
-                              color: colorScheme.onSurfaceVariant.withValues(
-                                alpha: 0.3,
-                              ),
-                              borderRadius: BorderRadius.circular(2.5),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Activity Stats & History',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                CupertinoIcons.xmark_circle_fill,
-                                size: 22,
-                              ),
-                              color: colorScheme.onSurfaceVariant,
-                              onPressed: () => Navigator.pop(context),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.cardBackground(
-                                    isDark: isDark,
-                                  ),
-                                  borderRadius: BorderRadius.circular(
-                                    AppTheme.cardRadius,
-                                  ),
-                                  border: Border.all(
-                                    color: AppTheme.separator(isDark: isDark),
-                                    width: 0.8,
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'Completed',
-                                      style: theme.textTheme.bodySmall,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${historyList.length}',
-                                      style: theme.textTheme.headlineMedium
-                                          ?.copyWith(
-                                            color: colorScheme.primary,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                    ),
-                                    Text(
-                                      'Sessions',
-                                      style: theme.textTheme.bodyMedium,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.cardBackground(
-                                    isDark: isDark,
-                                  ),
-                                  borderRadius: BorderRadius.circular(
-                                    AppTheme.cardRadius,
-                                  ),
-                                  border: Border.all(
-                                    color: AppTheme.separator(isDark: isDark),
-                                    width: 0.8,
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'Total Time',
-                                      style: theme.textTheme.bodySmall,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      formattedTotalTime,
-                                      style: theme.textTheme.headlineMedium
-                                          ?.copyWith(
-                                            color: colorScheme.primary,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                    ),
-                                    Text(
-                                      'Active Logged',
-                                      style: theme.textTheme.bodyMedium,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Category Time Breakdown (Apple Activity Style)
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.iosOrange.withValues(
-                                    alpha: 0.12,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Column(
-                                  children: [
-                                    const Text(
-                                      '⚡ Fitness Time',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppTheme.iosOrange,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      controller.formatTotalDuration(
-                                        fitnessSeconds,
-                                      ),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        color: AppTheme.iosOrange,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.iosBlue.withValues(
-                                    alpha: 0.12,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Column(
-                                  children: [
-                                    const Text(
-                                      '💼 Work Time',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppTheme.iosBlue,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      controller.formatTotalDuration(
-                                        workSeconds,
-                                      ),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        color: AppTheme.iosBlue,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
-                        Text(
-                          'Recent History',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        if (historyList.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 32),
-                            child: Center(
-                              child: Text(
-                                'No completed sessions logged yet.\nComplete a workout or work timer to see it here!',
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                            ),
-                          )
-                        else
-                          ...historyList.map(
-                            (session) => Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.all(14),
+              return DraggableScrollableSheet(
+                expand: false,
+                initialChildSize: 0.75,
+                maxChildSize: 0.9,
+                builder:
+                    (context, scrollController) => Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: ListView(
+                        controller: scrollController,
+                        children: [
+                          Center(
+                            child: Container(
+                              width: 36,
+                              height: 5,
                               decoration: BoxDecoration(
-                                color: AppTheme.cardBackground(isDark: isDark),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: AppTheme.separator(isDark: isDark),
-                                  width: 0.8,
+                                color: colorScheme.onSurfaceVariant.withValues(
+                                  alpha: 0.3,
                                 ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    session.sessionType == 'interval'
-                                        ? CupertinoIcons.stopwatch
-                                        : CupertinoIcons
-                                            .check_mark_circled_solid,
-                                    color: colorScheme.primary,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          session.title,
-                                          style: theme.textTheme.titleSmall
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                        ),
-                                        Text(
-                                          '${controller.formatTotalDuration(session.totalDurationInSeconds)} • ${dateFormat.format(session.completedAt)}',
-                                          style: theme.textTheme.bodySmall,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                borderRadius: BorderRadius.circular(2.5),
                               ),
                             ),
                           ),
-                      ],
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Activity Stats & History',
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  CupertinoIcons.xmark_circle_fill,
+                                  size: 22,
+                                ),
+                                color: colorScheme.onSurfaceVariant,
+                                onPressed: () => Navigator.pop(context),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.cardBackground(
+                                      isDark: isDark,
+                                    ),
+                                    borderRadius: BorderRadius.circular(
+                                      AppTheme.cardRadius,
+                                    ),
+                                    border: Border.all(
+                                      color: AppTheme.separator(isDark: isDark),
+                                      width: 0.8,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        'Completed',
+                                        style: theme.textTheme.bodySmall,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${historyList.length}',
+                                        style: theme.textTheme.headlineMedium
+                                            ?.copyWith(
+                                              color: colorScheme.primary,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                      ),
+                                      Text(
+                                        'Sessions',
+                                        style: theme.textTheme.bodyMedium,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.cardBackground(
+                                      isDark: isDark,
+                                    ),
+                                    borderRadius: BorderRadius.circular(
+                                      AppTheme.cardRadius,
+                                    ),
+                                    border: Border.all(
+                                      color: AppTheme.separator(isDark: isDark),
+                                      width: 0.8,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        'Total Time',
+                                        style: theme.textTheme.bodySmall,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        formattedTotalTime,
+                                        style: theme.textTheme.headlineMedium
+                                            ?.copyWith(
+                                              color: colorScheme.primary,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                      ),
+                                      Text(
+                                        'Active Logged',
+                                        style: theme.textTheme.bodyMedium,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Category Time Breakdown (Apple Activity Style)
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.iosOrange.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      const Text(
+                                        '⚡ Fitness Time',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.iosOrange,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        controller.formatTotalDuration(
+                                          fitnessSeconds,
+                                        ),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          color: AppTheme.iosOrange,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.iosBlue.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      const Text(
+                                        '💼 Work Time',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.iosBlue,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        controller.formatTotalDuration(
+                                          workSeconds,
+                                        ),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          color: AppTheme.iosBlue,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+                          Text(
+                            'Recent History',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          if (historyList.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 32),
+                              child: Center(
+                                child: Text(
+                                  'No completed sessions logged yet.\nComplete a workout or work timer to see it here!',
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodyMedium,
+                                ),
+                              ),
+                            )
+                          else
+                            ...historyList.map(
+                              (session) => Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.cardBackground(
+                                    isDark: isDark,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: AppTheme.separator(isDark: isDark),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      session.sessionType == 'interval'
+                                          ? CupertinoIcons.stopwatch
+                                          : CupertinoIcons
+                                              .check_mark_circled_solid,
+                                      color: colorScheme.primary,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            session.title,
+                                            style: theme.textTheme.titleSmall
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                          Text(
+                                            '${controller.formatTotalDuration(session.totalDurationInSeconds)} • ${dateFormat.format(session.completedAt)}',
+                                            style: theme.textTheme.bodySmall,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-            );
-          }),
+              );
+            },
+          ),
     );
   }
 

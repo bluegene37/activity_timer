@@ -9,6 +9,7 @@ import 'package:activity_timer/routes/app_routes.dart';
 import 'package:activity_timer/screens/brew_edit_screen.dart';
 import 'package:activity_timer/screens/brew_run_screen.dart';
 import 'package:activity_timer/services/database_service.dart';
+import 'package:activity_timer/services/locator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -35,7 +36,7 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  tearDown(Get.reset);
+  tearDown(resetLocator);
 
   IntervalTimer sampleIntervalTimer() {
     final start = DateTime(2026, 1, 1, 8);
@@ -167,7 +168,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final controller = Get.put(IntervalTimerController());
+    setUpLocator();
+    final controller = locator<IntervalTimerController>();
     final pending = controller.addNewIntervalTimer();
     await tester.pumpAndSettle();
 

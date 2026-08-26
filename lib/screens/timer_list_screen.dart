@@ -1,10 +1,13 @@
 import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
+import 'package:signals/signals_flutter.dart';
+
 import '../controllers/timer_list_controller.dart';
 import '../models/interval_phase.dart';
+import '../services/locator.dart';
 import '../theme/app_theme.dart';
 
 class TimerListScreen extends StatelessWidget {
@@ -12,7 +15,7 @@ class TimerListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(TimerListController());
+    final controller = locator<TimerListController>();
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -29,37 +32,41 @@ class TimerListScreen extends StatelessWidget {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Obx(
-          () => Text(
-            controller.sequence.value.name.isEmpty
-                ? 'Activity Detail'
-                : controller.sequence.value.name,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.3,
-            ),
-          ),
+        title: SignalBuilder(
+          builder:
+              (_) => Text(
+                controller.sequence.value.name.isEmpty
+                    ? 'Activity Detail'
+                    : controller.sequence.value.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
+                ),
+              ),
         ),
         actions: [
-          Obx(
-            () => IconButton(
-              icon: Icon(
-                CupertinoIcons.repeat,
-                color:
-                    controller.sequence.value.defaultLoopEnabled
-                        ? colorScheme.primary
-                        : colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                size: 20,
-              ),
-              tooltip:
-                  controller.sequence.value.defaultLoopEnabled
-                      ? 'Disable Loop'
-                      : 'Enable Loop',
-              onPressed: () {
-                unawaited(HapticFeedback.selectionClick());
-                controller.toggleDefaultLoop();
-              },
-            ),
+          SignalBuilder(
+            builder:
+                (_) => IconButton(
+                  icon: Icon(
+                    CupertinoIcons.repeat,
+                    color:
+                        controller.sequence.value.defaultLoopEnabled
+                            ? colorScheme.primary
+                            : colorScheme.onSurfaceVariant.withValues(
+                              alpha: 0.5,
+                            ),
+                    size: 20,
+                  ),
+                  tooltip:
+                      controller.sequence.value.defaultLoopEnabled
+                          ? 'Disable Loop'
+                          : 'Enable Loop',
+                  onPressed: () {
+                    unawaited(HapticFeedback.selectionClick());
+                    controller.toggleDefaultLoop();
+                  },
+                ),
           ),
           const SizedBox(width: 4),
         ],
@@ -116,17 +123,21 @@ class TimerListScreen extends StatelessWidget {
                                           size: 12,
                                         ),
                                         const SizedBox(width: 5),
-                                        Obx(
-                                          () => Text(
-                                            controller.sequence.value.category
-                                                .toUpperCase(),
-                                            style: TextStyle(
-                                              color: colorScheme.primary,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w800,
-                                              letterSpacing: 0.5,
-                                            ),
-                                          ),
+                                        SignalBuilder(
+                                          builder:
+                                              (_) => Text(
+                                                controller
+                                                    .sequence
+                                                    .value
+                                                    .category
+                                                    .toUpperCase(),
+                                                style: TextStyle(
+                                                  color: colorScheme.primary,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w800,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
                                         ),
                                       ],
                                     ),
@@ -148,38 +159,43 @@ class TimerListScreen extends StatelessWidget {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
                                 ),
-                                child: Obx(
-                                  () => Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 5,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          colorScheme.surfaceContainerHighest,
-                                      borderRadius: BorderRadius.circular(
-                                        AppTheme.pillRadius,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          CupertinoIcons.hourglass,
-                                          size: 12,
-                                          color: colorScheme.onSurfaceVariant,
+                                child: SignalBuilder(
+                                  builder:
+                                      (_) => Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 5,
                                         ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          'Prep: ${controller.sequence.value.preparationSeconds}s',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: colorScheme.onSurfaceVariant,
-                                            fontWeight: FontWeight.w700,
+                                        decoration: BoxDecoration(
+                                          color:
+                                              colorScheme
+                                                  .surfaceContainerHighest,
+                                          borderRadius: BorderRadius.circular(
+                                            AppTheme.pillRadius,
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              CupertinoIcons.hourglass,
+                                              size: 12,
+                                              color:
+                                                  colorScheme.onSurfaceVariant,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Prep: ${controller.sequence.value.preparationSeconds}s',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color:
+                                                    colorScheme
+                                                        .onSurfaceVariant,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                 ),
                                 itemBuilder:
                                     (context) => const [
@@ -215,18 +231,20 @@ class TimerListScreen extends StatelessWidget {
                                       style: textTheme.bodySmall,
                                     ),
                                     const SizedBox(height: 2),
-                                    Obx(
-                                      () => Text(
-                                        controller.formatDuration(
-                                          controller
-                                              .sequence
-                                              .value
-                                              .totalDuration,
-                                        ),
-                                        style: textTheme.titleLarge?.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
+                                    SignalBuilder(
+                                      builder:
+                                          (_) => Text(
+                                            controller.formatDuration(
+                                              controller
+                                                  .sequence
+                                                  .value
+                                                  .totalDuration,
+                                            ),
+                                            style: textTheme.titleLarge
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -246,13 +264,15 @@ class TimerListScreen extends StatelessWidget {
                                       style: textTheme.bodySmall,
                                     ),
                                     const SizedBox(height: 2),
-                                    Obx(
-                                      () => Text(
-                                        '${controller.sequence.value.timers.length}',
-                                        style: textTheme.titleLarge?.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
+                                    SignalBuilder(
+                                      builder:
+                                          (_) => Text(
+                                            '${controller.sequence.value.timers.length}',
+                                            style: textTheme.titleLarge
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -275,244 +295,256 @@ class TimerListScreen extends StatelessWidget {
                             letterSpacing: -0.2,
                           ),
                         ),
-                        Obx(
-                          () => Text(
-                            '${controller.sequence.value.timers.length} items',
-                            style: textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                        SignalBuilder(
+                          builder:
+                              (_) => Text(
+                                '${controller.sequence.value.timers.length} items',
+                                style: textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 10),
 
                     // Timer List
-                    Obx(() {
-                      if (controller.sequence.value.timers.isEmpty) {
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 40),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  CupertinoIcons.timer,
-                                  size: 56,
-                                  color: colorScheme.onSurfaceVariant
-                                      .withValues(alpha: 0.4),
-                                ),
-                                const SizedBox(height: 14),
-                                Text(
-                                  'No intervals added yet',
-                                  style: textTheme.titleMedium?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
+                    SignalBuilder(
+                      builder: (_) {
+                        if (controller.sequence.value.timers.isEmpty) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 40),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    CupertinoIcons.timer,
+                                    size: 56,
+                                    color: colorScheme.onSurfaceVariant
+                                        .withValues(alpha: 0.4),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }
-
-                      return ReorderableListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: controller.sequence.value.timers.length,
-                        onReorderItem: controller.reorderTimers,
-                        proxyDecorator: (child, index, animation) {
-                          return Material(
-                            color: Colors.transparent,
-                            child: child,
-                          );
-                        },
-                        itemBuilder: (context, index) {
-                          if (index < 0 ||
-                              index >=
-                                  controller.sequence.value.timers.length) {
-                            return const SizedBox.shrink(
-                              key: ValueKey('empty'),
-                            );
-                          }
-
-                          final timer = controller.sequence.value.timers[index];
-                          final durationText = controller.formatDuration(
-                            timer.durationInSeconds,
-                          );
-                          final phaseColor = timer.phase.defaultColor;
-
-                          return Container(
-                            key: ValueKey(timer.id),
-                            margin: const EdgeInsets.only(bottom: 10),
-                            decoration: BoxDecoration(
-                              color: AppTheme.cardBackground(isDark: isDark),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: AppTheme.separator(isDark: isDark),
-                                width: 0.8,
+                                  const SizedBox(height: 14),
+                                  Text(
+                                    'No intervals added yet',
+                                    style: textTheme.titleMedium?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            padding: const EdgeInsets.all(14),
-                            child: Row(
-                              children: [
-                                // Left Phase Icon Badge
-                                Container(
-                                  width: 38,
-                                  height: 38,
-                                  decoration: BoxDecoration(
-                                    color: phaseColor.withValues(alpha: 0.15),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    timer.phase.icon,
-                                    color: phaseColor,
-                                    size: 18,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
+                          );
+                        }
 
-                                // Middle Content
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Flexible(
-                                            child: Text(
-                                              timer.name,
-                                              style: textTheme.titleSmall
-                                                  ?.copyWith(
-                                                    fontWeight: FontWeight.w700,
+                        return ReorderableListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: controller.sequence.value.timers.length,
+                          onReorderItem: controller.reorderTimers,
+                          proxyDecorator: (child, index, animation) {
+                            return Material(
+                              color: Colors.transparent,
+                              child: child,
+                            );
+                          },
+                          itemBuilder: (context, index) {
+                            if (index < 0 ||
+                                index >=
+                                    controller.sequence.value.timers.length) {
+                              return const SizedBox.shrink(
+                                key: ValueKey('empty'),
+                              );
+                            }
+
+                            final timer =
+                                controller.sequence.value.timers[index];
+                            final durationText = controller.formatDuration(
+                              timer.durationInSeconds,
+                            );
+                            final phaseColor = timer.phase.defaultColor;
+
+                            return Container(
+                              key: ValueKey(timer.id),
+                              margin: const EdgeInsets.only(bottom: 10),
+                              decoration: BoxDecoration(
+                                color: AppTheme.cardBackground(isDark: isDark),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: AppTheme.separator(isDark: isDark),
+                                  width: 0.8,
+                                ),
+                              ),
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                children: [
+                                  // Left Phase Icon Badge
+                                  Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: BoxDecoration(
+                                      color: phaseColor.withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      timer.phase.icon,
+                                      color: phaseColor,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+
+                                  // Middle Content
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Flexible(
+                                              child: Text(
+                                                timer.name,
+                                                style: textTheme.titleSmall
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 5,
+                                                    vertical: 2,
                                                   ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 5,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: phaseColor.withValues(
-                                                alpha: 0.15,
+                                              decoration: BoxDecoration(
+                                                color: phaseColor.withValues(
+                                                  alpha: 0.15,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
                                               ),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              timer.phase.displayName
-                                                  .toUpperCase(),
-                                              style: TextStyle(
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.w800,
-                                                color: phaseColor,
-                                                letterSpacing: 0.3,
+                                              child: Text(
+                                                timer.phase.displayName
+                                                    .toUpperCase(),
+                                                style: TextStyle(
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: phaseColor,
+                                                  letterSpacing: 0.3,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          '$durationText${timer.description != null && timer.description!.isNotEmpty ? ' • ${timer.description}' : ''}',
+                                          style: textTheme.bodySmall,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  // Right Actions
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(
+                                          CupertinoIcons.pencil,
+                                          color: colorScheme.onSurfaceVariant,
+                                          size: 18,
+                                        ),
+                                        onPressed: () {
+                                          HapticFeedback.selectionClick();
+                                          controller.editTimer(index);
+                                        },
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
                                       ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        '$durationText${timer.description != null && timer.description!.isNotEmpty ? ' • ${timer.description}' : ''}',
-                                        style: textTheme.bodySmall,
+                                      const SizedBox(width: 10),
+                                      IconButton(
+                                        icon: Icon(
+                                          CupertinoIcons.trash,
+                                          color: colorScheme.onSurfaceVariant,
+                                          size: 18,
+                                        ),
+                                        onPressed: () async {
+                                          final confirm = await showDialog<
+                                            bool
+                                          >(
+                                            context: context,
+                                            builder:
+                                                (dialogContext) => AlertDialog(
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          18,
+                                                        ),
+                                                  ),
+                                                  title: const Text(
+                                                    'Delete Timer',
+                                                  ),
+                                                  content: Text(
+                                                    'Are you sure you want to delete "${timer.name}"?',
+                                                  ),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            dialogContext,
+                                                            false,
+                                                          ),
+                                                      child: const Text(
+                                                        'Cancel',
+                                                      ),
+                                                    ),
+                                                    TextButton(
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            dialogContext,
+                                                            true,
+                                                          ),
+                                                      child: const Text(
+                                                        'Delete',
+                                                        style: TextStyle(
+                                                          color: Colors.red,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                          );
+
+                                          if (confirm == true) {
+                                            unawaited(
+                                              controller.deleteTimer(index),
+                                            );
+                                          }
+                                        },
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        CupertinoIcons.line_horizontal_3,
+                                        color: colorScheme.outlineVariant,
+                                        size: 18,
                                       ),
                                     ],
                                   ),
-                                ),
-
-                                // Right Actions
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(
-                                        CupertinoIcons.pencil,
-                                        color: colorScheme.onSurfaceVariant,
-                                        size: 18,
-                                      ),
-                                      onPressed: () {
-                                        HapticFeedback.selectionClick();
-                                        controller.editTimer(index);
-                                      },
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    IconButton(
-                                      icon: Icon(
-                                        CupertinoIcons.trash,
-                                        color: colorScheme.onSurfaceVariant,
-                                        size: 18,
-                                      ),
-                                      onPressed: () async {
-                                        final confirm = await showDialog<bool>(
-                                          context: context,
-                                          builder:
-                                              (dialogContext) => AlertDialog(
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(18),
-                                                ),
-                                                title: const Text(
-                                                  'Delete Timer',
-                                                ),
-                                                content: Text(
-                                                  'Are you sure you want to delete "${timer.name}"?',
-                                                ),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed:
-                                                        () => Navigator.pop(
-                                                          dialogContext,
-                                                          false,
-                                                        ),
-                                                    child: const Text('Cancel'),
-                                                  ),
-                                                  TextButton(
-                                                    onPressed:
-                                                        () => Navigator.pop(
-                                                          dialogContext,
-                                                          true,
-                                                        ),
-                                                    child: const Text(
-                                                      'Delete',
-                                                      style: TextStyle(
-                                                        color: Colors.red,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                        );
-
-                                        if (confirm == true) {
-                                          unawaited(
-                                            controller.deleteTimer(index),
-                                          );
-                                        }
-                                      },
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Icon(
-                                      CupertinoIcons.line_horizontal_3,
-                                      color: colorScheme.outlineVariant,
-                                      size: 18,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                    }),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
 
                     // Quick Add Phase Chips
                     const SizedBox(height: 14),

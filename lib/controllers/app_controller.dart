@@ -1,24 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:signals/signals_flutter.dart';
 
 import '../models/alarm_sound.dart';
 import '../models/settings.dart';
 
-class AppController extends GetxController {
+class AppController {
   final _settings = AppSettings();
 
   // Reactive variables
-  final Rx<ThemeMode> themeMode = ThemeMode.dark.obs;
+  final themeMode = signal(ThemeMode.dark);
   // Initialize with the standard default, but it will be instantly overridden in onInit
-  final Rx<Color> themeColor = const Color(0xFF4A6FFF).obs;
-  final RxBool soundEnabled = true.obs;
-  final RxBool vibrationEnabled = true.obs;
-  final Rx<AlarmSound> defaultAlarmSound = AlarmSound.beep.obs;
-  final Rx<AppThemeStyle> themeStyle = AppThemeStyle.coffee.obs;
+  final themeColor = signal<Color>(const Color(0xFF4A6FFF));
+  final soundEnabled = signal(true);
+  final vibrationEnabled = signal(true);
+  final defaultAlarmSound = signal(AlarmSound.beep);
+  final themeStyle = signal(AppThemeStyle.coffee);
 
-  @override
   void onInit() {
-    super.onInit();
     _loadSettings();
   }
 

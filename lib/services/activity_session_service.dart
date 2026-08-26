@@ -1,4 +1,4 @@
-import 'package:get/get.dart';
+import 'package:signals/signals.dart';
 
 import '../controllers/activity_run_controller.dart';
 import '../models/activity_timer.dart';
@@ -20,7 +20,7 @@ class ActivitySessionService {
       ActivitySessionService._internal();
 
   /// The controller of the current session, or null when there is none.
-  final Rxn<ActivityRunController> active = Rxn<ActivityRunController>();
+  final active = signal<ActivityRunController?>(null);
 
   /// True while a routine is running or paused mid-way — exactly the window
   /// in which the floater should be visible. A routine starts the moment it

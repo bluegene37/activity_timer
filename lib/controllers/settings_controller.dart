@@ -6,23 +6,20 @@ import 'package:get/get.dart';
 import '../components/alarm_sound_picker.dart';
 import '../models/alarm_sound.dart';
 import '../services/cue_player.dart';
+import '../services/locator.dart';
 import '../services/ui_messenger.dart';
 import 'app_controller.dart';
 
-class SettingsController extends GetxController {
+class SettingsController {
   final CuePlayer _cuePlayer = AudioCuePlayer();
   late final AppController _appController;
 
-  @override
   void onInit() {
-    super.onInit();
-    _appController = Get.find<AppController>();
+    _appController = locator<AppController>();
   }
 
-  @override
   void onClose() {
     unawaited(_cuePlayer.dispose());
-    super.onClose();
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {

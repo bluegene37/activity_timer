@@ -1,4 +1,4 @@
-import 'package:get/get.dart';
+import 'package:signals/signals.dart';
 
 import '../controllers/interval_run_controller.dart';
 import '../models/interval_timer.dart';
@@ -20,7 +20,7 @@ class IntervalSessionService {
       IntervalSessionService._internal();
 
   /// The controller of the current session, or null when there is none.
-  final Rxn<IntervalRunController> active = Rxn<IntervalRunController>();
+  final active = signal<IntervalRunController?>(null);
 
   /// True while an interval schedule is still ticking toward alarms —
   /// exactly the window in which the floater should be visible. (Interval

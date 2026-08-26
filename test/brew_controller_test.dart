@@ -4,6 +4,7 @@ import 'package:activity_timer/controllers/brew_controller.dart';
 import 'package:activity_timer/hive_registrar.g.dart';
 import 'package:activity_timer/routes/app_pages.dart';
 import 'package:activity_timer/services/database_service.dart';
+import 'package:activity_timer/services/locator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -27,7 +28,7 @@ void main() {
   });
 
   tearDown(() async {
-    Get.reset();
+    await resetLocator();
     for (final recipe in await DatabaseService().getAllBrewRecipes()) {
       await DatabaseService().deleteBrewRecipe(recipe.id);
     }
@@ -41,7 +42,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final controller = Get.put(BrewController());
+    setUpLocator();
+    final controller = locator<BrewController>();
     final template = DatabaseService().getBrewTemplates().first;
 
     // `addFromTemplate` ends in `Get.snackbar`, and the Hive write ahead of it
@@ -54,7 +56,6 @@ void main() {
     // raised it.
     await tester.runAsync(() async {
       await controller.addFromTemplate(template);
-      Get.closeAllSnackbars();
     });
     await tester.pumpAndSettle();
 
@@ -71,13 +72,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final controller = Get.put(BrewController());
+    setUpLocator();
+    final controller = locator<BrewController>();
     final template = DatabaseService().getBrewTemplates().first;
     // See the comment on the previous test: close the snackbar in the same
     // real-async zone that raised it, or its timer outlives this test.
     await tester.runAsync(() async {
       await controller.addFromTemplate(template);
-      Get.closeAllSnackbars();
     });
     final id = controller.recipes.first.id;
 
@@ -98,7 +99,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final controller = Get.put(BrewController());
+    setUpLocator();
+    final controller = locator<BrewController>();
     final pending = controller.addNewBrew();
     await tester.pumpAndSettle();
 

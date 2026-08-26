@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:activity_timer/controllers/app_controller.dart';
 import 'package:activity_timer/models/settings.dart';
 import 'package:activity_timer/screens/settings_screen.dart';
+import 'package:activity_timer/services/locator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -38,7 +39,7 @@ void main() {
   testWidgets('SettingsScreen renders theme mode selector and sections', (
     tester,
   ) async {
-    Get.put(AppController());
+    setUpLocator();
 
     await tester.pumpWidget(const GetMaterialApp(home: SettingsScreen()));
     await tester.pumpAndSettle();
@@ -51,7 +52,7 @@ void main() {
     // Coffee is the default style, and its washi palette is fixed, so the
     // accent color picker stays hidden until the iOS style is selected.
     expect(find.text('Accent Color'), findsNothing);
-    final appController = Get.find<AppController>();
+    final appController = locator<AppController>();
     appController.themeStyle.value = AppThemeStyle.ios;
     await tester.pumpAndSettle();
     expect(find.text('Accent Color'), findsOneWidget);

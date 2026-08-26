@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:signals/signals_flutter.dart';
 
 import 'controllers/app_controller.dart';
 import 'hive_registrar.g.dart';
 import 'models/settings.dart';
 import 'routes/app_pages.dart';
 import 'services/database_service.dart';
+import 'services/locator.dart';
 import 'services/ui_messenger.dart';
 import 'theme/app_theme.dart';
 import 'theme/brew_theme.dart';
@@ -34,9 +36,11 @@ Future<void> main() async {
     DeviceOrientation.landscapeRight,
   ]);
 
-  // Inject the app controller strictly after settings have fully loaded from DB
-  // so the UI immediately draws using the saved theme color, avoiding flashes of defaults.
-  Get.put(AppController());
+  // Register controllers strictly after settings have loaded from the
+  // database, so the first frame draws with the saved theme instead of
+  // flashing defaults.
+  setUpLocator();
+  locator<AppController>();
 
   runApp(const MyApp());
 }
@@ -47,31 +51,32 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Find the app controller that was injected during main()
-    final appController = Get.find<AppController>();
+    final appController = locator<AppController>();
 
-    return Obx(
-      () => GetMaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Activity Timer',
-        // Lets controllers report failures and raise dialogs without
-        // reaching for a global BuildContext.
-        scaffoldMessengerKey: UiMessenger().messengerKey,
-        navigatorKey: UiMessenger().navigatorKey,
-        theme:
-            appController.themeStyle.value == AppThemeStyle.coffee
-                ? BrewTheme.themeFor(Brightness.light)
-                : AppTheme.getLightTheme(appController.themeColor.value),
-        darkTheme:
-            appController.themeStyle.value == AppThemeStyle.coffee
-                ? BrewTheme.themeFor(Brightness.dark)
-                : AppTheme.getDarkTheme(appController.themeColor.value),
-        themeMode:
-            appController
-                .themeMode
-                .value, // Follow exactly what's chosen in settings
-        initialRoute: AppPages.initial,
-        getPages: AppPages.routes,
-      ),
+    return SignalBuilder(
+      builder:
+          (_) => GetMaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'Activity Timer',
+            // Lets controllers report failures and raise dialogs without
+            // reaching for a global BuildContext.
+            scaffoldMessengerKey: UiMessenger().messengerKey,
+            navigatorKey: UiMessenger().navigatorKey,
+            theme:
+                appController.themeStyle.value == AppThemeStyle.coffee
+                    ? BrewTheme.themeFor(Brightness.light)
+                    : AppTheme.getLightTheme(appController.themeColor.value),
+            darkTheme:
+                appController.themeStyle.value == AppThemeStyle.coffee
+                    ? BrewTheme.themeFor(Brightness.dark)
+                    : AppTheme.getDarkTheme(appController.themeColor.value),
+            themeMode:
+                appController
+                    .themeMode
+                    .value, // Follow exactly what's chosen in settings
+            initialRoute: AppPages.initial,
+            getPages: AppPages.routes,
+          ),
     );
   }
 }

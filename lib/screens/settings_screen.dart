@@ -1,12 +1,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
+import 'package:signals/signals_flutter.dart';
 
 import '../components/color_selector.dart';
 import '../controllers/app_controller.dart';
 import '../controllers/settings_controller.dart';
 import '../models/settings.dart';
+import '../services/locator.dart';
 import '../theme/app_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -14,8 +15,8 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(SettingsController());
-    final appController = Get.find<AppController>();
+    final controller = locator<SettingsController>();
+    final appController = locator<AppController>();
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -125,44 +126,51 @@ class SettingsScreen extends StatelessWidget {
                             style: textTheme.bodySmall,
                           ),
                           const SizedBox(height: 14),
-                          Obx(
-                            () => SizedBox(
-                              width: double.infinity,
-                              child: SegmentedButton<AppThemeStyle>(
-                                segments: const [
-                                  ButtonSegment(
-                                    value: AppThemeStyle.ios,
-                                    label: Text('iOS'),
-                                    icon: Icon(
-                                      CupertinoIcons.device_phone_portrait,
-                                      size: 16,
+                          SignalBuilder(
+                            builder:
+                                (_) => SizedBox(
+                                  width: double.infinity,
+                                  child: SegmentedButton<AppThemeStyle>(
+                                    segments: const [
+                                      ButtonSegment(
+                                        value: AppThemeStyle.ios,
+                                        label: Text('iOS'),
+                                        icon: Icon(
+                                          CupertinoIcons.device_phone_portrait,
+                                          size: 16,
+                                        ),
+                                      ),
+                                      ButtonSegment(
+                                        value: AppThemeStyle.coffee,
+                                        label: Text('Coffee'),
+                                        icon: Icon(Icons.coffee, size: 16),
+                                      ),
+                                    ],
+                                    selected: {appController.themeStyle.value},
+                                    onSelectionChanged: (selection) {
+                                      HapticFeedback.selectionClick();
+                                      appController.setThemeStyle(
+                                        selection.first,
+                                      );
+                                    },
+                                    style: SegmentedButton.styleFrom(
+                                      selectedBackgroundColor: colorScheme
+                                          .primary
+                                          .withValues(alpha: 0.18),
+                                      selectedForegroundColor:
+                                          colorScheme.primary,
+                                      side: BorderSide(
+                                        color: AppTheme.separator(
+                                          isDark: isDark,
+                                        ),
+                                        width: 0.8,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
                                     ),
                                   ),
-                                  ButtonSegment(
-                                    value: AppThemeStyle.coffee,
-                                    label: Text('Coffee'),
-                                    icon: Icon(Icons.coffee, size: 16),
-                                  ),
-                                ],
-                                selected: {appController.themeStyle.value},
-                                onSelectionChanged: (selection) {
-                                  HapticFeedback.selectionClick();
-                                  appController.setThemeStyle(selection.first);
-                                },
-                                style: SegmentedButton.styleFrom(
-                                  selectedBackgroundColor: colorScheme.primary
-                                      .withValues(alpha: 0.18),
-                                  selectedForegroundColor: colorScheme.primary,
-                                  side: BorderSide(
-                                    color: AppTheme.separator(isDark: isDark),
-                                    width: 0.8,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
                                 ),
-                              ),
-                            ),
                           ),
                           const SizedBox(height: 18),
                           Text(
@@ -177,96 +185,111 @@ class SettingsScreen extends StatelessWidget {
                             style: textTheme.bodySmall,
                           ),
                           const SizedBox(height: 14),
-                          Obx(
-                            () => SizedBox(
-                              width: double.infinity,
-                              child: SegmentedButton<ThemeMode>(
-                                segments: const [
-                                  ButtonSegment(
-                                    value: ThemeMode.system,
-                                    label: Text('System'),
-                                    icon: Icon(
-                                      CupertinoIcons.device_phone_portrait,
-                                      size: 16,
+                          SignalBuilder(
+                            builder:
+                                (_) => SizedBox(
+                                  width: double.infinity,
+                                  child: SegmentedButton<ThemeMode>(
+                                    segments: const [
+                                      ButtonSegment(
+                                        value: ThemeMode.system,
+                                        label: Text('System'),
+                                        icon: Icon(
+                                          CupertinoIcons.device_phone_portrait,
+                                          size: 16,
+                                        ),
+                                      ),
+                                      ButtonSegment(
+                                        value: ThemeMode.light,
+                                        label: Text('Light'),
+                                        icon: Icon(
+                                          CupertinoIcons.sun_max_fill,
+                                          size: 16,
+                                        ),
+                                      ),
+                                      ButtonSegment(
+                                        value: ThemeMode.dark,
+                                        label: Text('Dark'),
+                                        icon: Icon(
+                                          CupertinoIcons.moon_fill,
+                                          size: 16,
+                                        ),
+                                      ),
+                                    ],
+                                    selected: {appController.themeMode.value},
+                                    onSelectionChanged: (selection) {
+                                      HapticFeedback.selectionClick();
+                                      appController.setThemeMode(
+                                        selection.first,
+                                      );
+                                    },
+                                    style: SegmentedButton.styleFrom(
+                                      selectedBackgroundColor: colorScheme
+                                          .primary
+                                          .withValues(alpha: 0.18),
+                                      selectedForegroundColor:
+                                          colorScheme.primary,
+                                      side: BorderSide(
+                                        color: AppTheme.separator(
+                                          isDark: isDark,
+                                        ),
+                                        width: 0.8,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
                                     ),
-                                  ),
-                                  ButtonSegment(
-                                    value: ThemeMode.light,
-                                    label: Text('Light'),
-                                    icon: Icon(
-                                      CupertinoIcons.sun_max_fill,
-                                      size: 16,
-                                    ),
-                                  ),
-                                  ButtonSegment(
-                                    value: ThemeMode.dark,
-                                    label: Text('Dark'),
-                                    icon: Icon(
-                                      CupertinoIcons.moon_fill,
-                                      size: 16,
-                                    ),
-                                  ),
-                                ],
-                                selected: {appController.themeMode.value},
-                                onSelectionChanged: (selection) {
-                                  HapticFeedback.selectionClick();
-                                  appController.setThemeMode(selection.first);
-                                },
-                                style: SegmentedButton.styleFrom(
-                                  selectedBackgroundColor: colorScheme.primary
-                                      .withValues(alpha: 0.18),
-                                  selectedForegroundColor: colorScheme.primary,
-                                  side: BorderSide(
-                                    color: AppTheme.separator(isDark: isDark),
-                                    width: 0.8,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
                                   ),
                                 ),
-                              ),
-                            ),
                           ),
                         ],
                       ),
                     ),
                     // The accent color only drives the iOS theme; Coffee has
                     // its own fixed washi palette.
-                    Obx(
-                      () =>
-                          appController.themeStyle.value == AppThemeStyle.coffee
-                              ? const SizedBox.shrink()
-                              : Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Divider(
-                                    height: 1,
-                                    color: AppTheme.separator(isDark: isDark),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(18),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Accent Color',
-                                          style: textTheme.titleSmall?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                    SignalBuilder(
+                      builder:
+                          (_) =>
+                              appController.themeStyle.value ==
+                                      AppThemeStyle.coffee
+                                  ? const SizedBox.shrink()
+                                  : Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Divider(
+                                        height: 1,
+                                        color: AppTheme.separator(
+                                          isDark: isDark,
                                         ),
-                                        const SizedBox(height: 12),
-                                        ColorSelector(
-                                          selectedColor:
-                                              appController.themeColor.value,
-                                          onColorSelected:
-                                              controller.setThemeColor,
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(18),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Accent Color',
+                                              style: textTheme.titleSmall
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            ColorSelector(
+                                              selectedColor:
+                                                  appController
+                                                      .themeColor
+                                                      .value,
+                                              onColorSelected:
+                                                  controller.setThemeColor,
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
                     ),
                   ],
                 ),
@@ -292,138 +315,146 @@ class SettingsScreen extends StatelessWidget {
                   type: MaterialType.transparency,
                   child: Column(
                     children: [
-                      Obx(
-                        () => Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 12,
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Sound Alerts',
-                                      style: textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Play sound when timer completes',
-                                      style: textTheme.bodySmall,
-                                    ),
-                                  ],
-                                ),
+                      SignalBuilder(
+                        builder:
+                            (_) => Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 12,
                               ),
-                              CupertinoSwitch(
-                                value: appController.soundEnabled.value,
-                                activeTrackColor: colorScheme.primary,
-                                onChanged: (value) {
-                                  HapticFeedback.selectionClick();
-                                  controller.toggleSound(value);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Divider(
-                        height: 1,
-                        color: AppTheme.separator(isDark: isDark),
-                      ),
-                      Obx(
-                        () => Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 12,
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Vibration',
-                                      style: textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Sound Alerts',
+                                          style: textTheme.titleSmall?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Play sound when timer completes',
+                                          style: textTheme.bodySmall,
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Vibrate when timer completes',
-                                      style: textTheme.bodySmall,
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                  CupertinoSwitch(
+                                    value: appController.soundEnabled.value,
+                                    activeTrackColor: colorScheme.primary,
+                                    onChanged: (value) {
+                                      HapticFeedback.selectionClick();
+                                      controller.toggleSound(value);
+                                    },
+                                  ),
+                                ],
                               ),
-                              CupertinoSwitch(
-                                value: appController.vibrationEnabled.value,
-                                activeTrackColor: colorScheme.primary,
-                                onChanged: (value) {
-                                  HapticFeedback.selectionClick();
-                                  controller.toggleVibration(value);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Divider(
-                        height: 1,
-                        color: AppTheme.separator(isDark: isDark),
-                      ),
-                      Obx(
-                        () => ListTile(
-                          title: Text(
-                            'Default Alarm Sound',
-                            style: textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
                             ),
-                          ),
-                          subtitle: Text(
-                            appController.defaultAlarmSound.value.displayName,
-                            style: textTheme.bodySmall,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 6,
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: Icon(
-                                  CupertinoIcons.play_circle_fill,
-                                  color: colorScheme.primary,
-                                  size: 28,
-                                ),
-                                onPressed: () {
-                                  HapticFeedback.selectionClick();
-                                  controller.previewAlarmSound(
-                                    appController.defaultAlarmSound.value,
-                                  );
-                                },
-                                tooltip: 'Preview sound',
+                      ),
+                      Divider(
+                        height: 1,
+                        color: AppTheme.separator(isDark: isDark),
+                      ),
+                      SignalBuilder(
+                        builder:
+                            (_) => Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 12,
                               ),
-                              IconButton(
-                                icon: Icon(
-                                  CupertinoIcons.pencil,
-                                  color: colorScheme.onSurfaceVariant,
-                                  size: 20,
-                                ),
-                                onPressed: () {
-                                  HapticFeedback.selectionClick();
-                                  controller.selectDefaultAlarmSound();
-                                },
-                                tooltip: 'Change sound',
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Vibration',
+                                          style: textTheme.titleSmall?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Vibrate when timer completes',
+                                          style: textTheme.bodySmall,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  CupertinoSwitch(
+                                    value: appController.vibrationEnabled.value,
+                                    activeTrackColor: colorScheme.primary,
+                                    onChanged: (value) {
+                                      HapticFeedback.selectionClick();
+                                      controller.toggleVibration(value);
+                                    },
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
+                            ),
+                      ),
+                      Divider(
+                        height: 1,
+                        color: AppTheme.separator(isDark: isDark),
+                      ),
+                      SignalBuilder(
+                        builder:
+                            (_) => ListTile(
+                              title: Text(
+                                'Default Alarm Sound',
+                                style: textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: Text(
+                                appController
+                                    .defaultAlarmSound
+                                    .value
+                                    .displayName,
+                                style: textTheme.bodySmall,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 6,
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(
+                                      CupertinoIcons.play_circle_fill,
+                                      color: colorScheme.primary,
+                                      size: 28,
+                                    ),
+                                    onPressed: () {
+                                      HapticFeedback.selectionClick();
+                                      controller.previewAlarmSound(
+                                        appController.defaultAlarmSound.value,
+                                      );
+                                    },
+                                    tooltip: 'Preview sound',
+                                  ),
+                                  IconButton(
+                                    icon: Icon(
+                                      CupertinoIcons.pencil,
+                                      color: colorScheme.onSurfaceVariant,
+                                      size: 20,
+                                    ),
+                                    onPressed: () {
+                                      HapticFeedback.selectionClick();
+                                      controller.selectDefaultAlarmSound();
+                                    },
+                                    tooltip: 'Change sound',
+                                  ),
+                                ],
+                              ),
+                            ),
                       ),
                     ],
                   ),

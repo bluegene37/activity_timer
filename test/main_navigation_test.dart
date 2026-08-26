@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:activity_timer/controllers/app_controller.dart';
 import 'package:activity_timer/hive_registrar.g.dart';
 import 'package:activity_timer/navigation/main_navigation.dart';
+import 'package:activity_timer/services/locator.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -32,8 +32,8 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  tearDown(() {
-    Get.reset();
+  tearDown(() async {
+    await resetLocator();
   });
 
   testWidgets(
@@ -43,7 +43,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
 
-      Get.put(AppController());
+      setUpLocator();
 
       await tester.pumpWidget(const GetMaterialApp(home: MainNavigation()));
       // This screen animates continuously, so pumpAndSettle never settles;
@@ -98,7 +98,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
-    Get.put(AppController());
+    setUpLocator();
 
     await tester.pumpWidget(const GetMaterialApp(home: MainNavigation()));
     for (var i = 0; i < 5; i++) {

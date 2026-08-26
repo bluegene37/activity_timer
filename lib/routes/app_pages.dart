@@ -1,9 +1,5 @@
 import 'package:get/get.dart';
 
-import '../controllers/activity_list_controller.dart';
-import '../controllers/interval_timer_controller.dart';
-import '../controllers/settings_controller.dart';
-import '../controllers/timer_list_controller.dart';
 import '../models/activity_timer.dart';
 import '../models/brew_recipe.dart';
 import '../models/interval_timer.dart';
@@ -22,24 +18,8 @@ abstract final class AppPages {
   static const initial = Routes.home;
 
   static final List<GetPage<dynamic>> routes = [
-    GetPage<void>(
-      name: Routes.home,
-      page: () => const MainNavigation(),
-      bindings: [
-        BindingsBuilder<void>(() {
-          Get.lazyPut<ActivityListController>(ActivityListController.new);
-          Get.lazyPut<IntervalTimerController>(IntervalTimerController.new);
-          Get.lazyPut<SettingsController>(SettingsController.new);
-        }),
-      ],
-    ),
-    GetPage<void>(
-      name: Routes.timerList,
-      page: () => const TimerListScreen(),
-      binding: BindingsBuilder<void>(() {
-        Get.lazyPut<TimerListController>(TimerListController.new);
-      }),
-    ),
+    GetPage<void>(name: Routes.home, page: () => const MainNavigation()),
+    GetPage<void>(name: Routes.timerList, page: () => const TimerListScreen()),
     GetPage<void>(
       name: Routes.timer,
       page: () => TimerScreen(sequence: Get.arguments as TimerSequence),
@@ -70,12 +50,6 @@ abstract final class AppPages {
       name: Routes.brew,
       page: () => BrewRunScreen(recipe: Get.arguments as BrewRecipe),
     ),
-    GetPage<void>(
-      name: Routes.settings,
-      page: () => const SettingsScreen(),
-      binding: BindingsBuilder<void>(() {
-        Get.lazyPut<SettingsController>(SettingsController.new);
-      }),
-    ),
+    GetPage<void>(name: Routes.settings, page: () => const SettingsScreen()),
   ];
 }

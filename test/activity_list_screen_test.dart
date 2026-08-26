@@ -4,6 +4,7 @@ import 'package:activity_timer/models/activity_timer.dart';
 import 'package:activity_timer/models/interval_phase.dart';
 import 'package:activity_timer/models/session_history.dart';
 import 'package:activity_timer/screens/activity_list_screen.dart';
+import 'package:activity_timer/services/locator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -36,8 +37,10 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  tearDown(() {
-    Get.reset();
+  setUp(setUpLocator);
+
+  tearDown(() async {
+    await resetLocator();
   });
 
   testWidgets(

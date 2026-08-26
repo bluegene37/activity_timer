@@ -1,15 +1,16 @@
 import 'package:get/get.dart';
+import 'package:signals/signals_flutter.dart';
 
 import '../models/brew_recipe.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
 import '../services/ui_messenger.dart';
 
-class BrewController extends GetxController {
+class BrewController {
   final _databaseService = DatabaseService();
 
-  final RxList<BrewRecipe> recipes = <BrewRecipe>[].obs;
-  final RxBool isLoading = true.obs;
+  final recipes = listSignal<BrewRecipe>([]);
+  final isLoading = signal(true);
 
   /// The recipe a brand-new brew starts from: one bloom, one pour, a drawdown.
   static BrewRecipe starterRecipe() => BrewRecipe(
@@ -34,9 +35,7 @@ class BrewController extends GetxController {
     ],
   );
 
-  @override
   void onInit() {
-    super.onInit();
     loadRecipes();
   }
 

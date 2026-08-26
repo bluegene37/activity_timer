@@ -4,7 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
+import 'package:signals/signals_flutter.dart';
 
 import '../components/glowing_timer_ring.dart';
 import '../controllers/activity_run_controller.dart';
@@ -82,103 +82,105 @@ class _TimerScreenState extends State<TimerScreen> {
     // Every observable read must happen INSIDE the Obx builder: Obx only
     // subscribes to what its own closure touches, so reading the clock
     // above this line would leave the screen frozen.
-    return Obx(() {
-      final remainingMs = math.max(0, _c.remainingMs.value);
-      final remainingSeconds = (remainingMs / 1000).ceil();
-      final double progress =
-          _c.currentDurationMs > 0
-              ? (1 - (remainingMs / _c.currentDurationMs)).clamp(0.0, 1.0)
-              : 0.0;
+    return SignalBuilder(
+      builder: (_) {
+        final remainingMs = math.max(0, _c.remainingMs.value);
+        final remainingSeconds = (remainingMs / 1000).ceil();
+        final double progress =
+            _c.currentDurationMs > 0
+                ? (1 - (remainingMs / _c.currentDurationMs)).clamp(0.0, 1.0)
+                : 0.0;
 
-      return Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        appBar: AppBar(
-          title: Text(widget.sequence.name),
-          centerTitle: true,
-          // Popping minimizes: a running routine keeps ticking in the
-          // session service and the floating chip brings it back.
-          leading: IconButton(
-            icon: Icon(
-              CupertinoIcons.chevron_down,
-              color: colorScheme.onSurface,
-              size: 22,
-            ),
-            tooltip: 'Minimize',
-            onPressed: () => Navigator.pop(context),
-          ),
-          actions: [
-            IconButton(
+        return Scaffold(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          appBar: AppBar(
+            title: Text(widget.sequence.name),
+            centerTitle: true,
+            // Popping minimizes: a running routine keeps ticking in the
+            // session service and the floating chip brings it back.
+            leading: IconButton(
               icon: Icon(
-                _settings.soundEnabled
-                    ? CupertinoIcons.speaker_2_fill
-                    : CupertinoIcons.speaker_slash_fill,
-                color:
-                    _settings.soundEnabled
-                        ? colorScheme.primary
-                        : colorScheme.onSurfaceVariant,
-                size: 20,
-              ),
-              onPressed: () async {
-                unawaited(HapticFeedback.selectionClick());
-                final bool newValue = !_settings.soundEnabled;
-                await _settings.setSoundEnabled(newValue);
-                setState(() {});
-              },
-              tooltip: _settings.soundEnabled ? 'Mute sound' : 'Enable sound',
-            ),
-            IconButton(
-              icon: Icon(
-                CupertinoIcons.xmark,
+                CupertinoIcons.chevron_down,
                 color: colorScheme.onSurface,
-                size: 20,
+                size: 22,
               ),
-              tooltip: 'End routine',
-              onPressed: () {
-                if (_c.isCompleted.value) {
-                  Navigator.pop(context);
-                } else {
-                  _confirmExit();
-                }
-              },
+              tooltip: 'Minimize',
+              onPressed: () => Navigator.pop(context),
             ),
-            IconButton(
-              icon: Icon(
-                _c.loopEnabled.value
-                    ? CupertinoIcons.repeat
-                    : CupertinoIcons.repeat,
-                color:
-                    _c.loopEnabled.value
-                        ? colorScheme.primary
-                        : colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                size: 20,
-              ),
-              onPressed: () {
-                HapticFeedback.selectionClick();
-                _c.toggleLoop();
-              },
-              tooltip: _c.loopEnabled.value ? 'Disable loop' : 'Enable loop',
-            ),
-            const SizedBox(width: 4),
-          ],
-        ),
-        body:
-            _c.isCompleted.value
-                ? _buildCompletedView(textTheme, colorScheme)
-                : isLandscape
-                ? _buildLandscapeLayout(
-                  progress,
-                  remainingSeconds,
-                  textTheme,
-                  colorScheme,
-                )
-                : _buildPortraitLayout(
-                  progress,
-                  remainingSeconds,
-                  textTheme,
-                  colorScheme,
+            actions: [
+              IconButton(
+                icon: Icon(
+                  _settings.soundEnabled
+                      ? CupertinoIcons.speaker_2_fill
+                      : CupertinoIcons.speaker_slash_fill,
+                  color:
+                      _settings.soundEnabled
+                          ? colorScheme.primary
+                          : colorScheme.onSurfaceVariant,
+                  size: 20,
                 ),
-      );
-    });
+                onPressed: () async {
+                  unawaited(HapticFeedback.selectionClick());
+                  final bool newValue = !_settings.soundEnabled;
+                  await _settings.setSoundEnabled(newValue);
+                  setState(() {});
+                },
+                tooltip: _settings.soundEnabled ? 'Mute sound' : 'Enable sound',
+              ),
+              IconButton(
+                icon: Icon(
+                  CupertinoIcons.xmark,
+                  color: colorScheme.onSurface,
+                  size: 20,
+                ),
+                tooltip: 'End routine',
+                onPressed: () {
+                  if (_c.isCompleted.value) {
+                    Navigator.pop(context);
+                  } else {
+                    _confirmExit();
+                  }
+                },
+              ),
+              IconButton(
+                icon: Icon(
+                  _c.loopEnabled.value
+                      ? CupertinoIcons.repeat
+                      : CupertinoIcons.repeat,
+                  color:
+                      _c.loopEnabled.value
+                          ? colorScheme.primary
+                          : colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  size: 20,
+                ),
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  _c.toggleLoop();
+                },
+                tooltip: _c.loopEnabled.value ? 'Disable loop' : 'Enable loop',
+              ),
+              const SizedBox(width: 4),
+            ],
+          ),
+          body:
+              _c.isCompleted.value
+                  ? _buildCompletedView(textTheme, colorScheme)
+                  : isLandscape
+                  ? _buildLandscapeLayout(
+                    progress,
+                    remainingSeconds,
+                    textTheme,
+                    colorScheme,
+                  )
+                  : _buildPortraitLayout(
+                    progress,
+                    remainingSeconds,
+                    textTheme,
+                    colorScheme,
+                  ),
+        );
+      },
+    );
   }
 
   // PORTRAIT LAYOUT

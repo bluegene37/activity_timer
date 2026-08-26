@@ -4,6 +4,7 @@ import 'package:activity_timer/controllers/brew_controller.dart';
 import 'package:activity_timer/hive_registrar.g.dart';
 import 'package:activity_timer/screens/brew_list_screen.dart';
 import 'package:activity_timer/services/database_service.dart';
+import 'package:activity_timer/services/locator.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
@@ -25,8 +26,10 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
+  setUp(setUpLocator);
+
   tearDown(() async {
-    Get.reset();
+    await resetLocator();
     for (final recipe in await DatabaseService().getAllBrewRecipes()) {
       await DatabaseService().deleteBrewRecipe(recipe.id);
     }
@@ -84,7 +87,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      Get.find<BrewController>().recipes.map((r) => r.name),
+      locator<BrewController>().recipes.map((r) => r.name),
       contains('Chemex'),
     );
   });

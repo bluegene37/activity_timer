@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
+import 'package:signals/signals_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/activity_timer.dart';
@@ -22,7 +22,7 @@ import '../services/database_service.dart';
 /// `ActivitySessionService`) lets the screen be popped — minimized — without
 /// stopping the routine, and lets the whole thing be tested with a fake
 /// clock instead of a widget tree.
-class ActivityRunController extends GetxController {
+class ActivityRunController {
   ActivityRunController({
     required this.sequence,
     CuePlayer? cuePlayer,
@@ -63,16 +63,16 @@ class ActivityRunController extends GetxController {
           ]
           : List<ActivityTimer>.from(sequence.timers);
 
-  final RxInt currentIndex = 0.obs;
-  final RxBool isPreparing = false.obs;
-  final RxBool isRunning = false.obs;
-  final RxBool isCompleted = false.obs;
-  final RxBool loopEnabled = false.obs;
-  final RxInt loopCount = 0.obs;
+  final currentIndex = signal(0);
+  final isPreparing = signal(false);
+  final isRunning = signal(false);
+  final isCompleted = signal(false);
+  final loopEnabled = signal(false);
+  final loopCount = signal(0);
 
   /// Milliseconds left in the current step. Driven by the ticker so the
   /// screen can observe it without rebuilding on anything else.
-  final RxInt remainingMs = 0.obs;
+  final remainingMs = signal(0);
 
   Timer? _ticker;
   DateTime? _deadline;
@@ -106,9 +106,7 @@ class ActivityRunController extends GetxController {
     return loopEnabled.value ? timers.first : null;
   }
 
-  @override
   void onInit() {
-    super.onInit();
     loopEnabled.value = sequence.defaultLoopEnabled;
 
     if (sequence.preparationSeconds > 0) {
@@ -418,12 +416,10 @@ class ActivityRunController extends GetxController {
     }
   }
 
-  @override
   void onClose() {
     _ticker?.cancel();
     unawaited(_cuePlayer.dispose());
     unawaited(_scheduler.cancelAll());
     unawaited(WakelockPlus.disable());
-    super.onClose();
   }
 }

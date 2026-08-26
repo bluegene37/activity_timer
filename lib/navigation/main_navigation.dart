@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:ui';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:signals/signals_flutter.dart';
+
 import '../controllers/activity_list_controller.dart';
 import '../controllers/activity_run_controller.dart';
 import '../controllers/brew_controller.dart';
@@ -18,6 +21,7 @@ import '../screens/settings_screen.dart';
 import '../services/activity_session_service.dart';
 import '../services/brew_session_service.dart';
 import '../services/interval_session_service.dart';
+import '../services/locator.dart';
 import '../theme/app_theme.dart';
 import '../theme/brew_theme.dart';
 
@@ -53,7 +57,7 @@ class _MainNavigationState extends State<MainNavigation> {
         heroTag: 'activity_list_fab',
         onPressed: () {
           HapticFeedback.selectionClick();
-          Get.find<ActivityListController>().addNewSequence();
+          locator<ActivityListController>().addNewSequence();
         },
         backgroundColor: colorScheme.primary,
         foregroundColor: Colors.white,
@@ -69,7 +73,7 @@ class _MainNavigationState extends State<MainNavigation> {
         heroTag: 'brew_list_fab',
         onPressed: () {
           HapticFeedback.selectionClick();
-          unawaited(Get.find<BrewController>().addNewBrew());
+          unawaited(locator<BrewController>().addNewBrew());
         },
         backgroundColor: colorScheme.primary,
         foregroundColor: Colors.white,
@@ -85,7 +89,7 @@ class _MainNavigationState extends State<MainNavigation> {
         heroTag: 'interval_timer_list_fab',
         onPressed: () {
           HapticFeedback.selectionClick();
-          Get.find<IntervalTimerController>().addNewIntervalTimer();
+          locator<IntervalTimerController>().addNewIntervalTimer();
         },
         backgroundColor: colorScheme.primary,
         foregroundColor: Colors.white,
@@ -253,86 +257,93 @@ class _BrewFloater extends StatelessWidget {
     final session = BrewSessionService();
     final palette = BrewTheme.paletteFor(Theme.of(context).brightness);
 
-    return Obx(() {
-      final BrewRunController? controller = session.active.value;
-      if (controller == null || !session.hasBrewInProgress) {
-        return const SizedBox.shrink();
-      }
+    return SignalBuilder(
+      builder: (_) {
+        final BrewRunController? controller = session.active.value;
+        if (controller == null || !session.hasBrewInProgress) {
+          return const SizedBox.shrink();
+        }
 
-      final target = controller.currentTarget;
-      final label =
-          target == null
-              ? controller.currentStep.name
-              : '${controller.currentStep.name} · pour to ${target}g';
+        final target = controller.currentTarget;
+        final label =
+            target == null
+                ? controller.currentStep.name
+                : '${controller.currentStep.name} · pour to ${target}g';
 
-      return Padding(
-        // Gap above this chip when it shares the column with another.
-        padding: const EdgeInsets.only(top: 8),
-        child: Material(
-          key: const Key('brew-floater'),
-          color: palette.paperRaised,
-          elevation: 6,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-            side: BorderSide(color: palette.hairline),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-            onTap:
-                () => unawaited(
-                  Get.toNamed<dynamic>(
-                    Routes.brew,
-                    arguments: controller.recipe,
+        return Padding(
+          // Gap above this chip when it shares the column with another.
+          padding: const EdgeInsets.only(top: 8),
+          child: Material(
+            key: const Key('brew-floater'),
+            color: palette.paperRaised,
+            elevation: 6,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+              side: BorderSide(color: palette.hairline),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+              onTap:
+                  () => unawaited(
+                    Get.toNamed<dynamic>(
+                      Routes.brew,
+                      arguments: controller.recipe,
+                    ),
                   ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
                 ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Row(
-                children: [
-                  Icon(Icons.coffee, size: 18, color: palette.lead),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: palette.ink,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                child: Row(
+                  children: [
+                    Icon(Icons.coffee, size: 18, color: palette.lead),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: palette.ink,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    _clock(controller.stepRemaining),
-                    style: TextStyle(
-                      color:
-                          controller.isPouring ? palette.lead : palette.inkSoft,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                    const SizedBox(width: 10),
+                    Text(
+                      _clock(controller.stepRemaining),
+                      style: TextStyle(
+                        color:
+                            controller.isPouring
+                                ? palette.lead
+                                : palette.inkSoft,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    key: const Key('brew-floater-close'),
-                    icon: Icon(Icons.close, size: 16, color: palette.inkSoft),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 32,
-                      minHeight: 32,
+                    const SizedBox(width: 4),
+                    IconButton(
+                      key: const Key('brew-floater-close'),
+                      icon: Icon(Icons.close, size: 16, color: palette.inkSoft),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
+                      tooltip: 'End brew',
+                      onPressed: session.clear,
                     ),
-                    tooltip: 'End brew',
-                    onPressed: session.clear,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 }
 
@@ -356,91 +367,96 @@ class _IntervalFloater extends StatelessWidget {
     final session = IntervalSessionService();
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Obx(() {
-      final IntervalRunController? controller = session.active.value;
-      if (controller == null || !session.hasSessionInProgress) {
-        return const SizedBox.shrink();
-      }
+    return SignalBuilder(
+      builder: (_) {
+        final IntervalRunController? controller = session.active.value;
+        if (controller == null || !session.hasSessionInProgress) {
+          return const SizedBox.shrink();
+        }
 
-      final label =
-          '${controller.timer.name} · alarm '
-          '${controller.currentAlarmIndex.value + 1} of '
-          '${controller.allAlarmTimes.length}';
+        final label =
+            '${controller.timer.name} · alarm '
+            '${controller.currentAlarmIndex.value + 1} of '
+            '${controller.allAlarmTimes.length}';
 
-      return Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Material(
-          key: const Key('interval-floater'),
-          color: colorScheme.surfaceContainerHigh,
-          elevation: 6,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-            side: BorderSide(color: colorScheme.outlineVariant),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-            onTap:
-                () => unawaited(
-                  Get.toNamed<dynamic>(
-                    Routes.intervalTimer,
-                    arguments: controller.timer,
+        return Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Material(
+            key: const Key('interval-floater'),
+            color: colorScheme.surfaceContainerHigh,
+            elevation: 6,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+              side: BorderSide(color: colorScheme.outlineVariant),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+              onTap:
+                  () => unawaited(
+                    Get.toNamed<dynamic>(
+                      Routes.intervalTimer,
+                      arguments: controller.timer,
+                    ),
                   ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
                 ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Row(
-                children: [
-                  Icon(
-                    CupertinoIcons.stopwatch,
-                    size: 18,
-                    color: colorScheme.primary,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                child: Row(
+                  children: [
+                    Icon(
+                      CupertinoIcons.stopwatch,
+                      size: 18,
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    _clock(controller.untilNextAlarm),
-                    style: TextStyle(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                    const SizedBox(width: 10),
+                    Text(
+                      _clock(controller.untilNextAlarm),
+                      style: TextStyle(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    key: const Key('interval-floater-close'),
-                    icon: Icon(
-                      Icons.close,
-                      size: 16,
-                      color: colorScheme.onSurfaceVariant,
+                    const SizedBox(width: 4),
+                    IconButton(
+                      key: const Key('interval-floater-close'),
+                      icon: Icon(
+                        Icons.close,
+                        size: 16,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
+                      tooltip: 'End interval timer',
+                      onPressed: session.clear,
                     ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 32,
-                      minHeight: 32,
-                    ),
-                    tooltip: 'End interval timer',
-                    onPressed: session.clear,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 }
 
@@ -461,93 +477,98 @@ class _ActivityFloater extends StatelessWidget {
     final session = ActivitySessionService();
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Obx(() {
-      final ActivityRunController? controller = session.active.value;
-      if (controller == null || !session.hasSessionInProgress) {
-        return const SizedBox.shrink();
-      }
+    return SignalBuilder(
+      builder: (_) {
+        final ActivityRunController? controller = session.active.value;
+        if (controller == null || !session.hasSessionInProgress) {
+          return const SizedBox.shrink();
+        }
 
-      final label =
-          controller.isPreparing.value
-              ? '${controller.sequence.name} · get ready'
-              : '${controller.sequence.name} · ${controller.currentTimer.name}';
+        final label =
+            controller.isPreparing.value
+                ? '${controller.sequence.name} · get ready'
+                : '${controller.sequence.name} · ${controller.currentTimer.name}';
 
-      return Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Material(
-          key: const Key('activity-floater'),
-          color: colorScheme.surfaceContainerHigh,
-          elevation: 6,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-            side: BorderSide(color: colorScheme.outlineVariant),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-            onTap:
-                () => unawaited(
-                  Get.toNamed<dynamic>(
-                    Routes.timer,
-                    arguments: controller.sequence,
+        return Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Material(
+            key: const Key('activity-floater'),
+            color: colorScheme.surfaceContainerHigh,
+            elevation: 6,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+              side: BorderSide(color: colorScheme.outlineVariant),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+              onTap:
+                  () => unawaited(
+                    Get.toNamed<dynamic>(
+                      Routes.timer,
+                      arguments: controller.sequence,
+                    ),
                   ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
                 ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Row(
-                children: [
-                  Icon(
-                    CupertinoIcons.timer,
-                    size: 18,
-                    color: colorScheme.primary,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                child: Row(
+                  children: [
+                    Icon(
+                      CupertinoIcons.timer,
+                      size: 18,
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    _clock(controller.remainingMs.value),
-                    style: TextStyle(
-                      color:
-                          controller.isRunning.value
-                              ? colorScheme.primary
-                              : colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                    const SizedBox(width: 10),
+                    Text(
+                      _clock(controller.remainingMs.value),
+                      style: TextStyle(
+                        color:
+                            controller.isRunning.value
+                                ? colorScheme.primary
+                                : colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    key: const Key('activity-floater-close'),
-                    icon: Icon(
-                      Icons.close,
-                      size: 16,
-                      color: colorScheme.onSurfaceVariant,
+                    const SizedBox(width: 4),
+                    IconButton(
+                      key: const Key('activity-floater-close'),
+                      icon: Icon(
+                        Icons.close,
+                        size: 16,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
+                      tooltip: 'End routine',
+                      onPressed: session.clear,
                     ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 32,
-                      minHeight: 32,
-                    ),
-                    tooltip: 'End routine',
-                    onPressed: session.clear,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 }

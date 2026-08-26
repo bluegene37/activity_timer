@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:signals/signals_flutter.dart';
 
 import '../models/activity_timer.dart';
 import '../models/interval_phase.dart';
@@ -8,15 +9,13 @@ import '../services/database_service.dart';
 import '../services/ui_messenger.dart';
 import '../utils/time_format.dart';
 
-class TimerListController extends GetxController {
+class TimerListController {
   final _databaseService = DatabaseService();
 
   // Reactive variables
-  final Rx<TimerSequence> sequence = TimerSequence(name: '', timers: []).obs;
+  final sequence = signal(TimerSequence(name: '', timers: []));
 
-  @override
   void onInit() {
-    super.onInit();
     if (Get.arguments case final TimerSequence args) {
       sequence.value = args;
     }

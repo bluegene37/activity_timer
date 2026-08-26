@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:signals/signals_flutter.dart';
 
 import '../components/glowing_timer_ring.dart';
 import '../controllers/interval_run_controller.dart';
@@ -86,72 +86,78 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
     final timeFormat = DateFormat('h:mm:ss a');
     final timeFormatShort = DateFormat('h:mm a');
 
-    return Obx(
-      () => Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        appBar: AppBar(
-          title: Text(widget.timer.name),
-          centerTitle: true,
-          // Popping minimizes: a running schedule keeps ticking in the
-          // session service and the floating chip brings it back.
-          leading: IconButton(
-            icon: Icon(
-              CupertinoIcons.chevron_down,
-              color: colorScheme.onSurface,
-              size: 22,
-            ),
-            tooltip: 'Minimize',
-            onPressed: () => Navigator.pop(context),
-          ),
-          actions: [
-            // Sound toggle button
-            IconButton(
-              icon: Icon(
-                _settings.soundEnabled
-                    ? CupertinoIcons.speaker_2_fill
-                    : CupertinoIcons.speaker_slash_fill,
-                color:
-                    _settings.soundEnabled
-                        ? colorScheme.primary
-                        : colorScheme.onSurfaceVariant,
-                size: 20,
-              ),
-              onPressed: () async {
-                unawaited(HapticFeedback.selectionClick());
-                final bool newValue = !_settings.soundEnabled;
-                await _settings.setSoundEnabled(newValue);
-                setState(() {});
-              },
-              tooltip: _settings.soundEnabled ? 'Mute sound' : 'Enable sound',
-            ),
-            IconButton(
-              icon: Icon(
-                CupertinoIcons.xmark,
-                color: colorScheme.onSurface,
-                size: 20,
-              ),
-              tooltip: 'End timer',
-              onPressed: () {
-                if (_c.isCompleted.value) {
-                  Navigator.pop(context);
-                } else {
-                  _confirmExit();
-                }
-              },
-            ),
-            const SizedBox(width: 4),
-          ],
-        ),
-        body:
-            _c.isCompleted.value
-                ? _buildCompletedView(textTheme, colorScheme, timeFormatShort)
-                : _buildRunningView(
-                  textTheme,
-                  colorScheme,
-                  timeFormat,
-                  timeFormatShort,
+    return SignalBuilder(
+      builder:
+          (_) => Scaffold(
+            backgroundColor: theme.scaffoldBackgroundColor,
+            appBar: AppBar(
+              title: Text(widget.timer.name),
+              centerTitle: true,
+              // Popping minimizes: a running schedule keeps ticking in the
+              // session service and the floating chip brings it back.
+              leading: IconButton(
+                icon: Icon(
+                  CupertinoIcons.chevron_down,
+                  color: colorScheme.onSurface,
+                  size: 22,
                 ),
-      ),
+                tooltip: 'Minimize',
+                onPressed: () => Navigator.pop(context),
+              ),
+              actions: [
+                // Sound toggle button
+                IconButton(
+                  icon: Icon(
+                    _settings.soundEnabled
+                        ? CupertinoIcons.speaker_2_fill
+                        : CupertinoIcons.speaker_slash_fill,
+                    color:
+                        _settings.soundEnabled
+                            ? colorScheme.primary
+                            : colorScheme.onSurfaceVariant,
+                    size: 20,
+                  ),
+                  onPressed: () async {
+                    unawaited(HapticFeedback.selectionClick());
+                    final bool newValue = !_settings.soundEnabled;
+                    await _settings.setSoundEnabled(newValue);
+                    setState(() {});
+                  },
+                  tooltip:
+                      _settings.soundEnabled ? 'Mute sound' : 'Enable sound',
+                ),
+                IconButton(
+                  icon: Icon(
+                    CupertinoIcons.xmark,
+                    color: colorScheme.onSurface,
+                    size: 20,
+                  ),
+                  tooltip: 'End timer',
+                  onPressed: () {
+                    if (_c.isCompleted.value) {
+                      Navigator.pop(context);
+                    } else {
+                      _confirmExit();
+                    }
+                  },
+                ),
+                const SizedBox(width: 4),
+              ],
+            ),
+            body:
+                _c.isCompleted.value
+                    ? _buildCompletedView(
+                      textTheme,
+                      colorScheme,
+                      timeFormatShort,
+                    )
+                    : _buildRunningView(
+                      textTheme,
+                      colorScheme,
+                      timeFormat,
+                      timeFormatShort,
+                    ),
+          ),
     );
   }
 

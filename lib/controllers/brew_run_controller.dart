@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:get/get.dart';
+import 'package:signals/signals_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/brew_recipe.dart';
@@ -10,7 +10,7 @@ import '../services/cue_player.dart';
 /// Runs a brew on the clock. Steps advance strictly by time; inside a pour
 /// step the controller also reports whether the pour window is still open, so
 /// the screen can say POUR then WAIT.
-class BrewRunController extends GetxController {
+class BrewRunController {
   BrewRunController({
     required this.recipe,
     CuePlayer? cuePlayer,
@@ -28,10 +28,10 @@ class BrewRunController extends GetxController {
   final AlarmScheduler _scheduler;
   final DateTime Function() _now;
 
-  final RxInt stepIndex = 0.obs;
-  final RxInt elapsedInStepMs = 0.obs;
-  final RxBool isRunning = false.obs;
-  final RxBool isFinished = false.obs;
+  final stepIndex = signal(0);
+  final elapsedInStepMs = signal(0);
+  final isRunning = signal(false);
+  final isFinished = signal(false);
 
   Timer? _ticker;
   DateTime? _stepStartedAt;
@@ -195,12 +195,10 @@ class BrewRunController extends GetxController {
     unawaited(_scheduler.cancelAll());
   }
 
-  @override
   void onClose() {
     _ticker?.cancel();
     unawaited(_cuePlayer.dispose());
     unawaited(_scheduler.cancelAll());
     unawaited(WakelockPlus.disable());
-    super.onClose();
   }
 }

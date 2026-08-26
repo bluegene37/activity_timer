@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:activity_timer/controllers/app_controller.dart';
 import 'package:activity_timer/hive_registrar.g.dart';
 import 'package:activity_timer/main.dart';
 import 'package:activity_timer/models/settings.dart';
+import 'package:activity_timer/services/locator.dart';
 import 'package:activity_timer/theme/app_theme.dart';
 import 'package:activity_timer/theme/brew_theme.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +27,7 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  tearDown(Get.reset);
+  tearDown(resetLocator);
 
   test('themeStyle persists and defaults to coffee', () async {
     final settings = AppSettings();
@@ -48,7 +48,7 @@ void main() {
     // Hive IO only progresses outside the fake-async zone.
     await tester.runAsync(() async {
       await AppSettings().setThemeStyle(AppThemeStyle.coffee);
-      Get.put(AppController());
+      setUpLocator();
       await Future<void>.delayed(const Duration(milliseconds: 50));
     });
     await tester.pumpWidget(const MyApp());
@@ -68,7 +68,7 @@ void main() {
   testWidgets('ios style keeps the existing look', (tester) async {
     await tester.runAsync(() async {
       await AppSettings().setThemeStyle(AppThemeStyle.ios);
-      Get.put(AppController());
+      setUpLocator();
       await Future<void>.delayed(const Duration(milliseconds: 50));
     });
     await tester.pumpWidget(const MyApp());

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:signals/signals_flutter.dart';
 
 import '../models/activity_timer.dart';
 import '../models/session_history.dart';
@@ -12,15 +13,15 @@ import '../services/database_service.dart';
 import '../services/ui_messenger.dart';
 import '../utils/time_format.dart';
 
-class ActivityListController extends GetxController {
+class ActivityListController {
   final _databaseService = DatabaseService();
 
   // Reactive variables
-  final RxList<TimerSequence> sequences = <TimerSequence>[].obs;
-  final RxList<SessionHistory> sessionHistory = <SessionHistory>[].obs;
-  final RxBool isLoading = true.obs;
-  final RxString selectedCategory = 'all'.obs; // 'all', 'fitness', 'work'
-  final RxString searchQuery = ''.obs;
+  final sequences = listSignal<TimerSequence>([]);
+  final sessionHistory = listSignal<SessionHistory>([]);
+  final isLoading = signal(true);
+  final selectedCategory = signal('all'); // 'all', 'fitness', 'work'
+  final searchQuery = signal('');
 
   List<TimerSequence> get filteredSequences {
     return sequences.where((seq) {
@@ -37,9 +38,7 @@ class ActivityListController extends GetxController {
     }).toList();
   }
 
-  @override
   void onInit() {
-    super.onInit();
     loadSequences();
     loadSessionHistory();
   }
