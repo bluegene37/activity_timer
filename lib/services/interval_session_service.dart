@@ -2,6 +2,7 @@ import 'package:signals/signals.dart';
 
 import '../controllers/interval_run_controller.dart';
 import '../models/interval_timer.dart';
+import '../utils/signal_scheduling.dart';
 import 'cue_player.dart';
 
 /// Owns the one running interval session, decoupled from any screen.
@@ -47,7 +48,7 @@ class IntervalSessionService {
     // Screens rely on onInit having run; GetxController only calls it when
     // registered, so trigger it explicitly for this service-owned instance.
     controller.onInit();
-    active.value = controller;
+    setAfterBuild(active, controller);
     return controller;
   }
 
@@ -55,7 +56,7 @@ class IntervalSessionService {
   /// the cue player.
   void clear() {
     active.value?.onClose();
-    active.value = null;
+    setAfterBuild(active, null);
   }
 
   /// Called when the run screen is popped: a completed schedule has nothing

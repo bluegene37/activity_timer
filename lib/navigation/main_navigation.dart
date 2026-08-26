@@ -4,7 +4,6 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import 'package:signals/signals_flutter.dart';
 
 import '../controllers/activity_list_controller.dart';
@@ -13,6 +12,7 @@ import '../controllers/brew_controller.dart';
 import '../controllers/brew_run_controller.dart';
 import '../controllers/interval_run_controller.dart';
 import '../controllers/interval_timer_controller.dart';
+import '../routes/app_pages.dart';
 import '../routes/app_routes.dart';
 import '../screens/activity_list_screen.dart';
 import '../screens/brew_list_screen.dart';
@@ -285,9 +285,9 @@ class _BrewFloater extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppTheme.pillRadius),
               onTap:
                   () => unawaited(
-                    Get.toNamed<dynamic>(
+                    AppPages.push<dynamic>(
                       Routes.brew,
-                      arguments: controller.recipe,
+                      extra: controller.recipe,
                     ),
                   ),
               child: Padding(
@@ -393,9 +393,9 @@ class _IntervalFloater extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppTheme.pillRadius),
               onTap:
                   () => unawaited(
-                    Get.toNamed<dynamic>(
+                    AppPages.push<dynamic>(
                       Routes.intervalTimer,
-                      arguments: controller.timer,
+                      extra: controller.timer,
                     ),
                   ),
               child: Padding(
@@ -503,9 +503,9 @@ class _ActivityFloater extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppTheme.pillRadius),
               onTap:
                   () => unawaited(
-                    Get.toNamed<dynamic>(
+                    AppPages.push<dynamic>(
                       Routes.timer,
-                      arguments: controller.sequence,
+                      extra: controller.sequence,
                     ),
                   ),
               child: Padding(

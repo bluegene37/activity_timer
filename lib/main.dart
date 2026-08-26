@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:signals/signals_flutter.dart';
 
@@ -55,13 +54,12 @@ class MyApp extends StatelessWidget {
 
     return SignalBuilder(
       builder:
-          (_) => GetMaterialApp(
+          (_) => MaterialApp.router(
             debugShowCheckedModeBanner: false,
             title: 'Activity Timer',
-            // Lets controllers report failures and raise dialogs without
-            // reaching for a global BuildContext.
+            // Lets controllers report failures without reaching for a
+            // global BuildContext. The navigator key lives on the router.
             scaffoldMessengerKey: UiMessenger().messengerKey,
-            navigatorKey: UiMessenger().navigatorKey,
             theme:
                 appController.themeStyle.value == AppThemeStyle.coffee
                     ? BrewTheme.themeFor(Brightness.light)
@@ -74,8 +72,7 @@ class MyApp extends StatelessWidget {
                 appController
                     .themeMode
                     .value, // Follow exactly what's chosen in settings
-            initialRoute: AppPages.initial,
-            getPages: AppPages.routes,
+            routerConfig: AppPages.router,
           ),
     );
   }

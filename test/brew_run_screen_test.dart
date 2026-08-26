@@ -4,9 +4,9 @@ import 'package:activity_timer/models/brew_recipe.dart';
 import 'package:activity_timer/screens/brew_run_screen.dart';
 import 'package:activity_timer/services/cue_player.dart';
 import 'package:activity_timer/services/locator.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
 
 class _FakeClock {
   DateTime value = DateTime(2026, 1, 1, 8);
@@ -87,9 +87,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      GetMaterialApp(
-        home: BrewRunScreen(recipe: brew(), controller: controller),
-      ),
+      MaterialApp(home: BrewRunScreen(recipe: brew(), controller: controller)),
     );
     await tester.pumpAndSettle();
 
@@ -112,9 +110,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      GetMaterialApp(
-        home: BrewRunScreen(recipe: brew(), controller: controller),
-      ),
+      MaterialApp(home: BrewRunScreen(recipe: brew(), controller: controller)),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Start'));
@@ -140,9 +136,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      GetMaterialApp(
-        home: BrewRunScreen(recipe: brew(), controller: controller),
-      ),
+      MaterialApp(home: BrewRunScreen(recipe: brew(), controller: controller)),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Start'));
@@ -166,9 +160,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      GetMaterialApp(
-        home: BrewRunScreen(recipe: brew(), controller: controller),
-      ),
+      MaterialApp(home: BrewRunScreen(recipe: brew(), controller: controller)),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Start'));

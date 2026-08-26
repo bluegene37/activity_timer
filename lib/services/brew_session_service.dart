@@ -2,6 +2,7 @@ import 'package:signals/signals.dart';
 
 import '../controllers/brew_run_controller.dart';
 import '../models/brew_recipe.dart';
+import '../utils/signal_scheduling.dart';
 import 'cue_player.dart';
 
 /// Owns the one running brew, decoupled from any screen.
@@ -42,7 +43,7 @@ class BrewSessionService {
     }
     clear();
     final controller = BrewRunController(recipe: recipe, cuePlayer: cuePlayer);
-    active.value = controller;
+    setAfterBuild(active, controller);
     return controller;
   }
 
@@ -50,7 +51,7 @@ class BrewSessionService {
   /// the cue player.
   void clear() {
     active.value?.onClose();
-    active.value = null;
+    setAfterBuild(active, null);
   }
 
   /// Called when the run screen is popped: a brew that was never started —

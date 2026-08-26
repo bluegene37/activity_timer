@@ -1,4 +1,4 @@
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/activity_timer.dart';
 import '../models/brew_recipe.dart';
@@ -12,44 +12,98 @@ import '../screens/interval_timer_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/timer_list_screen.dart';
 import '../screens/timer_screen.dart';
+import '../services/ui_messenger.dart';
 import 'app_routes.dart';
 
+/// The app's router.
+///
+/// Routes carry their argument in go_router's `extra`, which — unlike GetX's
+/// named routes — keeps the result type honest: `push<T>` really does return
+/// `Future<T?>`, so pushes can be typed again rather than pushed as
+/// `dynamic` and narrowed by hand.
 abstract final class AppPages {
   static const initial = Routes.home;
 
-  static final List<GetPage<dynamic>> routes = [
-    GetPage<void>(name: Routes.home, page: () => const MainNavigation()),
-    GetPage<void>(name: Routes.timerList, page: () => const TimerListScreen()),
-    GetPage<void>(
-      name: Routes.timer,
-      page: () => TimerScreen(sequence: Get.arguments as TimerSequence),
+  /// The app's router. Built once for the running app.
+  static final GoRouter router = createRouter();
+
+  /// A fresh router over the same routes.
+  ///
+  /// Each one owns its route-information state, so tests that mount several
+  /// apps in a row do not inherit the previous one's location — or its
+  /// `extra`, which comes back as a decoded map rather than the object that
+  /// was pushed.
+  static GoRouter createRouter({String initialLocation = initial}) => GoRouter(
+    // Shared with UiMessenger so controllers can raise dialogs and route
+    // without a BuildContext.
+    navigatorKey: UiMessenger().navigatorKey,
+    initialLocation: initialLocation,
+    routes: routes,
+  );
+
+  static final List<RouteBase> routes = [
+    GoRoute(
+      path: Routes.home,
+      builder: (context, state) => const MainNavigation(),
     ),
-    GetPage<ActivityTimer>(
-      name: Routes.editTimer,
-      page: () => EditTimerScreen(timer: Get.arguments as ActivityTimer),
+    GoRoute(
+      path: Routes.timerList,
+      builder:
+          (context, state) =>
+              TimerListScreen(sequence: state.extra as TimerSequence?),
     ),
-    GetPage<void>(
-      name: Routes.intervalTimer,
-      page: () => IntervalTimerScreen(timer: Get.arguments as IntervalTimer),
+    GoRoute(
+      path: Routes.timer,
+      builder:
+          (context, state) =>
+              TimerScreen(sequence: state.extra! as TimerSequence),
     ),
-    GetPage<bool>(
-      name: Routes.editIntervalTimer,
-      page: () {
-        final args = Get.arguments as EditIntervalTimerArgs;
+    GoRoute(
+      path: Routes.editTimer,
+      builder:
+          (context, state) =>
+              EditTimerScreen(timer: state.extra! as ActivityTimer),
+    ),
+    GoRoute(
+      path: Routes.intervalTimer,
+      builder:
+          (context, state) =>
+              IntervalTimerScreen(timer: state.extra! as IntervalTimer),
+    ),
+    GoRoute(
+      path: Routes.editIntervalTimer,
+      builder: (context, state) {
+        final args = state.extra! as EditIntervalTimerArgs;
         return EditIntervalTimerScreen(timer: args.timer, isNew: args.isNew);
       },
     ),
-    GetPage<void>(
-      name: Routes.editBrew,
-      page: () {
-        final args = Get.arguments as EditBrewArgs;
+    GoRoute(
+      path: Routes.editBrew,
+      builder: (context, state) {
+        final args = state.extra! as EditBrewArgs;
         return BrewEditScreen(recipe: args.recipe, isNew: args.isNew);
       },
     ),
-    GetPage<void>(
-      name: Routes.brew,
-      page: () => BrewRunScreen(recipe: Get.arguments as BrewRecipe),
+    GoRoute(
+      path: Routes.brew,
+      builder:
+          (context, state) => BrewRunScreen(recipe: state.extra! as BrewRecipe),
     ),
-    GetPage<void>(name: Routes.settings, page: () => const SettingsScreen()),
+    GoRoute(
+      path: Routes.settings,
+      builder: (context, state) => const SettingsScreen(),
+    ),
   ];
+
+  /// Pushes a route from anywhere, including code with no `BuildContext`.
+  ///
+  /// Returns null when there is no live router (a widget test that pumped a
+  /// bare screen), so callers degrade instead of throwing.
+  static Future<T?> push<T>(String path, {Object? extra}) {
+    final context = UiMessenger().navigatorKey.currentContext;
+    if (context == null) {
+      return Future<T?>.value();
+    }
+    return GoRouter.of(context).push<T>(path, extra: extra);
+  }
 }

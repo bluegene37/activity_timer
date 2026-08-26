@@ -30,8 +30,16 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
   // The session service owns the production controller, so popping this
   // screen minimizes a running schedule instead of killing it. The engine —
   // schedule normalization, ticking, alarms — lives in the controller.
-  late final IntervalRunController _c =
-      widget.controller ?? IntervalSessionService().obtain(widget.timer);
+  // Claiming the session writes to the service's signal, so it happens in
+  // initState — a write during build would mark the tree dirty mid-build.
+  late final IntervalRunController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = widget.controller ?? IntervalSessionService().obtain(widget.timer);
+  }
+
   final _settings = AppSettings();
 
   Color _getTimerColor(double progress, ColorScheme colorScheme) {

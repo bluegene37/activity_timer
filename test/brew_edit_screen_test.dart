@@ -7,7 +7,6 @@ import 'package:activity_timer/services/database_service.dart';
 import 'package:activity_timer/services/locator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 
 /// The actually-rendered text of the `TextFormField` at [key] -- its
@@ -67,7 +66,7 @@ void main() {
 
   testWidgets('shows targets in grams, never fractions', (tester) async {
     await tester.pumpWidget(
-      GetMaterialApp(home: BrewEditScreen(recipe: recipe(), isNew: false)),
+      MaterialApp(home: BrewEditScreen(recipe: recipe(), isNew: false)),
     );
     await tester.pumpAndSettle();
 
@@ -82,7 +81,7 @@ void main() {
 
   testWidgets('changing the dose restates every target', (tester) async {
     await tester.pumpWidget(
-      GetMaterialApp(home: BrewEditScreen(recipe: recipe(), isNew: false)),
+      MaterialApp(home: BrewEditScreen(recipe: recipe(), isNew: false)),
     );
     await tester.pumpAndSettle();
 
@@ -102,7 +101,7 @@ void main() {
     broken.steps[1].pourToFraction = 0.5; // last pour no longer reaches total
 
     await tester.pumpWidget(
-      GetMaterialApp(home: BrewEditScreen(recipe: broken, isNew: true)),
+      MaterialApp(home: BrewEditScreen(recipe: broken, isNew: true)),
     );
     await tester.pumpAndSettle();
 
@@ -120,7 +119,7 @@ void main() {
     final fresh = recipe();
 
     await tester.pumpWidget(
-      GetMaterialApp(home: BrewEditScreen(recipe: fresh, isNew: true)),
+      MaterialApp(home: BrewEditScreen(recipe: fresh, isNew: true)),
     );
     await tester.pumpAndSettle();
 
@@ -176,7 +175,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      GetMaterialApp(home: BrewEditScreen(recipe: fractional, isNew: true)),
+      MaterialApp(home: BrewEditScreen(recipe: fractional, isNew: true)),
     );
     await tester.pumpAndSettle();
 
@@ -216,7 +215,7 @@ void main() {
     // Push the editor onto a real Navigator stack (rather than using it as
     // `home:`) so there is something to pop back to.
     await tester.pumpWidget(
-      GetMaterialApp(
+      MaterialApp(
         home: Builder(
           builder:
               (context) => Scaffold(
@@ -263,7 +262,7 @@ void main() {
     'reordering steps moves their rendered fields, not just their data',
     (tester) async {
       await tester.pumpWidget(
-        GetMaterialApp(home: BrewEditScreen(recipe: recipe(), isNew: false)),
+        MaterialApp(home: BrewEditScreen(recipe: recipe(), isNew: false)),
       );
       await tester.pumpAndSettle();
 
@@ -301,7 +300,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      GetMaterialApp(home: BrewEditScreen(recipe: threeSteps, isNew: false)),
+      MaterialApp(home: BrewEditScreen(recipe: threeSteps, isNew: false)),
     );
     await tester.pumpAndSettle();
 

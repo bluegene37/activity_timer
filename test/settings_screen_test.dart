@@ -7,7 +7,6 @@ import 'package:activity_timer/services/locator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 
 void main() {
@@ -41,7 +40,7 @@ void main() {
   ) async {
     setUpLocator();
 
-    await tester.pumpWidget(const GetMaterialApp(home: SettingsScreen()));
+    await tester.pumpWidget(const MaterialApp(home: SettingsScreen()));
     await tester.pumpAndSettle();
 
     // Three-way theme selector

@@ -3,11 +3,11 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import 'package:signals/signals_flutter.dart';
 
 import '../models/activity_timer.dart';
 import '../models/session_history.dart';
+import '../routes/app_pages.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
 import '../services/ui_messenger.dart';
@@ -47,7 +47,7 @@ class ActivityListController {
     isLoading.value = true;
     try {
       final loadedSequences = await _databaseService.getAllActivitySequences();
-      sequences.assignAll(loadedSequences);
+      sequences.value = List.of(loadedSequences);
     } catch (e) {
       UiMessenger().showMessage(
         'Failed to load activities: $e',
@@ -61,7 +61,7 @@ class ActivityListController {
   Future<void> loadSessionHistory() async {
     try {
       final history = await _databaseService.getSessionHistory();
-      sessionHistory.assignAll(history);
+      sessionHistory.value = List.of(history);
     } catch (_) {}
   }
 
@@ -260,7 +260,7 @@ class ActivityListController {
         await _databaseService.createActivitySequence(newSequence);
         sequences.add(newSequence);
 
-        unawaited(Get.toNamed<void>(Routes.timerList, arguments: newSequence));
+        unawaited(AppPages.push<void>(Routes.timerList, extra: newSequence));
       } catch (e) {
         UiMessenger().showMessage(
           'Failed to create activity: $e',

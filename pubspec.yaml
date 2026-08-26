@@ -17,7 +17,6 @@ dependencies:
   path_provider: ^2.1.1
   uuid: ^4.2.1
   intl: ^0.20.2
-  get: ^4.7.2
   hive_ce: ^2.16.0
   hive_ce_flutter: ^2.3.3
   wakelock_plus: ^1.7.0

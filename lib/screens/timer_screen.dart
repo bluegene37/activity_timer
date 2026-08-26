@@ -32,8 +32,16 @@ class _TimerScreenState extends State<TimerScreen> {
   // The session service owns the production controller, so popping this
   // screen minimizes the routine instead of killing it. The engine — the
   // clock, cues, looping, alarms, history — lives in the controller.
-  late final ActivityRunController _c =
-      widget.controller ?? ActivitySessionService().obtain(widget.sequence);
+  // Claiming the session writes to the service's signal, so it happens in
+  // initState — a write during build would mark the tree dirty mid-build.
+  late final ActivityRunController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = widget.controller ?? ActivitySessionService().obtain(widget.sequence);
+  }
+
   final _settings = AppSettings();
 
   @override

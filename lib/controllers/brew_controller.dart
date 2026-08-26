@@ -1,7 +1,7 @@
-import 'package:get/get.dart';
 import 'package:signals/signals_flutter.dart';
 
 import '../models/brew_recipe.dart';
+import '../routes/app_pages.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
 import '../services/ui_messenger.dart';
@@ -44,7 +44,7 @@ class BrewController {
     try {
       final stored = await _databaseService.getAllBrewRecipes();
       stored.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      recipes.assignAll(stored);
+      recipes.value = List.of(stored);
     } catch (e) {
       UiMessenger().showMessage('Failed to load brews: $e', title: 'Error');
     } finally {
@@ -55,12 +55,9 @@ class BrewController {
   Future<void> refreshRecipes() => loadRecipes();
 
   Future<void> addNewBrew() async {
-    // GetX builds every named route as `GetPageRoute<dynamic>`, so pushing with
-    // a concrete result type throws inside `Navigator.pushNamed`. Push untyped
-    // and narrow the result here.
-    final result = await Get.toNamed<dynamic>(
+    final result = await AppPages.push<dynamic>(
       Routes.editBrew,
-      arguments: (recipe: starterRecipe(), isNew: true),
+      extra: (recipe: starterRecipe(), isNew: true),
     );
 
     if (result == true) {
@@ -69,9 +66,9 @@ class BrewController {
   }
 
   Future<void> editBrew(BrewRecipe recipe) async {
-    final result = await Get.toNamed<dynamic>(
+    final result = await AppPages.push<dynamic>(
       Routes.editBrew,
-      arguments: (recipe: recipe, isNew: false),
+      extra: (recipe: recipe, isNew: false),
     );
 
     if (result == true) {

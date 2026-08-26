@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:activity_timer/hive_registrar.g.dart';
 import 'package:activity_timer/navigation/main_navigation.dart';
 import 'package:activity_timer/services/locator.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 
 void main() {
@@ -45,7 +45,7 @@ void main() {
 
       setUpLocator();
 
-      await tester.pumpWidget(const GetMaterialApp(home: MainNavigation()));
+      await tester.pumpWidget(const MaterialApp(home: MainNavigation()));
       // This screen animates continuously, so pumpAndSettle never settles;
       // bounded pumps are the established idiom for this widget tree.
       for (var i = 0; i < 5; i++) {
@@ -100,7 +100,7 @@ void main() {
 
     setUpLocator();
 
-    await tester.pumpWidget(const GetMaterialApp(home: MainNavigation()));
+    await tester.pumpWidget(const MaterialApp(home: MainNavigation()));
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(milliseconds: 500));
     }

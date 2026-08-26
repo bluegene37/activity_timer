@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:signals/signals_flutter.dart';
 
 import '../controllers/brew_controller.dart';
 import '../models/brew_recipe.dart';
+import '../routes/app_pages.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
 import '../services/locator.dart';
@@ -135,9 +135,9 @@ class BrewListScreen extends StatelessWidget {
                         child: InkWell(
                           onTap:
                               () => unawaited(
-                                Get.toNamed<dynamic>(
+                                AppPages.push<dynamic>(
                                   Routes.brew,
-                                  arguments: recipe,
+                                  extra: recipe,
                                 ),
                               ),
                           child: Padding(

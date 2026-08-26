@@ -8,8 +8,8 @@ import 'package:activity_timer/theme/app_theme.dart';
 import 'package:activity_timer/theme/brew_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:signals/signals_flutter.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -142,21 +142,25 @@ void main() {
     // AnimatedDefaultTextStyle lerps its old resolved text style into the
     // new one. Pump mid-animation frames in both directions and demand
     // silence.
-    final style = AppThemeStyle.ios.obs;
+    final style = signal(AppThemeStyle.ios);
 
     await tester.pumpWidget(
-      Obx(
-        () => MaterialApp(
-          theme:
-              style.value == AppThemeStyle.coffee
-                  ? BrewTheme.themeFor(Brightness.light)
-                  : AppTheme.getLightTheme(AppSettings.defaultThemeColor),
-          home: Scaffold(
-            body: Center(
-              child: ElevatedButton(onPressed: () {}, child: const Text('go')),
+      SignalBuilder(
+        builder:
+            (_) => MaterialApp(
+              theme:
+                  style.value == AppThemeStyle.coffee
+                      ? BrewTheme.themeFor(Brightness.light)
+                      : AppTheme.getLightTheme(AppSettings.defaultThemeColor),
+              home: Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    child: const Text('go'),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
       ),
     );
     await tester.pump();

@@ -1,10 +1,11 @@
-import 'package:get/get.dart';
+import 'dart:async';
+
 import 'package:signals/signals_flutter.dart';
 
 import '../models/activity_timer.dart';
 import '../models/interval_phase.dart';
-import '../screens/edit_timer_screen.dart';
-import '../screens/timer_screen.dart';
+import '../routes/app_pages.dart';
+import '../routes/app_routes.dart';
 import '../services/database_service.dart';
 import '../services/ui_messenger.dart';
 import '../utils/time_format.dart';
@@ -15,10 +16,11 @@ class TimerListController {
   // Reactive variables
   final sequence = signal(TimerSequence(name: '', timers: []));
 
-  void onInit() {
-    if (Get.arguments case final TimerSequence args) {
-      sequence.value = args;
-    }
+  void onInit() {}
+
+  /// Points the controller at [incoming], which the route supplies.
+  void load(TimerSequence incoming) {
+    sequence.value = incoming;
   }
 
   Future<void> _reloadSequence() async {
@@ -39,8 +41,9 @@ class TimerListController {
       phase: phase,
     );
 
-    final result = await Get.to<ActivityTimer>(
-      () => EditTimerScreen(timer: newTimer, isNew: true),
+    final result = await AppPages.push<ActivityTimer>(
+      Routes.editTimer,
+      extra: newTimer,
     );
 
     if (result != null) {
@@ -62,8 +65,9 @@ class TimerListController {
     if (index < 0 || index >= sequence.value.timers.length) return;
     final timer = sequence.value.timers[index];
 
-    final result = await Get.to<ActivityTimer>(
-      () => EditTimerScreen(timer: timer),
+    final result = await AppPages.push<ActivityTimer>(
+      Routes.editTimer,
+      extra: timer,
     );
 
     if (result != null) {
@@ -174,7 +178,7 @@ class TimerListController {
       return;
     }
 
-    Get.to<void>(() => TimerScreen(sequence: sequence.value));
+    unawaited(AppPages.push<void>(Routes.timer, extra: sequence.value));
   }
 
   String formatDuration(int seconds) => TimeFormat.clock(seconds);

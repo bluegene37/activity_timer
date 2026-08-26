@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:signals/signals_flutter.dart';
 
 import '../controllers/interval_timer_controller.dart';
 import '../models/alarm_sound.dart';
 import '../models/interval_timer.dart';
+import '../routes/app_pages.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
 import '../services/locator.dart';
@@ -49,11 +49,9 @@ class IntervalTimerListScreen extends StatelessWidget {
   }
 
   Future<void> _editIntervalTimer(IntervalTimer timer) async {
-    // Named routes always come back as `GetPageRoute<dynamic>`; see
-    // `IntervalTimerController.addNewIntervalTimer`.
-    final result = await Get.toNamed<dynamic>(
+    final result = await AppPages.push<dynamic>(
       Routes.editIntervalTimer,
-      arguments: (timer: timer, isNew: false),
+      extra: (timer: timer, isNew: false),
     );
 
     if (result == true) {
@@ -63,7 +61,7 @@ class IntervalTimerListScreen extends StatelessWidget {
 
   void _startIntervalTimer(IntervalTimer timer) {
     unawaited(HapticFeedback.selectionClick());
-    unawaited(Get.toNamed<void>(Routes.intervalTimer, arguments: timer));
+    unawaited(AppPages.push<void>(Routes.intervalTimer, extra: timer));
   }
 
   @override

@@ -4,7 +4,6 @@ import 'package:activity_timer/hive_registrar.g.dart';
 import 'package:activity_timer/models/activity_timer.dart';
 import 'package:activity_timer/models/alarm_sound.dart';
 import 'package:activity_timer/models/interval_phase.dart';
-import 'package:activity_timer/navigation/main_navigation.dart';
 import 'package:activity_timer/routes/app_pages.dart';
 import 'package:activity_timer/services/activity_session_service.dart';
 import 'package:activity_timer/services/cue_player.dart';
@@ -13,7 +12,6 @@ import 'package:activity_timer/services/locator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 
 class _SilentCuePlayer implements CuePlayer {
@@ -93,7 +91,7 @@ void main() {
 
     setUpLocator();
     await tester.pumpWidget(
-      GetMaterialApp(getPages: AppPages.routes, home: const MainNavigation()),
+      MaterialApp.router(routerConfig: AppPages.createRouter()),
     );
     await settle(tester);
   }

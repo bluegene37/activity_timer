@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 import '../components/alarm_sound_picker.dart';
 import '../models/alarm_sound.dart';
@@ -22,16 +21,14 @@ class SettingsController {
     unawaited(_cuePlayer.dispose());
   }
 
-  Future<void> setThemeMode(ThemeMode mode) async {
-    await _appController.setThemeMode(mode);
-    Get.changeThemeMode(mode);
-  }
+  // MaterialApp is wrapped in a SignalBuilder that reads these values, so
+  // writing the signal is all it takes to restyle the app — no explicit
+  // "rebuild everything" call.
+  Future<void> setThemeMode(ThemeMode mode) =>
+      _appController.setThemeMode(mode);
 
-  Future<void> setThemeColor(Color color) async {
-    await _appController.setThemeColor(color);
-    // Force rebuild of the app with new theme
-    unawaited(Get.forceAppUpdate());
-  }
+  Future<void> setThemeColor(Color color) =>
+      _appController.setThemeColor(color);
 
   Future<void> toggleSound(bool enabled) async {
     await _appController.setSoundEnabled(enabled);

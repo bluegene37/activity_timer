@@ -7,7 +7,6 @@ import 'package:activity_timer/screens/activity_list_screen.dart';
 import 'package:activity_timer/services/locator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 
 void main() {
@@ -50,7 +49,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
 
-      await tester.pumpWidget(const GetMaterialApp(home: ActivityListScreen()));
+      await tester.pumpWidget(const MaterialApp(home: ActivityListScreen()));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 

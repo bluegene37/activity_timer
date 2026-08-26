@@ -5,8 +5,8 @@ import 'package:activity_timer/hive_registrar.g.dart';
 import 'package:activity_timer/screens/brew_list_screen.dart';
 import 'package:activity_timer/services/database_service.dart';
 import 'package:activity_timer/services/locator.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 
 void main() {
@@ -36,7 +36,7 @@ void main() {
   });
 
   testWidgets('empty state invites the library', (tester) async {
-    await tester.pumpWidget(const GetMaterialApp(home: BrewListScreen()));
+    await tester.pumpWidget(const MaterialApp(home: BrewListScreen()));
     await tester.pumpAndSettle();
 
     expect(find.text('Brew Library'), findsOneWidget);
@@ -53,7 +53,7 @@ void main() {
       () => DatabaseService().createBrewRecipe(template.cloneAsNew()),
     );
 
-    await tester.pumpWidget(const GetMaterialApp(home: BrewListScreen()));
+    await tester.pumpWidget(const MaterialApp(home: BrewListScreen()));
     await tester.pumpAndSettle();
 
     expect(find.text('Kalita Wave'), findsOneWidget);
@@ -65,7 +65,7 @@ void main() {
   testWidgets('the library sheet clones a built-in into the list', (
     tester,
   ) async {
-    await tester.pumpWidget(const GetMaterialApp(home: BrewListScreen()));
+    await tester.pumpWidget(const MaterialApp(home: BrewListScreen()));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Brew Library'));

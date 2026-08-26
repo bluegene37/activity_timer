@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:activity_timer/controllers/interval_timer_controller.dart';
@@ -10,9 +11,11 @@ import 'package:activity_timer/screens/brew_edit_screen.dart';
 import 'package:activity_timer/screens/brew_run_screen.dart';
 import 'package:activity_timer/services/database_service.dart';
 import 'package:activity_timer/services/locator.dart';
+import 'package:activity_timer/services/ui_messenger.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hive_ce/hive.dart';
 
 /// The route table casts `Get.arguments` to a concrete type, so a caller that
@@ -25,6 +28,22 @@ void main() {
   late Directory tempDir;
 
   setUpAll(() async {
+    // Pushing a run route now builds the real screen, which reaches for
+    // audio and the wakelock.
+    for (final channel in const [
+      MethodChannel('xyz.luan/audioplayers'),
+      MethodChannel('xyz.luan/audioplayers.global'),
+    ]) {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async => null);
+    }
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMessageHandler(
+          'dev.flutter.pigeon.wakelock_plus_platform_interface.WakelockPlusApi.toggle',
+          (message) async =>
+              const StandardMessageCodec().encodeMessage(<Object?>[null]),
+        );
+
     tempDir = await Directory.systemTemp.createTemp('app_routes_test');
     Hive.init(tempDir.path);
     Hive.registerAdapters();
@@ -35,6 +54,8 @@ void main() {
     await Hive.close();
     await tempDir.delete(recursive: true);
   });
+
+  setUp(setUpLocator);
 
   tearDown(resetLocator);
 
@@ -70,25 +91,17 @@ void main() {
     ],
   );
 
-  /// Pumps a GetX app whose only job is to push [route] with [arguments].
+  /// Pumps the real router, then pushes [route] carrying [arguments].
   Future<void> pushRoute(
     WidgetTester tester,
     String route,
     Object? arguments,
   ) async {
     await tester.pumpWidget(
-      GetMaterialApp(
-        getPages: AppPages.routes,
-        home: Builder(
-          builder:
-              (context) => TextButton(
-                onPressed: () => Get.toNamed<void>(route, arguments: arguments),
-                child: const Text('go'),
-              ),
-        ),
-      ),
+      MaterialApp.router(routerConfig: AppPages.createRouter()),
     );
-    await tester.tap(find.text('go'));
+    await tester.pumpAndSettle();
+    unawaited(AppPages.push<void>(route, extra: arguments));
     await tester.pumpAndSettle();
   }
 
@@ -105,9 +118,15 @@ void main() {
       Routes.settings,
     ];
 
+    final declared =
+        AppPages.routes
+            .whereType<GoRoute>()
+            .map((route) => route.path)
+            .toList();
+
     for (final name in names) {
       expect(
-        AppPages.routes.where((page) => page.name == name),
+        declared.where((path) => path == name),
         hasLength(1),
         reason: 'route $name should be declared exactly once',
       );
@@ -164,7 +183,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      GetMaterialApp(getPages: AppPages.routes, home: const Scaffold()),
+      MaterialApp.router(routerConfig: AppPages.createRouter()),
     );
     await tester.pumpAndSettle();
 
@@ -180,7 +199,7 @@ void main() {
     final saved = sampleIntervalTimer();
     await tester.runAsync(() => DatabaseService().createIntervalTimer(saved));
 
-    Get.back<bool>(result: true);
+    UiMessenger().navigatorKey.currentState!.pop(true);
     await tester.pumpAndSettle();
     await pending;
 

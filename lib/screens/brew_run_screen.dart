@@ -21,8 +21,16 @@ class BrewRunScreen extends StatefulWidget {
 class _BrewRunScreenState extends State<BrewRunScreen> {
   // The session service owns the production controller, so popping this
   // screen minimizes a running brew instead of killing it.
-  late final BrewRunController _controller =
-      widget.controller ?? BrewSessionService().obtain(widget.recipe);
+  // Claiming the session writes to the service's signal, so it happens in
+  // initState — a write during build would mark the tree dirty mid-build.
+  late final BrewRunController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        widget.controller ?? BrewSessionService().obtain(widget.recipe);
+  }
 
   String _clock(Duration duration) {
     final minutes = duration.inMinutes;

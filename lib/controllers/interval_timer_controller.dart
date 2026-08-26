@@ -1,7 +1,7 @@
-import 'package:get/get.dart';
 import 'package:signals/signals_flutter.dart';
 
 import '../models/interval_timer.dart';
+import '../routes/app_pages.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
 import '../services/ui_messenger.dart';
@@ -22,7 +22,7 @@ class IntervalTimerController {
     try {
       final timers = await _databaseService.getAllIntervalTimers();
       timers.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      intervalTimers.assignAll(timers);
+      intervalTimers.value = List.of(timers);
     } catch (e) {
       UiMessenger().showMessage(
         'Failed to load interval timers: $e',
@@ -38,12 +38,9 @@ class IntervalTimerController {
     final startTime = DateTime(now.year, now.month, now.day, now.hour, 0);
     final endTime = startTime.add(const Duration(hours: 8));
 
-    // GetX builds every named route as `GetPageRoute<dynamic>`, so pushing with
-    // a concrete result type throws inside `Navigator.pushNamed`. Push untyped
-    // and narrow the result here.
-    final result = await Get.toNamed<dynamic>(
+    final result = await AppPages.push<dynamic>(
       Routes.editIntervalTimer,
-      arguments: (
+      extra: (
         timer: IntervalTimer(
           name: 'New Interval Timer',
           startTime: startTime,

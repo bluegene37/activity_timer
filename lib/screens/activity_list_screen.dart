@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:signals/signals_flutter.dart';
 
 import '../controllers/activity_list_controller.dart';
 import '../models/activity_timer.dart';
+import '../routes/app_pages.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
 import '../services/locator.dart';
@@ -504,9 +504,9 @@ class ActivityListScreen extends StatelessWidget {
                                   Expanded(
                                     child: OutlinedButton.icon(
                                       onPressed:
-                                          () => Get.toNamed<void>(
+                                          () => AppPages.push<void>(
                                             Routes.timerList,
-                                            arguments: sequence,
+                                            extra: sequence,
                                           ),
                                       icon: const Icon(
                                         CupertinoIcons.slider_horizontal_3,
@@ -533,14 +533,14 @@ class ActivityListScreen extends StatelessWidget {
                                           HapticFeedback.selectionClick(),
                                         );
                                         if (sequence.timers.isEmpty) {
-                                          Get.toNamed<void>(
+                                          AppPages.push<void>(
                                             Routes.timerList,
-                                            arguments: sequence,
+                                            extra: sequence,
                                           );
                                         } else {
-                                          Get.toNamed<void>(
+                                          AppPages.push<void>(
                                             Routes.timer,
-                                            arguments: sequence,
+                                            extra: sequence,
                                           );
                                         }
                                       },

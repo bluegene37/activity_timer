@@ -3,11 +3,13 @@ import 'dart:io';
 import 'package:activity_timer/controllers/brew_controller.dart';
 import 'package:activity_timer/hive_registrar.g.dart';
 import 'package:activity_timer/routes/app_pages.dart';
+import 'package:activity_timer/screens/brew_edit_screen.dart';
 import 'package:activity_timer/services/database_service.dart';
 import 'package:activity_timer/services/locator.dart';
+import 'package:activity_timer/services/ui_messenger.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 
 void main() {
@@ -16,6 +18,22 @@ void main() {
   late Directory tempDir;
 
   setUpAll(() async {
+    // Pushing a run route now builds the real screen, which reaches for
+    // audio and the wakelock.
+    for (final channel in const [
+      MethodChannel('xyz.luan/audioplayers'),
+      MethodChannel('xyz.luan/audioplayers.global'),
+    ]) {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async => null);
+    }
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMessageHandler(
+          'dev.flutter.pigeon.wakelock_plus_platform_interface.WakelockPlusApi.toggle',
+          (message) async =>
+              const StandardMessageCodec().encodeMessage(<Object?>[null]),
+        );
+
     tempDir = await Directory.systemTemp.createTemp('brew_controller_test');
     Hive.init(tempDir.path);
     Hive.registerAdapters();
@@ -26,6 +44,8 @@ void main() {
     await Hive.close();
     await tempDir.delete(recursive: true);
   });
+
+  setUp(setUpLocator);
 
   tearDown(() async {
     await resetLocator();
@@ -38,7 +58,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      GetMaterialApp(getPages: AppPages.routes, home: const Scaffold()),
+      MaterialApp.router(routerConfig: AppPages.createRouter()),
     );
     await tester.pumpAndSettle();
 
@@ -68,7 +88,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      GetMaterialApp(getPages: AppPages.routes, home: const Scaffold()),
+      MaterialApp.router(routerConfig: AppPages.createRouter()),
     );
     await tester.pumpAndSettle();
 
@@ -95,7 +115,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      GetMaterialApp(getPages: AppPages.routes, home: const Scaffold()),
+      MaterialApp.router(routerConfig: AppPages.createRouter()),
     );
     await tester.pumpAndSettle();
 
@@ -109,11 +129,11 @@ void main() {
       isNull,
       reason: 'named routes must be pushed untyped',
     );
-    expect(Get.currentRoute, '/edit-brew');
+    expect(find.byType(BrewEditScreen), findsOneWidget);
 
     final saved = BrewController.starterRecipe()..name = 'Saved from editor';
     await tester.runAsync(() => DatabaseService().createBrewRecipe(saved));
-    Get.back<bool>(result: true);
+    UiMessenger().navigatorKey.currentState!.pop(true);
     await tester.pumpAndSettle();
     await pending;
 

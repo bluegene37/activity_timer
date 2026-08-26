@@ -6,12 +6,32 @@ import 'package:flutter/services.dart';
 import 'package:signals/signals_flutter.dart';
 
 import '../controllers/timer_list_controller.dart';
+import '../models/activity_timer.dart';
 import '../models/interval_phase.dart';
 import '../services/locator.dart';
 import '../theme/app_theme.dart';
 
-class TimerListScreen extends StatelessWidget {
-  const TimerListScreen({super.key});
+class TimerListScreen extends StatefulWidget {
+  const TimerListScreen({super.key, this.sequence});
+
+  /// The routine to show, handed over by the route.
+  final TimerSequence? sequence;
+
+  @override
+  State<TimerListScreen> createState() => _TimerListScreenState();
+}
+
+class _TimerListScreenState extends State<TimerListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Handing the routine to the controller writes a signal, so it must not
+    // happen during build.
+    final incoming = widget.sequence;
+    if (incoming != null) {
+      locator<TimerListController>().load(incoming);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
