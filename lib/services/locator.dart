@@ -7,11 +7,11 @@ import '../controllers/interval_timer_controller.dart';
 import '../controllers/settings_controller.dart';
 import '../controllers/timer_list_controller.dart';
 
-/// Where controllers are looked up, replacing `Get.put` / `Get.find`.
+/// Where controllers are looked up.
 ///
-/// Lazy singletons, so a controller is built the first time a screen asks
-/// for it and reused after — the behavior `Get.lazyPut` gave us, without
-/// tying controller lifetime to a route.
+/// Lazy singletons: a controller is built the first time a screen asks for
+/// it and reused after, so its lifetime follows the app rather than any one
+/// route.
 final GetIt locator = GetIt.instance;
 
 /// Called once at startup, and again by tests between cases.
@@ -36,6 +36,6 @@ void setUpLocator() {
     );
 }
 
-/// Drops every registration. Tests call this between cases the way they
-/// used to call `Get.reset()`.
+/// Drops every registration. Tests call this between cases so one case's
+/// controller state cannot leak into the next.
 Future<void> resetLocator() => locator.reset();

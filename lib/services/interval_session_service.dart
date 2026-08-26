@@ -45,8 +45,8 @@ class IntervalSessionService {
       timer: timer,
       cuePlayer: cuePlayer,
     );
-    // Screens rely on onInit having run; GetxController only calls it when
-    // registered, so trigger it explicitly for this service-owned instance.
+    // Nothing constructs controllers for us, so the service runs the
+    // lifecycle hook screens rely on.
     controller.onInit();
     setAfterBuild(active, controller);
     return controller;

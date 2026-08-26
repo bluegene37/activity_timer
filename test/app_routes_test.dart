@@ -18,10 +18,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_ce/hive.dart';
 
-/// The route table casts `Get.arguments` to a concrete type, so a caller that
-/// passes the wrong shape (a `Map` where a record is expected, say) compiles
-/// fine and only blows up when the page is built. These tests pin the
-/// argument contract for the routes that take one.
+/// go_router's `extra` is `Object?`, so a route builder casting it to a
+/// concrete type compiles fine no matter what a caller passes, and only
+/// blows up when the page is built. These tests pin the argument contract
+/// for every route that takes one.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -176,9 +176,9 @@ void main() {
     expect(find.byType(BrewRunScreen), findsOneWidget);
   });
 
-  // GetX generates every named route as `GetPageRoute<dynamic>`, so pushing one
-  // with a concrete result type (`Get.toNamed<bool>`) blows up on a cast inside
-  // `Navigator.pushNamed`. These pin the untyped push plus the `== true` narrowing.
+  // A push that opens an editor and acts on its result: these pin the
+  // round trip, which is where a wrong argument shape or a mishandled
+  // result would show up.
   testWidgets('addNewIntervalTimer opens the edit screen and reloads on save', (
     tester,
   ) async {

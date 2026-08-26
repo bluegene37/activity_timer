@@ -17,10 +17,9 @@ import 'app_routes.dart';
 
 /// The app's router.
 ///
-/// Routes carry their argument in go_router's `extra`, which — unlike GetX's
-/// named routes — keeps the result type honest: `push<T>` really does return
-/// `Future<T?>`, so pushes can be typed again rather than pushed as
-/// `dynamic` and narrowed by hand.
+/// Routes carry their argument in go_router's `extra`. Pushes are typed:
+/// `push<T>` returns `Future<T?>`, so a screen's result comes back as the
+/// type it was declared with.
 abstract final class AppPages {
   static const initial = Routes.home;
 

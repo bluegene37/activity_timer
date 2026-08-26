@@ -66,14 +66,8 @@ void main() {
     final controller = locator<BrewController>();
     final template = DatabaseService().getBrewTemplates().first;
 
-    // `addFromTemplate` ends in `Get.snackbar`, and the Hive write ahead of it
-    // only progresses for real inside `runAsync`. That puts the snackbar's
-    // auto-dismiss timer on a *real* clock too. If it isn't closed before
-    // leaving this real-async zone, that timer outlives the test and fires
-    // mid-navigation in whichever test runs next, corrupting GetX's route
-    // bookkeeping — the next test's `Get.toNamed`/`Get.back` pair then hangs
-    // forever instead of failing. Close it here, in the same zone that
-    // raised it.
+    // The Hive write inside `addFromTemplate` only progresses for real
+    // inside `runAsync`.
     await tester.runAsync(() async {
       await controller.addFromTemplate(template);
     });

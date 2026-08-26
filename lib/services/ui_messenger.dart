@@ -3,10 +3,9 @@ import 'package:flutter/material.dart';
 /// Shows messages and dialogs from places that have no `BuildContext`.
 ///
 /// Controllers must not import Flutter's widget tree, but they do need to
-/// report a failed save. GetX solved this with `Get.snackbar` reaching into
-/// a global context; this keeps the same convenience without the global —
-/// the app installs its keys once at startup, and everything else talks to
-/// this narrow interface.
+/// report a failed save. The app installs these keys once at startup, and
+/// everything else talks to this narrow interface — no global context, and
+/// nothing below the screen layer has to know how a message is shown.
 class UiMessenger {
   factory UiMessenger() => _instance;
 
