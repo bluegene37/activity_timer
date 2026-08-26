@@ -58,15 +58,17 @@ disk in a model, it belongs in a service.
 
 ```
 lib/
-  main.dart               Boot: Hive init → DB init → settings → GetX → runApp
+  main.dart               Boot: Hive → DB → settings → locator → runApp
   models/                 Hive types + pure logic. *.g.dart is GENERATED.
   services/               Singletons. One responsibility each.
     database_service.dart   All Hive box access. Nothing else opens a box.
     cue_player.dart         In-app audio + haptics for every timer.
+    locator.dart            get_it registrations for the controllers.
+    ui_messenger.dart       Messages and dialogs without a BuildContext.
     alarm_scheduler.dart    OS notifications for backgrounded sessions.
     brew_session_service.dart      Owns the one running brew.
     interval_session_service.dart  Owns the one running interval schedule.
-  controllers/            GetX controllers: list state and run engines.
+  controllers/            Plain classes: list state and run engines.
   screens/                One file per full-page screen.
   components/             Reusable widgets shared by 2+ screens.
   navigation/             MainNavigation: the tab shell and floating chips.
@@ -262,10 +264,9 @@ the leading slot; ending the session = X in the actions, behind a confirm.
 
 ### 6. Route — `lib/routes/`
 
-Add the name to `app_routes.dart`, the `GetPage` to `app_pages.dart`.
-
-> ⚠️ **Push with `Get.toNamed<dynamic>` and narrow the result.** A concrete
-> type parameter crashes at runtime — see [Known sharp edges](#known-sharp-edges).
+Add the name to `app_routes.dart` and the `GoRoute` to `app_pages.dart`,
+then push it with `AppPages.push<T>(Routes.x, extra: …)` — which works from
+controllers too, with no `BuildContext`.
 
 ### 7. Navigation — `lib/navigation/main_navigation.dart`
 
@@ -328,9 +329,15 @@ end of the test body.
 future from an `async` function hangs the test until the dialog closes; assign
 it to a variable the test reads instead.
 
-**Observable reads must sit inside the `Obx` closure.** Reading `x.value` in
-the enclosing `build` subscribes the widget to nothing; the screen renders
-once and then freezes. Compute inside `Obx(() { ... })`.
+**Signal reads must sit inside the `SignalBuilder` closure.** Reading
+`x.value` in the enclosing `build` subscribes the widget to nothing; the
+screen renders once and then freezes.
+
+**Writing a signal during build throws.** Claim sessions in `initState`
+and publish through `setAfterBuild()`.
+
+**Tests get their own router and registrations.** `AppPages.createRouter()`
+per pump, `setUpLocator()` in `setUp`, `resetLocator()` in `tearDown`.
 
 **A session service outlives the widget tree.** The pending-timer check runs
 before `addTearDown`, so any test that pumps a screen backed by a session
@@ -358,75 +365,56 @@ Reviewed 2026-08-26. Every direct dependency is on its latest version.
 | **timezone** | Required by the above for DST-correct scheduling. |
 | **intl**, **uuid**, **path_provider** | Boring, stable, correct. |
 | **flutter_launcher_icons**, **flutter_native_splash** | Build-time generators; zero runtime cost. |
+| **signals** | Fine-grained reactivity with the same mental model the code already used. Replaced GetX's state half. |
+| **go_router** | The Flutter-team-endorsed router. Typed pushes, so the GetX cast crash cannot recur. |
+| **get_it** | A service locator that does one thing. Lazy singletons replace `Get.lazyPut`. |
 
-### Keep, with eyes open
+### State, routing and DI (migrated off GetX, 2026-08-26)
 
-**`get` (GetX)** — used for state, DI, routing, and dialogs. The honest
-picture: one-package-does-everything, a thin maintenance bus factor, a v5 that
-has been "coming" for years, and an API sharp enough that it has already cost
-this project a production crash (typed named routes). The 2026 default for a
-new app would be **Riverpod + go_router**.
+GetX used to cover state, routing, DI and dialogs in one package. It is
+gone. Each part now has a single-purpose replacement, which is what makes
+the pieces individually swappable:
 
-**Recommendation: do not migrate in one go.** GetX is load-bearing across
-~20 files and 169 tests; a big-bang rewrite would burn days and re-open
-settled behavior for no user-visible gain. Instead, *contain* it now and
-migrate incrementally when it earns its keep:
-
-- New engines stay plain classes with injected edges — only their observable
-  fields use `Rx`. Both session services already follow this.
-- No `Get.context` inside controllers where a screen can pass what it needs.
-- Route pushes use `Get.toNamed<dynamic>` (below).
-
-Revisit if GetX goes a full year without a release, or if a second crash
-traces to its API.
-
-### If we do replace GetX: signals is the right fit here
-
-GetX is really four tools in one, and each part has a separate, simpler
-replacement. **`signals` is the recommended choice for the state half** —
-not because it is fashionable, but because it maps almost one-to-one onto
-what this codebase already writes, which makes the migration mechanical
-instead of architectural:
-
-| GetX today | signals equivalent | Notes |
+| Concern | Package | Idiom |
 | --- | --- | --- |
-| `final x = 0.obs;` | `final x = signal(0);` | same `.value` access |
-| `Obx(() => ...)` | `Watch((_) => ...)` | same "reads inside the closure" rule |
-| `Rxn<T>` | `signal<T?>(null)` | — |
-| `ever(x, cb)` | `effect(() => cb(x.value))` | — |
-| — | `computed(() => ...)` | derived values GetX has no clean answer for |
+| State | **signals** | `signal(0)`, `listSignal<T>([])`, `SignalBuilder(builder: …)` |
+| Routing | **go_router** | `AppPages.push<T>(Routes.x, extra: …)` |
+| DI | **get_it** | `locator<XController>()`, registered in `services/locator.dart` |
+| Messages / dialogs | Flutter | `UiMessenger()` holds the messenger and navigator keys |
 
-The other three parts do **not** come from signals, and pretending otherwise
-is how migrations stall:
+Why signals over Riverpod: it maps one-to-one onto what the code already
+wrote (`.obs` → `signal`, `Obx` → `SignalBuilder`), so the migration was
+mechanical rather than architectural. The app's structure is unchanged;
+only the reactive primitive is different.
 
-| GetX role | Replacement | Effort |
-| --- | --- | --- |
-| State | `signals` | Low — mechanical, one controller at a time |
-| Routing (`Get.toNamed`) | `go_router` | Medium — also retires the typed-route crash class for good |
-| DI (`Get.put` / `Get.find`) | plain singletons, or `get_it` | Low — the services already are plain singletons |
-| Dialogs / snackbars (`Get.dialog`, `Get.snackbar`) | `showDialog`, `ScaffoldMessenger` | Low — and removes the `Get.context` dependency |
+**Use `SignalBuilder`, not `Watch`.** `Watch` is deprecated in signals 7,
+and CI runs `analyze --fatal-infos`, so it fails the build.
 
-**Suggested order**, each step shippable on its own with the suite green:
+#### Three rules the migration bought the hard way
 
-1. **Dialogs and snackbars first.** Smallest surface, no state involved, and
-   it removes every `Get.context` call — the most fragile GetX usage here.
-2. **Routing to `go_router`.** Self-contained in `routes/`; delete the
-   `Get.toNamed<dynamic>` workaround along with it.
-3. **State, controller by controller.** Start with `BrewRunController` — it
-   is the smallest engine with the best test coverage, so the tests prove
-   the swap. Then interval, then activity, then the list controllers.
-4. **Drop `get` from pubspec** once nothing imports it.
+**Read signals inside the builder closure.** `SignalBuilder` subscribes to
+what its own closure touches. A read in the enclosing `build` subscribes to
+nothing and the screen freezes.
 
-Both libraries can coexist during steps 1–3, which is what makes this
-tractable: there is never a commit where the app is half-migrated and
-untestable. Rough size: the three run controllers expose 20-odd observables
-between them, so step 3 is a day's careful work, not a rewrite.
+**Never write a signal during build.** Claiming a session from a lazy field
+read inside `build` marks already-mounted watchers dirty mid-build, which
+Flutter rejects. Claim in `initState`, and publish through
+`setAfterBuild()` (`utils/signal_scheduling.dart`), which defers one frame
+when a build is already running. GetX tolerated this; signals is stricter,
+and correctly so.
 
-Why not Riverpod? It is the more common answer and a fine one, but it asks
-you to restructure ownership around providers — a genuine architectural
-change. signals leaves this app's structure exactly as it is and swaps only
-the reactive primitive, which is the cheaper, lower-risk path for a codebase
-that is already shipping.
+**Build a `GoRouter` per app, not one shared instance.** `AppPages.router`
+is the app's; tests call `AppPages.createRouter()`. A reused router
+restores the previous location, and a non-serializable `extra` comes back
+as a decoded `Map` rather than the object that was pushed.
+
+#### What `extra` costs
+
+Route arguments travel in go_router's `extra`, which is not deep-link or
+restoration safe. That is fine for an offline app with no deep links. If
+that changes, routes should take an id in the path (`/timer/:id`) and the
+screen should load the object — a bigger change, worth doing deliberately
+rather than by accident.
 
 ### Gaps worth deciding on
 
@@ -441,28 +429,20 @@ that is already shipping.
 
 ## Known sharp edges
 
-**GetX named routes are always `GetPageRoute<dynamic>`.** A concrete type
-parameter throws at runtime:
+**Route arguments are not type-checked.** go_router's `extra` is
+`Object?`, so a route builder casting to the wrong type compiles fine and
+fails when the page builds. `test/app_routes_test.dart` pins the argument
+shape of every route that takes one.
 
-```dart
-// CRASHES: type 'GetPageRoute<dynamic>' is not a subtype of 'Route<bool?>?'
-final ok = await Get.toNamed<bool>(Routes.editTimer);
-
-// CORRECT: push dynamic, narrow the result
-final result = await Get.toNamed<dynamic>(Routes.editTimer);
-if (result == true) { /* ... */ }
-```
-
-`Get.dialog<T>` and `Get.back<T>` keep concrete types — they do not go through
-the route generator.
+> Historical note: the GetX version of this was worse — every named route
+> was built as `GetPageRoute<dynamic>`, so `Get.toNamed<bool>` threw at
+> runtime and pushes had to be untyped and narrowed by hand. `push<T>` is
+> honest, so that whole workaround is gone.
 
 **Theme text styles must agree on `inherit`.** `MaterialApp` lerps `ThemeData`
 over ~200 ms on a theme switch, and `TextStyle.lerp` throws when two styles
 disagree. Both themes derive their button styles from the same base for this
 reason; `test/coffee_theme_test.dart` pumps mid-animation frames to prove it.
-
-**`Get.snackbar` inside `runAsync` schedules a real-clock timer.** Flush it
-with `pump(4s)` or `Get.closeAllSnackbars()` in the same zone.
 
 **The iOS Simulator MCP is broken on this machine.** Use:
 
