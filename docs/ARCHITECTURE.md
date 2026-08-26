@@ -4,6 +4,7 @@ How this app is put together, why it is put together that way, and the exact
 steps to add a feature without guessing.
 
 - [The app in one paragraph](#the-app-in-one-paragraph)
+- [The pattern, named](#the-pattern-named)
 - [Layers](#layers)
 - [Folder map](#folder-map)
 - [The three timer subsystems](#the-three-timer-subsystems)
@@ -26,9 +27,106 @@ audio and OS notifications.
 
 ---
 
+## The pattern, named
+
+**MVVM with a service layer.** Not Clean Architecture, and deliberately so —
+the reasoning is below, along with the trigger for changing our minds.
+
+| MVVM role | Lives in | Holds | Example |
+| --- | --- | --- | --- |
+| **Model** | `models/` | data + pure computation, no I/O | `BrewRecipe.targetGramsAt(i)` |
+| **View** | `screens/`, `components/` | layout and gestures only | `BrewRunScreen` |
+| **ViewModel** | `controllers/` | observable state + the logic that drives it | `BrewRunController` |
+| *(supporting)* | `services/` | I/O and cross-screen ownership | `DatabaseService`, `CuePlayer` |
+
+The View never reaches past the ViewModel for state, and the ViewModel never
+imports a widget:
+
+```
+View            SignalBuilder reads controller.remainingMs.value
+  |  calls methods                              ^
+  v                                             | signal changes
+ViewModel       controller.pause()  ────────────┘
+  |  calls
+  v
+Service         DatabaseService, CuePlayer, AlarmScheduler
+  |  reads/writes
+  v
+Model           TimerSequence, BrewRecipe
+```
+
+### Three deliberate deviations from textbook MVVM
+
+**1. Services own ViewModel lifetime.** In plain MVVM a View creates its
+ViewModel and both die together. Here a running timer must outlive its
+screen, so `XSessionService` owns the controller and the screen *borrows*
+it. That is the whole reason minimize-to-a-chip works.
+
+**2. Side-effecting services are interface-inverted; the database is not.**
+`CuePlayer` and `AlarmScheduler` are `abstract interface class` because
+tests must substitute them — audio and OS notifications cannot run in a
+widget test. `DatabaseService` is a concrete singleton, because Hive already
+runs fine in tests against a temp directory, so an interface would buy
+indirection and nothing else.
+
+**3. ViewModels take their edges as constructor parameters.** Manual
+dependency injection, no framework:
+
+```dart
+BrewRunController({
+  required this.recipe,
+  CuePlayer? cuePlayer,          // audio
+  AlarmScheduler? scheduler,     // OS notifications
+  DateTime Function()? clock,    // time itself
+});
+```
+
+Each defaults to the real thing and is overridden in tests. This is the
+single most important convention in the codebase: it is what lets the
+engines be tested with a fake clock and no device.
+
+### Why not Clean Architecture
+
+Clean Architecture would add use-cases/interactors, domain entities kept
+free of persistence, and repository interfaces the domain depends on rather
+than concrete data sources. This app has none of that, on purpose:
+
+| Clean would require | Reality here |
+| --- | --- |
+| Domain entities free of persistence | `@HiveType` annotations sit directly on `BrewRecipe` and friends |
+| Repository interfaces + implementations | one concrete `DatabaseService` |
+| Use-cases between ViewModel and repository | controllers call the service directly |
+
+Those indirections pay off when there are several data sources to swap, a
+domain shared across platforms, or teams working behind a stable interface.
+This app is offline-only, single data source, no backend, no network. Adding
+the layers would mean more files, more mapping code, and more places to look
+when something breaks — for no behavior anyone can observe.
+
+> **Revisit when any of these becomes true:** a second data source appears
+> (sync, an API, an export target); the same domain logic needs to run
+> somewhere without Flutter; or a model needs a shape the storage format
+> cannot express. The first of those is the likely one, and the migration is
+> contained: introduce a repository interface, let `DatabaseService`
+> implement it, and point the controllers at the interface. Nothing above
+> the ViewModel changes.
+
+### Which layer does my new thing go in?
+
+| If it… | It belongs in | And it must not |
+| --- | --- | --- |
+| holds data or computes from it | `models/` | touch disk, audio, or widgets |
+| talks to disk, the OS, or hardware | `services/` | know about controllers or screens |
+| owns state a screen renders | `controllers/` | import `BuildContext` or widgets |
+| lays out pixels or handles gestures | `screens/` | contain business rules |
+| is reused by 2+ screens | `components/` | own app state |
+
+---
+
 ## Layers
 
-Data flows down, events flow up. Nothing below reaches back into a layer above.
+The same structure as above, stated as import rules. Data flows down, events
+flow up, and nothing below reaches back into a layer above.
 
 ```
 screens/          Widgets. Layout and interaction only.
@@ -217,6 +315,19 @@ Never hand-edit `*.g.dart`; it is excluded from analysis and regenerated.
 
 Worked example: *"add a Tabata preset timer."*
 
+The order is not arbitrary — it walks the layers bottom-up, so every step
+only depends on things that already exist and can be tested the moment it is
+written. Each heading names the MVVM role it produces.
+
+| Step | Produces | Testable with |
+| --- | --- | --- |
+| 1 | Model | plain unit test, no Hive, no widgets |
+| 2 | data access | temp-directory Hive |
+| 3 | ViewModel | fake clock + fake services, no device |
+| 4 | lifetime owner | plain unit test |
+| 5–7 | View + wiring | widget tests |
+| 8–9 | the gate | `flutter analyze && flutter test` |
+
 ### 1. Model first — `lib/models/`
 
 Create `tabata_preset.dart`. Pure data + computation, `@HiveType(typeId: 12)`
@@ -229,15 +340,16 @@ dart run build_runner build --delete-conflicting-outputs
 Write `test/tabata_preset_test.dart` alongside it — pure model tests need no
 Hive and no widgets, so they stay fast.
 
-### 2. Persistence — `lib/services/database_service.dart`
+### 2. Data access — `lib/services/database_service.dart`
 
 Add a box getter and the CRUD methods. Register the adapter (the generated
 `hive_registrar.g.dart` handles this once the model is annotated).
 
-### 3. Engine — `lib/controllers/`
+### 3. ViewModel — `lib/controllers/`
 
-If it runs on a clock, create `tabata_run_controller.dart` and **inject every
-edge**:
+The ViewModel: observable state plus the logic that drives it, and no
+`BuildContext` anywhere in it. If it runs on a clock, create
+`tabata_run_controller.dart` and **inject every edge**:
 
 ```dart
 TabataRunController({
@@ -251,15 +363,19 @@ TabataRunController({
 That constructor shape is the single most important convention in this
 codebase: it is what makes the engines testable without a device.
 
-### 4. Session ownership — `lib/services/`
+### 4. Lifetime owner — `lib/services/`
 
-Want it to survive the screen closing? Copy
-`interval_session_service.dart` verbatim and swap the types.
+Want it to survive the screen closing — the deviation from textbook MVVM
+described above? Copy `interval_session_service.dart` verbatim and swap the
+types. Skip this step for a feature whose state dies with its screen.
 
-### 5. Screen — `lib/screens/`
+### 5. View — `lib/screens/`
 
-`tabata_screen.dart`, borrowing the controller from the session service and
-accepting a `controller` parameter as a test seam. Minimize = chevron-down in
+`tabata_screen.dart` — layout and gestures only, no business rules.
+It borrows the controller from the session service and accepts a
+`controller` parameter as a test seam. State is read inside a
+`SignalBuilder` closure, and the session is claimed in `initState`, never
+during build. Minimize = chevron-down in
 the leading slot; ending the session = X in the actions, behind a confirm.
 
 ### 6. Route — `lib/routes/`
