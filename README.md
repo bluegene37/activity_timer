@@ -19,10 +19,10 @@ A simple, fully offline, versatile activity timer for iOS and Android, built wit
 |---|---|---|
 | Models | `lib/models/` | Hive-annotated data classes (`TimerSequence`, `ActivityTimer`, `IntervalTimer`, `SessionHistory`, settings) |
 | Persistence | `lib/services/database_service.dart` | Hive boxes + preset/demo data |
-| State | `lib/controllers/` | GetX controllers per screen |
+| State | `lib/controllers/` | `signals`-based controllers (ViewModels), one per screen, resolved via `get_it` (`lib/services/locator.dart`) |
 | UI | `lib/screens/`, `lib/components/` | Screens and reusable widgets |
 | Theme | `lib/theme/app_theme.dart` | Material 3 light/dark themes seeded from the accent color |
-| Routing | `lib/routes/` | GetX pages |
+| Routing | `lib/routes/` | `go_router` route table |
 
 ## Development
 
@@ -43,3 +43,22 @@ Run checks:
 flutter analyze
 flutter test
 ```
+
+## Releasing
+
+Version lives in `pubspec.yaml` (`version: X.Y.Z+N`) and flows to both
+platforms; pushing a `vX.Y.Z` tag triggers `.github/workflows/release.yml`,
+which tests, builds both platforms, and attaches artifacts to a GitHub
+release. Local store builds:
+
+```bash
+flutter build appbundle --release --obfuscate --split-debug-info=build/symbols/android
+```
+
+```bash
+flutter build ipa --release --obfuscate --split-debug-info=build/symbols/ios
+```
+
+See [RELEASING.md](RELEASING.md) for signing setup, versioning rules, and the
+pre-release checklist, and [docs/STORE_LISTING.md](docs/STORE_LISTING.md) for
+store copy and remaining store assets.

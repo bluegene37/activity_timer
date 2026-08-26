@@ -1,0 +1,10 @@
+# Copy to android/key.properties (gitignored) and fill in.
+# Generate the keystore once with:
+#   keytool -genkey -v -keystore ~/upload-keystore.jks -keyalg RSA \
+#     -keysize 2048 -validity 10000 -alias upload
+# Back the keystore up somewhere durable — losing it means losing the
+# ability to update the app on Play.
+storePassword=<keystore password>
+keyPassword=<key password>
+keyAlias=upload
+storeFile=<absolute path to upload-keystore.jks>
