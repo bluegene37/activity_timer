@@ -1,8 +1,19 @@
+# Regenerate after changing anything here:
+#   dart run flutter_native_splash:create
+#
+# The glyph is the transparent foreground from assets/icon (the same art the
+# launcher icon uses), so one source drives both and light/dark each get the
+# right ground. Colors are the app's washi tokens, matching BrewTheme.
 flutter_native_splash:
-  color: "#F8F9FA"
-  color_dark: "#121212"
-  image: "assets/images/app_icon.png"
+  color: "#F2EDE3"
+  color_dark: "#1B1815"
+  # The splash art fills its canvas; the launcher foreground keeps the
+  # adaptive-icon safe-zone inset, which a splash does not need.
+  image: "assets/icon/icon_splash.png"
+  image_dark: "assets/icon/icon_splash.png"
   android_12:
-    image: "assets/images/app_icon.png"
-    icon_background_color: "#F8F9FA"
-    icon_background_color_dark: "#121212"
+    # Android 12 masks this into a circle, so it uses the inset artwork.
+    image: "assets/icon/icon_fg.png"
+    image_dark: "assets/icon/icon_fg.png"
+    icon_background_color: "#F2EDE3"
+    icon_background_color_dark: "#1B1815"
