@@ -4,15 +4,22 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
-    name: Analyze and test
+    name: Code Quality & Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
@@ -20,42 +27,65 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Check formatting
+      - name: Verify formatting
         run: dart format --set-exit-if-changed lib test
 
-      # analysis_options.yaml turns on strict-casts, strict-inference and
-      # strict-raw-types, so this catches type slop other projects tolerate.
-      - name: Analyze
+      - name: Static analysis
         run: flutter analyze --fatal-infos
 
-      - name: Test
+      - name: Run test suite
         run: flutter test --coverage
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage
+          name: code-coverage
           path: coverage/lcov.info
           if-no-files-found: ignore
 
   build-android:
-    name: Build Android
+    name: Android Build Verification
+    needs: [verify]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: subosito/flutter-action@v2
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
-      - run: flutter pub get
+      - name: Install dependencies
+        run: flutter pub get
 
-      # Guards the plugin's core-library-desugaring requirement: a broken
-      # Gradle config fails here rather than on someone's device.
-      - run: flutter build apk --debug
+      - name: Build Android APK (Debug)
+        run: flutter build apk --debug
+
+  build-ios:
+    name: iOS Build Verification
+    needs: [verify]
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build iOS (Simulator Debug)
+        run: flutter build ios --no-codesign --simulator --debug

@@ -1,95 +1,143 @@
 # Releasing Activity Timer
 
-Platforms shipped: **Android** (Play Store, `.aab`) and **iOS** (App Store,
-`.ipa`). There are no desktop or web targets.
+This guide details the release architecture, versioning rules, signing requirements, and automated release pipelines for **Activity Timer**.
 
-App identity, fixed everywhere:
+## 📱 Shipped Platforms & Application Identity
 
-| | |
-| --- | --- |
-| Display name | Activity Timer |
-| Bundle / application ID | `dev.genexis.activitytimer` |
-| Publisher | genexis.dev |
-| Copyright | Copyright © 2026 genexis.dev. All rights reserved. |
+| Attribute | Value |
+|---|---|
+| **Supported Platforms** | Android (Google Play Store, `.aab`, `.apk`), iOS (Apple App Store, `.ipa`, `.xcarchive`) |
+| **Application / Bundle ID** | `dev.genexis.activitytimer` |
+| **Display Name** | Activity Timer |
+| **Publisher** | genexis.dev |
+| **Copyright** | Copyright © 2026 genexis.dev. All rights reserved. |
 
-## Versioning
+---
 
-`pubspec.yaml` `version: X.Y.Z+N` is the **single source of truth**. One
-exception must be bumped by hand alongside it:
+## 🔢 Versioning Architecture
 
-- `lib/screens/settings_screen.dart` — the hardcoded version string in the
-  Settings → About section. (Switching it to `package_info_plus` would
-  remove this step, at the cost of a new platform-channel dependency and
-  test mocks.)
+The application uses **Semantic Versioning** (`X.Y.Z`) combined with a build number (`+N`).
 
-Everything else reads pubspec automatically:
+`pubspec.yaml` `version: X.Y.Z+N` is the **single source of truth**.
 
-- Android reads `flutter.versionName` / `flutter.versionCode` in
-  `android/app/build.gradle.kts`.
-- iOS reads `$(FLUTTER_BUILD_NAME)` / `$(FLUTTER_BUILD_NUMBER)` in
-  `ios/Runner/Info.plist`. (The `MARKETING_VERSION` in `project.pbxproj` is
-  unused — Info.plist wins.)
+When bumping a version, synchronize these locations:
+1. `pubspec.yaml`: Update `version: X.Y.Z+N` (e.g., `1.0.0+1`).
+2. `lib/screens/settings_screen.dart`: Update the display string in the Settings → About card (`'X.Y.Z'`).
+3. `CHANGELOG.md`: Move staged items under `## [X.Y.Z] - YYYY-MM-DD`.
 
-Rules:
+### Platform Mapping
+- **Android**: Automatically consumes `flutter.versionName` (`X.Y.Z`) and `flutter.versionCode` (`N`) via `android/app/build.gradle.kts`.
+- **iOS**: Automatically consumes `$(FLUTTER_BUILD_NAME)` and `$(FLUTTER_BUILD_NUMBER)` via `ios/Runner/Info.plist`.
 
-- `X.Y.Z` is the user-visible semantic version and must match the git tag
-  (`v X.Y.Z`); the release workflow fails if they disagree.
-- `+N` is the store build number. It must **increase monotonically forever**
-  — both stores reject a reused build number, even across versions. Never
-  decrease it, never reuse it, bump it for *every* store upload including
-  re-uploads of the same X.Y.Z.
+### Invariant Rules
+- **Semantic Version (`X.Y.Z`)**: Must match the release git tag exactly (e.g., `v1.0.0`). The CI release pipeline validates this match and aborts if inconsistent.
+- **Build Number (`+N`)**: Must **monotonically increase forever**. Both Google Play Console and Apple App Store Connect reject duplicate or lower build numbers. Never reuse or decrement `N`.
 
-## Release flow (tag push)
+---
 
+## 🔐 Code Signing Setup
+
+### Android Signing (Google Play)
+
+Android release builds look for `android/key.properties` (which is gitignored).
+
+1. Copy the example configuration:
+   ```bash
+   cp android/key.properties.example android/key.properties
+   ```
+2. Generate an upload keystore:
+   ```bash
+   keytool -genkey -v -keystore ~/upload-keystore.jks \
+     -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+   ```
+3. Update `android/key.properties` with the path and passwords:
+   ```properties
+   storePassword=your-keystore-password
+   keyPassword=your-key-password
+   keyAlias=upload
+   storeFile=/path/to/upload-keystore.jks
+   ```
+4. **CI Keystore Secrets**:
+   To enable automatic release signing in GitHub Actions, configure repository secrets:
+   - `ANDROID_KEYSTORE_BASE64` (generated via `base64 -i upload-keystore.jks`)
+   - `ANDROID_KEYSTORE_PASSWORD`
+   - `ANDROID_KEY_PASSWORD`
+
+*(Note: Without `key.properties` present, local builds fall back to debug keys so `flutter run --release` continues to work seamlessly.)*
+
+### iOS Signing (Apple App Store)
+
+iOS signing uses Xcode Automatic Signing with Team ID `8AD458D2K2`.
+
+1. Open `ios/Runner.xcworkspace` in Xcode.
+2. Under **Runner Target** → **Signing & Capabilities**, select your provisioned Apple Developer Team.
+3. CI builds produce unsigned archives (`.xcarchive.zip`). Signed distribution IPAs are built on local release machines via `flutter build ipa --release`.
+
+---
+
+## 🛠️ Release Execution Workflow
+
+### 1. Automated Tagged Release (Recommended)
+
+1. Verify all tests and static analysis pass locally:
+   ```bash
+   flutter analyze --fatal-infos
+   flutter test
+   ```
+2. Update versions in `pubspec.yaml`, `lib/screens/settings_screen.dart`, and `CHANGELOG.md`.
+3. Commit and tag:
+   ```bash
+   git add pubspec.yaml lib/screens/settings_screen.dart CHANGELOG.md
+   git commit -m "chore(release): prepare v1.0.0"
+   git tag v1.0.0
+   git push origin main v1.0.0
+   ```
+4. **GitHub Actions** will automatically:
+   - Validate that tag `v1.0.0` matches `pubspec.yaml` version `1.0.0`.
+   - Run tests and static analysis with `--fatal-infos`.
+   - Build Android `.aab` bundle and standalone `.apk` + symbols archive.
+   - Build iOS `.xcarchive.zip` + symbols archive.
+   - Publish a GitHub Release with attached binaries and auto-generated release notes.
+
+---
+
+### 2. Local Release Builds
+
+#### Android Bundle & APK
 ```bash
-# 1. Bump version in pubspec.yaml (e.g. 1.1.0+2), commit.
-# 2. Tag and push — this triggers .github/workflows/release.yml:
-git tag v1.1.0
-git push origin main v1.1.0
+# Android App Bundle for Play Store upload:
+flutter build appbundle --release \
+  --obfuscate \
+  --split-debug-info=build/symbols/android
+
+# Standalone APK for sideloading / testing:
+flutter build apk --release \
+  --obfuscate \
+  --split-debug-info=build/symbols/android
 ```
 
-CI then runs analyze + tests, builds both platforms, and attaches artifacts
-to a GitHub release:
-
-- `activity-timer-<version>.aab` + `symbols-android.zip`
-- `Runner-<version>.xcarchive.zip` (unsigned) + `symbols-ios.zip`
-
-The CI `.aab` is **debug-signed unless** the `ANDROID_KEYSTORE_BASE64`,
-`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_PASSWORD` secrets are configured
-(base64 of the keystore: `base64 -i upload-keystore.jks`). The CI iOS build
-is unsigned — the store `.ipa` is produced locally (below). Store uploads
-themselves are manual: Play Console for the `.aab`, Transporter/Xcode
-Organizer for the `.ipa`.
-
-## Local release builds
-
+#### iOS IPA & Archive
 ```bash
-flutter build appbundle --release --obfuscate --split-debug-info=build/symbols/android
-# → build/app/outputs/bundle/release/app-release.aab
-
-flutter build ipa --release --obfuscate --split-debug-info=build/symbols/ios
-# → build/ios/ipa/*.ipa
+flutter build ipa --release \
+  --obfuscate \
+  --split-debug-info=build/symbols/ios
 ```
 
-**Archive `build/symbols/` for every store upload** — without those files,
-production crash stacks are unreadable and they cannot be regenerated.
+> [!WARNING]
+> **Always save and archive `build/symbols/`** for every published build. De-obfuscating crash logs from production without the corresponding symbols is impossible.
 
-## Signing status
+---
 
-| Platform | Status |
-| --- | --- |
-| Android | `android/app/build.gradle.kts` reads `android/key.properties` (gitignored). Copy `android/key.properties.example`, generate the keystore with the `keytool` command in it, and **back the keystore up somewhere durable** — losing it means losing the ability to update the app on Play. Without `key.properties` release builds fall back to debug signing so `flutter run --release` still works. |
-| iOS | Xcode automatic signing, team `8AD458D2K2`. The Apple team must be selected manually in Xcode (Runner target → Signing & Capabilities) on any new machine; certs cannot be checked in. |
+## ✅ Pre-Release Quality Checklist
 
-## Pre-release checklist
+Prior to triggering a production release, ensure the following checklist is completed:
 
-- [ ] `pubspec.yaml` version bumped; build number `+N` never used before
-- [ ] Settings → About version string bumped to match (`lib/screens/settings_screen.dart`)
-- [ ] `flutter analyze && flutter test` clean
-- [ ] Android SDK licenses accepted (`flutter doctor --android-licenses` — interactive, run it yourself)
-- [ ] Both release builds succeed locally with `--obfuscate`; `build/symbols/` archived
-- [ ] Release build smoke-tested on a real device (timers fire from background / after reboot)
-- [ ] Store listing text current: [docs/STORE_LISTING.md](docs/STORE_LISTING.md)
-- [ ] Play Data safety + App Store privacy answers still "no data collected" (see STORE_LISTING.md); `ios/Runner/PrivacyInfo.xcprivacy` still accurate
-- [ ] Tag matches pubspec version; tag pushed; GitHub release artifacts present
-- [ ] Play: staged rollout at a low percentage first — an App Store release cannot be pulled back, only superseded
+- [ ] **Version Synchronization**: `pubspec.yaml` version bumped; build number `+N` has never been used before.
+- [ ] **About Screen**: Hardcoded version string updated in `lib/screens/settings_screen.dart`.
+- [ ] **Changelog**: `CHANGELOG.md` updated with all notable changes under the target version header.
+- [ ] **Quality Gates**: `flutter analyze --fatal-infos` and `flutter test` both pass 100% clean.
+- [ ] **Code Formatting**: `dart format --set-exit-if-changed lib test` reports zero changes.
+- [ ] **Privacy Verification**: `ios/Runner/PrivacyInfo.xcprivacy` and Google Play Data Safety forms reflect zero data collection.
+- [ ] **Smoke Test on Device**: Active timers fire from background, alarms ring, and wake lock behaves as expected.
+- [ ] **Symbols Archived**: Obfuscation symbols saved to durable storage for crash diagnosis.
+- [ ] **Staged Rollout**: On Google Play, deploy initially to Internal Testing or 10% Production rollout.
