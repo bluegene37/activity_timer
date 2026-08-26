@@ -1,10 +1,14 @@
 import 'dart:io';
 
+import 'package:activity_timer/controllers/activity_run_controller.dart';
 import 'package:activity_timer/hive_registrar.g.dart';
 import 'package:activity_timer/models/activity_timer.dart';
+import 'package:activity_timer/models/alarm_sound.dart';
 import 'package:activity_timer/models/interval_phase.dart';
 import 'package:activity_timer/screens/timer_screen.dart';
 import 'package:activity_timer/services/activity_session_service.dart';
+import 'package:activity_timer/services/alarm_scheduler.dart';
+import 'package:activity_timer/services/cue_player.dart';
 import 'package:activity_timer/services/database_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -271,4 +275,79 @@ void main() {
     // timer check runs before addTearDown.
     ActivitySessionService().clear();
   });
+
+  testWidgets('a looping routine can be switched back to not looping', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    // Starts ON, the way a saved looping routine opens.
+    final sequence = buildSequence()..defaultLoopEnabled = true;
+    await tester.runAsync(
+      () => DatabaseService().createActivitySequence(sequence),
+    );
+
+    // Inject the controller so the real audio player — whose per-instance
+    // event channel has a random name and cannot be mocked — stays out of
+    // it. The saver is still the real database.
+    final controller = ActivityRunController(
+      sequence: sequence,
+      cuePlayer: _SilentCuePlayer(),
+      scheduler: NoopAlarmScheduler(),
+    )..onInit();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TimerScreen(sequence: sequence, controller: controller),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.byTooltip('Disable loop'),
+      findsOneWidget,
+      reason: 'the routine opens showing that it loops',
+    );
+
+    await tester.runAsync(() async {
+      await tester.tap(find.byTooltip('Disable loop'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pump();
+
+    expect(
+      find.byTooltip('Enable loop'),
+      findsOneWidget,
+      reason: 'tapping it must turn looping OFF, not leave it on',
+    );
+    expect(controller.loopEnabled.value, isFalse);
+    expect(sequence.defaultLoopEnabled, isFalse);
+
+    final stored = await tester.runAsync(
+      () => DatabaseService().getAllActivitySequences(),
+    );
+    expect(
+      stored!.singleWhere((s) => s.id == sequence.id).defaultLoopEnabled,
+      isFalse,
+      reason: 'and the off state must be what gets saved',
+    );
+
+    controller.onClose();
+  });
+}
+
+class _SilentCuePlayer implements CuePlayer {
+  @override
+  Future<void> playAlarm(AlarmSound sound) async {}
+
+  @override
+  Future<void> playCompletion() async {}
+
+  @override
+  Future<void> playStart() async {}
+
+  @override
+  Future<void> dispose() async {}
 }

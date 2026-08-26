@@ -50,7 +50,7 @@ class TimerListController {
       try {
         final updatedTimers = List<ActivityTimer>.from(sequence.value.timers)
           ..add(result);
-        sequence.value = sequence.value.copyWith(timers: updatedTimers);
+        _applyTimers(updatedTimers);
 
         await _databaseService.addTimerToSequence(sequence.value.id, result);
       } catch (e) {
@@ -75,7 +75,7 @@ class TimerListController {
         final updatedTimers = List<ActivityTimer>.from(sequence.value.timers);
         updatedTimers[index] = result;
 
-        sequence.value = sequence.value.copyWith(timers: updatedTimers);
+        _applyTimers(updatedTimers);
 
         await _databaseService.updateTimerInSequence(sequence.value.id, result);
       } catch (e) {
@@ -93,7 +93,7 @@ class TimerListController {
     try {
       final updatedTimers = List<ActivityTimer>.from(sequence.value.timers)
         ..removeAt(index);
-      sequence.value = sequence.value.copyWith(timers: updatedTimers);
+      _applyTimers(updatedTimers);
 
       await _databaseService.deleteTimerFromSequence(
         sequence.value.id,
@@ -120,7 +120,7 @@ class TimerListController {
     final timer = updatedTimers.removeAt(oldIndex);
     updatedTimers.insert(newIndex, timer);
 
-    sequence.value = sequence.value.copyWith(timers: updatedTimers);
+    _applyTimers(updatedTimers);
 
     try {
       final timerIds = updatedTimers.map((t) => t.id).toList();
@@ -135,14 +135,27 @@ class TimerListController {
     }
   }
 
+  /// Writes [updatedTimers] onto the routine every other holder already
+  /// has a reference to, then tells the signal by force — the value is the
+  /// same instance, so it would not notify on its own.
+  void _applyTimers(List<ActivityTimer> updatedTimers) {
+    final routine = sequence.value;
+    routine.timers = updatedTimers;
+    sequence.set(routine, force: true);
+  }
+
   Future<void> toggleDefaultLoop() async {
-    final updated = sequence.value.copyWith(
-      defaultLoopEnabled: !sequence.value.defaultLoopEnabled,
-    );
+    // Mutate the routine everything else already holds — the list that
+    // handed it to this screen, and any live run session — rather than
+    // swapping in a copy. A copy leaves those references on the old value,
+    // so the next open loads the stale flag straight back over the change.
+    final routine = sequence.value;
+    routine.defaultLoopEnabled = !routine.defaultLoopEnabled;
 
     try {
-      await _databaseService.updateActivitySequence(updated);
-      sequence.value = updated;
+      await _databaseService.updateActivitySequence(routine);
+      // Same instance, so the signal needs telling explicitly.
+      sequence.set(routine, force: true);
     } catch (e) {
       await Future<void>.delayed(const Duration(milliseconds: 100));
       UiMessenger().showMessage(
@@ -153,10 +166,11 @@ class TimerListController {
   }
 
   Future<void> updatePreparationSeconds(int seconds) async {
-    final updated = sequence.value.copyWith(preparationSeconds: seconds);
+    final routine = sequence.value;
+    routine.preparationSeconds = seconds;
     try {
-      await _databaseService.updateActivitySequence(updated);
-      sequence.value = updated;
+      await _databaseService.updateActivitySequence(routine);
+      sequence.set(routine, force: true);
       UiMessenger().showMessage(
         'Set lead-in to ${seconds}s',
         title: 'Prep Countdown',
