@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 import '../models/brew_recipe.dart';
 import '../services/database_service.dart';
@@ -114,7 +113,9 @@ class _BrewEditScreenState extends State<BrewEditScreen> {
     } else {
       await _database.updateBrewRecipe(_draft);
     }
-    Get.back<bool>(result: true);
+    if (mounted) {
+      Navigator.pop(context, true);
+    }
   }
 
   @override

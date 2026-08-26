@@ -8,6 +8,7 @@ import 'hive_registrar.g.dart';
 import 'models/settings.dart';
 import 'routes/app_pages.dart';
 import 'services/database_service.dart';
+import 'services/ui_messenger.dart';
 import 'theme/app_theme.dart';
 import 'theme/brew_theme.dart';
 
@@ -52,6 +53,10 @@ class MyApp extends StatelessWidget {
       () => GetMaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Activity Timer',
+        // Lets controllers report failures and raise dialogs without
+        // reaching for a global BuildContext.
+        scaffoldMessengerKey: UiMessenger().messengerKey,
+        navigatorKey: UiMessenger().navigatorKey,
         theme:
             appController.themeStyle.value == AppThemeStyle.coffee
                 ? BrewTheme.themeFor(Brightness.light)

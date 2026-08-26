@@ -27,7 +27,7 @@ class TimerListScreen extends StatelessWidget {
             color: colorScheme.onSurface,
             size: 22,
           ),
-          onPressed: () => Get.back<void>(),
+          onPressed: () => Navigator.pop(context),
         ),
         title: Obx(
           () => Text(
@@ -448,37 +448,46 @@ class TimerListScreen extends StatelessWidget {
                                         size: 18,
                                       ),
                                       onPressed: () async {
-                                        final confirm = await Get.dialog<bool>(
-                                          AlertDialog(
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(18),
-                                            ),
-                                            title: const Text('Delete Timer'),
-                                            content: Text(
-                                              'Are you sure you want to delete "${timer.name}"?',
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed:
-                                                    () =>
-                                                        Get.back(result: false),
-                                                child: const Text('Cancel'),
-                                              ),
-                                              TextButton(
-                                                onPressed:
-                                                    () =>
-                                                        Get.back(result: true),
-                                                child: const Text(
-                                                  'Delete',
-                                                  style: TextStyle(
-                                                    color: Colors.red,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder:
+                                              (dialogContext) => AlertDialog(
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(18),
                                                 ),
+                                                title: const Text(
+                                                  'Delete Timer',
+                                                ),
+                                                content: Text(
+                                                  'Are you sure you want to delete "${timer.name}"?',
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed:
+                                                        () => Navigator.pop(
+                                                          dialogContext,
+                                                          false,
+                                                        ),
+                                                    child: const Text('Cancel'),
+                                                  ),
+                                                  TextButton(
+                                                    onPressed:
+                                                        () => Navigator.pop(
+                                                          dialogContext,
+                                                          true,
+                                                        ),
+                                                    child: const Text(
+                                                      'Delete',
+                                                      style: TextStyle(
+                                                        color: Colors.red,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                            ],
-                                          ),
                                         );
 
                                         if (confirm == true) {

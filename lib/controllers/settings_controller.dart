@@ -1,10 +1,12 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../components/alarm_sound_picker.dart';
 import '../models/alarm_sound.dart';
 import '../services/cue_player.dart';
+import '../services/ui_messenger.dart';
 import 'app_controller.dart';
 
 class SettingsController extends GetxController {
@@ -43,15 +45,12 @@ class SettingsController extends GetxController {
   }
 
   Future<void> selectDefaultAlarmSound() async {
-    final context = Get.context;
-    if (context == null) {
-      return;
-    }
-    final choice = await showAlarmSoundPicker(
-      context,
-      selected: _appController.defaultAlarmSound.value,
-      title: 'Default Alarm Sound',
-      cuePlayer: _cuePlayer,
+    final choice = await UiMessenger().showDialogBuilder<AlarmSoundChoice>(
+      (dialogContext) => AlarmSoundPickerDialog(
+        selected: _appController.defaultAlarmSound.value,
+        title: 'Default Alarm Sound',
+        cuePlayer: _cuePlayer,
+      ),
     );
     final sound = choice?.sound;
     if (sound != null) {

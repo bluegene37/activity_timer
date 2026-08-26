@@ -8,6 +8,7 @@ import '../controllers/brew_controller.dart';
 import '../models/brew_recipe.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
+import '../services/ui_messenger.dart';
 import '../theme/brew_theme.dart';
 
 class BrewListScreen extends StatelessWidget {
@@ -28,70 +29,67 @@ class BrewListScreen extends StatelessWidget {
     BrewController controller,
     BrewRecipe recipe,
   ) async {
-    final confirmed = await Get.dialog<bool>(
-      AlertDialog(
-        title: const Text('Delete Brew'),
-        content: Text('Are you sure you want to delete "${recipe.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back<bool>(result: false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Get.back<bool>(result: true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirmed = await UiMessenger().confirm(
+      title: 'Delete Brew',
+      message: 'Are you sure you want to delete "${recipe.name}"?',
+      confirmLabel: 'Delete',
+      isDestructive: true,
     );
-    if (confirmed == true) {
+    if (confirmed) {
       await controller.deleteBrew(recipe.id);
     }
   }
 
-  void _openLibrary(BrewController controller, BrewPalette palette) {
+  void _openLibrary(
+    BuildContext context,
+    BrewController controller,
+    BrewPalette palette,
+  ) {
     final templates = DatabaseService().getBrewTemplates();
     unawaited(
-      Get.bottomSheet<void>(
-        Material(
-          color: palette.paperRaised,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            child: ListView(
-              shrinkWrap: true,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Text(
-                    'Brew Library',
-                    style: TextStyle(fontSize: 22, color: palette.ink),
-                  ),
+      showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder:
+            (sheetContext) => Material(
+              color: palette.paperRaised,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        'Brew Library',
+                        style: TextStyle(fontSize: 22, color: palette.ink),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    for (final template in templates)
+                      ListTile(
+                        title: Text(
+                          template.name,
+                          style: TextStyle(color: palette.ink),
+                        ),
+                        subtitle: Text(
+                          '${template.method.displayName} · '
+                          '${template.totalWaterGrams}g · '
+                          '${_duration(template.totalSeconds)}',
+                          style: TextStyle(color: palette.inkSoft),
+                        ),
+                        onTap: () {
+                          Navigator.pop(sheetContext);
+                          unawaited(controller.addFromTemplate(template));
+                        },
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                for (final template in templates)
-                  ListTile(
-                    title: Text(
-                      template.name,
-                      style: TextStyle(color: palette.ink),
-                    ),
-                    subtitle: Text(
-                      '${template.method.displayName} · '
-                      '${template.totalWaterGrams}g · '
-                      '${_duration(template.totalSeconds)}',
-                      style: TextStyle(color: palette.inkSoft),
-                    ),
-                    onTap: () {
-                      Get.back<void>();
-                      unawaited(controller.addFromTemplate(template));
-                    },
-                  ),
-              ],
+              ),
             ),
-          ),
-        ),
       ),
     );
   }
@@ -122,7 +120,7 @@ class BrewListScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
-                  onPressed: () => _openLibrary(controller, palette),
+                  onPressed: () => _openLibrary(context, controller, palette),
                   icon: const Icon(CupertinoIcons.book, size: 16),
                   label: const Text('Brew Library'),
                 ),

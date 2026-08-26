@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+
 import '../models/activity_timer.dart';
 import '../models/session_history.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
+import '../services/ui_messenger.dart';
 import '../utils/time_format.dart';
 
 class ActivityListController extends GetxController {
@@ -47,7 +50,10 @@ class ActivityListController extends GetxController {
       final loadedSequences = await _databaseService.getAllActivitySequences();
       sequences.assignAll(loadedSequences);
     } catch (e) {
-      Get.snackbar('Error', 'Failed to load activities: $e');
+      UiMessenger().showMessage(
+        'Failed to load activities: $e',
+        title: 'Error',
+      );
     } finally {
       isLoading.value = false;
     }
@@ -92,9 +98,12 @@ class ActivityListController extends GetxController {
     try {
       await _databaseService.createActivitySequence(newSequence);
       sequences.add(newSequence);
-      Get.snackbar('Success', 'Added "${newSequence.name}" preset');
+      UiMessenger().showMessage(
+        'Added "${newSequence.name}" preset',
+        title: 'Success',
+      );
     } catch (e) {
-      Get.snackbar('Error', 'Failed to add preset: $e');
+      UiMessenger().showMessage('Failed to add preset: $e', title: 'Error');
     }
   }
 
@@ -104,10 +113,16 @@ class ActivityListController extends GetxController {
       final duplicate = await _databaseService.duplicateSequence(original.id);
       if (duplicate != null) {
         sequences.add(duplicate);
-        Get.snackbar('Success', 'Duplicated "${original.name}"');
+        UiMessenger().showMessage(
+          'Duplicated "${original.name}"',
+          title: 'Success',
+        );
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to duplicate activity: $e');
+      UiMessenger().showMessage(
+        'Failed to duplicate activity: $e',
+        title: 'Error',
+      );
     }
   }
 
@@ -132,18 +147,20 @@ class ActivityListController extends GetxController {
   Future<void> exportSequenceToClipboard(TimerSequence sequence) async {
     final jsonStr = sequenceToJson(sequence);
     await Clipboard.setData(ClipboardData(text: jsonStr));
-    Get.snackbar(
-      'Exported to Clipboard',
-      'Routine "${sequence.name}" JSON copied to clipboard. Share it with anyone!',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 3),
+    UiMessenger().showMessage(
+      'Routine "${sequence.name}" JSON copied to clipboard. '
+      'Share it with anyone!',
+      title: 'Exported to Clipboard',
     );
   }
 
   Future<bool> importSequenceFromJson(String jsonString) async {
     final sequence = sequenceFromJson(jsonString);
     if (sequence == null) {
-      Get.snackbar('Import Failed', 'Invalid timer routine JSON format.');
+      UiMessenger().showMessage(
+        'Invalid timer routine JSON format.',
+        title: 'Import Failed',
+      );
       return false;
     }
 
@@ -159,13 +176,13 @@ class ActivityListController extends GetxController {
 
       await _databaseService.createActivitySequence(newSequence);
       sequences.add(newSequence);
-      Get.snackbar(
-        'Imported!',
+      UiMessenger().showMessage(
         'Successfully added "${newSequence.name}" to your routines.',
+        title: 'Imported!',
       );
       return true;
     } catch (e) {
-      Get.snackbar('Error', 'Failed to import routine: $e');
+      UiMessenger().showMessage('Failed to import routine: $e', title: 'Error');
       return false;
     }
   }
@@ -177,53 +194,52 @@ class ActivityListController extends GetxController {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
 
-    final result = await Get.dialog<({String name, String description})>(
-      AlertDialog(
-        title: const Text('New Activity Routine'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Activity Name',
-                  hintText: 'e.g. HIIT Sprint, Pomodoro Focus',
-                ),
-                autofocus: true,
+    final result = await UiMessenger()
+        .showDialogBuilder<({String name, String description})>(
+          (dialogContext) => AlertDialog(
+            title: const Text('New Activity Routine'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Activity Name',
+                      hintText: 'e.g. HIIT Sprint, Pomodoro Focus',
+                    ),
+                    autofocus: true,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Description (Optional)',
+                      hintText: 'e.g. 5 rounds of high intensity',
+                    ),
+                    maxLines: 2,
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description (Optional)',
-                  hintText: 'e.g. 5 rounds of high intensity',
-                ),
-                maxLines: 2,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  final name = nameController.text.trim();
+                  Navigator.pop(dialogContext, (
+                    name: name.isNotEmpty ? name : 'New Activity',
+                    description: descriptionController.text.trim(),
+                  ));
+                },
+                child: const Text('Create'),
               ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: Get.back<({String name, String description})>,
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-              Get.back(
-                result: (
-                  name: name.isNotEmpty ? name : 'New Activity',
-                  description: descriptionController.text.trim(),
-                ),
-              );
-            },
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
+        );
 
     await Future<void>.delayed(const Duration(milliseconds: 300));
     nameController.dispose();
@@ -247,7 +263,10 @@ class ActivityListController extends GetxController {
 
         unawaited(Get.toNamed<void>(Routes.timerList, arguments: newSequence));
       } catch (e) {
-        Get.snackbar('Error', 'Failed to create activity: $e');
+        UiMessenger().showMessage(
+          'Failed to create activity: $e',
+          title: 'Error',
+        );
       }
     }
   }
@@ -278,7 +297,10 @@ class ActivityListController extends GetxController {
       await _databaseService.updateActivitySequence(updatedSequence);
       sequences[index] = updatedSequence;
     } catch (e) {
-      Get.snackbar('Error', 'Failed to update activity: $e');
+      UiMessenger().showMessage(
+        'Failed to update activity: $e',
+        title: 'Error',
+      );
     }
   }
 
@@ -290,10 +312,13 @@ class ActivityListController extends GetxController {
       sequences.removeAt(index);
 
       await Future<void>.delayed(const Duration(milliseconds: 100));
-      Get.snackbar('Success', 'Activity deleted');
+      UiMessenger().showMessage('Activity deleted', title: 'Success');
     } catch (e) {
       await Future<void>.delayed(const Duration(milliseconds: 100));
-      Get.snackbar('Error', 'Failed to delete activity: $e');
+      UiMessenger().showMessage(
+        'Failed to delete activity: $e',
+        title: 'Error',
+      );
     }
   }
 
@@ -315,7 +340,10 @@ class ActivityListController extends GetxController {
       await _databaseService.updateActivitySequence(updatedSequence);
       sequences[index] = updatedSequence;
     } catch (e) {
-      Get.snackbar('Error', 'Failed to update loop setting: $e');
+      UiMessenger().showMessage(
+        'Failed to update loop setting: $e',
+        title: 'Error',
+      );
     }
   }
 

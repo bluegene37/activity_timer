@@ -23,7 +23,7 @@ Future<AlarmSoundChoice?> showAlarmSoundPicker(
 }) => showDialog<AlarmSoundChoice>(
   context: context,
   builder:
-      (context) => _AlarmSoundPicker(
+      (context) => AlarmSoundPickerDialog(
         selected: selected,
         allowDefault: allowDefault,
         title: title,
@@ -31,11 +31,14 @@ Future<AlarmSoundChoice?> showAlarmSoundPicker(
       ),
 );
 
-class _AlarmSoundPicker extends StatefulWidget {
-  const _AlarmSoundPicker({
+/// The picker itself. Use [showAlarmSoundPicker] when a `BuildContext` is
+/// at hand; raise this directly (via `UiMessenger`) when one is not.
+class AlarmSoundPickerDialog extends StatefulWidget {
+  const AlarmSoundPickerDialog({
+    super.key,
     required this.selected,
-    required this.allowDefault,
-    required this.title,
+    this.allowDefault = false,
+    this.title = 'Alarm Sound',
     this.cuePlayer,
   });
 
@@ -47,10 +50,10 @@ class _AlarmSoundPicker extends StatefulWidget {
   final CuePlayer? cuePlayer;
 
   @override
-  State<_AlarmSoundPicker> createState() => _AlarmSoundPickerState();
+  State<AlarmSoundPickerDialog> createState() => AlarmSoundPickerDialogState();
 }
 
-class _AlarmSoundPickerState extends State<_AlarmSoundPicker> {
+class AlarmSoundPickerDialogState extends State<AlarmSoundPickerDialog> {
   late final CuePlayer _cuePlayer = widget.cuePlayer ?? AudioCuePlayer();
   late AlarmSound? _selected = widget.selected;
 

@@ -5,6 +5,7 @@ import '../models/interval_phase.dart';
 import '../screens/edit_timer_screen.dart';
 import '../screens/timer_screen.dart';
 import '../services/database_service.dart';
+import '../services/ui_messenger.dart';
 import '../utils/time_format.dart';
 
 class TimerListController extends GetxController {
@@ -53,7 +54,7 @@ class TimerListController extends GetxController {
       } catch (e) {
         await _reloadSequence();
         await Future<void>.delayed(const Duration(milliseconds: 100));
-        Get.snackbar('Error', 'Failed to add timer: $e');
+        UiMessenger().showMessage('Failed to add timer: $e', title: 'Error');
       }
     }
   }
@@ -77,7 +78,7 @@ class TimerListController extends GetxController {
       } catch (e) {
         await _reloadSequence();
         await Future<void>.delayed(const Duration(milliseconds: 100));
-        Get.snackbar('Error', 'Failed to update timer: $e');
+        UiMessenger().showMessage('Failed to update timer: $e', title: 'Error');
       }
     }
   }
@@ -98,7 +99,7 @@ class TimerListController extends GetxController {
     } catch (e) {
       await _reloadSequence();
       await Future<void>.delayed(const Duration(milliseconds: 100));
-      Get.snackbar('Error', 'Failed to delete timer: $e');
+      UiMessenger().showMessage('Failed to delete timer: $e', title: 'Error');
     }
   }
 
@@ -127,7 +128,7 @@ class TimerListController extends GetxController {
     } catch (e) {
       await _reloadSequence();
       await Future<void>.delayed(const Duration(milliseconds: 100));
-      Get.snackbar('Error', 'Failed to reorder timers: $e');
+      UiMessenger().showMessage('Failed to reorder timers: $e', title: 'Error');
     }
   }
 
@@ -141,7 +142,10 @@ class TimerListController extends GetxController {
       sequence.value = updated;
     } catch (e) {
       await Future<void>.delayed(const Duration(milliseconds: 100));
-      Get.snackbar('Error', 'Failed to update loop setting: $e');
+      UiMessenger().showMessage(
+        'Failed to update loop setting: $e',
+        title: 'Error',
+      );
     }
   }
 
@@ -150,15 +154,24 @@ class TimerListController extends GetxController {
     try {
       await _databaseService.updateActivitySequence(updated);
       sequence.value = updated;
-      Get.snackbar('Prep Countdown', 'Set lead-in to ${seconds}s');
+      UiMessenger().showMessage(
+        'Set lead-in to ${seconds}s',
+        title: 'Prep Countdown',
+      );
     } catch (e) {
-      Get.snackbar('Error', 'Failed to update prep duration: $e');
+      UiMessenger().showMessage(
+        'Failed to update prep duration: $e',
+        title: 'Error',
+      );
     }
   }
 
   void startTimerSequence() {
     if (sequence.value.timers.isEmpty) {
-      Get.snackbar('Error', 'Add at least one timer to start the activity');
+      UiMessenger().showMessage(
+        'Add at least one timer to start the activity',
+        title: 'Error',
+      );
       return;
     }
 

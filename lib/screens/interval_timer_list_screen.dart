@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +11,7 @@ import '../models/alarm_sound.dart';
 import '../models/interval_timer.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
+import '../services/ui_messenger.dart';
 import '../theme/app_theme.dart';
 
 class IntervalTimerListScreen extends StatelessWidget {
@@ -37,10 +39,10 @@ class IntervalTimerListScreen extends StatelessWidget {
 
     await DatabaseService().createIntervalTimer(newTimer);
     unawaited(Get.find<IntervalTimerController>().refreshTimers());
-    Get.snackbar(
-      'Created $name',
-      'Interval alarms active from ${DateFormat('h:mm a').format(startTime)} to ${DateFormat('h:mm a').format(endTime)}',
-      snackPosition: SnackPosition.BOTTOM,
+    UiMessenger().showMessage(
+      'Interval alarms active from ${DateFormat('h:mm a').format(startTime)} '
+      'to ${DateFormat('h:mm a').format(endTime)}',
+      title: 'Created $name',
     );
   }
 
@@ -331,41 +333,46 @@ class IntervalTimerListScreen extends StatelessWidget {
                                       constraints: const BoxConstraints(),
                                       padding: EdgeInsets.zero,
                                       onPressed: () async {
-                                        final confirm = await Get.dialog<bool>(
-                                          AlertDialog(
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(18),
-                                            ),
-                                            title: const Text(
-                                              'Delete Interval Timer',
-                                            ),
-                                            content: Text(
-                                              'Are you sure you want to delete "${timer.name}"?',
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed:
-                                                    () => Get.back<bool>(
-                                                      result: false,
-                                                    ),
-                                                child: const Text('Cancel'),
-                                              ),
-                                              TextButton(
-                                                onPressed:
-                                                    () => Get.back<bool>(
-                                                      result: true,
-                                                    ),
-                                                child: const Text(
-                                                  'Delete',
-                                                  style: TextStyle(
-                                                    color: Colors.red,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder:
+                                              (dialogContext) => AlertDialog(
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(18),
                                                 ),
+                                                title: const Text(
+                                                  'Delete Interval Timer',
+                                                ),
+                                                content: Text(
+                                                  'Are you sure you want to delete "${timer.name}"?',
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed:
+                                                        () => Navigator.pop(
+                                                          dialogContext,
+                                                          false,
+                                                        ),
+                                                    child: const Text('Cancel'),
+                                                  ),
+                                                  TextButton(
+                                                    onPressed:
+                                                        () => Navigator.pop(
+                                                          dialogContext,
+                                                          true,
+                                                        ),
+                                                    child: const Text(
+                                                      'Delete',
+                                                      style: TextStyle(
+                                                        color: Colors.red,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                            ],
-                                          ),
                                         );
                                         if (confirm == true) {
                                           unawaited(

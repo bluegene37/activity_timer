@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../models/brew_recipe.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
+import '../services/ui_messenger.dart';
 
 class BrewController extends GetxController {
   final _databaseService = DatabaseService();
@@ -46,7 +47,7 @@ class BrewController extends GetxController {
       stored.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       recipes.assignAll(stored);
     } catch (e) {
-      Get.snackbar('Error', 'Failed to load brews: $e');
+      UiMessenger().showMessage('Failed to load brews: $e', title: 'Error');
     } finally {
       isLoading.value = false;
     }
@@ -84,7 +85,7 @@ class BrewController extends GetxController {
       await _databaseService.deleteBrewRecipe(id);
       recipes.removeWhere((recipe) => recipe.id == id);
     } catch (e) {
-      Get.snackbar('Error', 'Failed to delete brew: $e');
+      UiMessenger().showMessage('Failed to delete brew: $e', title: 'Error');
     }
   }
 
@@ -92,9 +93,12 @@ class BrewController extends GetxController {
     try {
       await _databaseService.createBrewRecipe(template.cloneAsNew());
       await refreshRecipes();
-      Get.snackbar('Added', '"${template.name}" is in your brews');
+      UiMessenger().showMessage(
+        '"${template.name}" is in your brews',
+        title: 'Added',
+      );
     } catch (e) {
-      Get.snackbar('Error', 'Failed to add brew: $e');
+      UiMessenger().showMessage('Failed to add brew: $e', title: 'Error');
     }
   }
 }

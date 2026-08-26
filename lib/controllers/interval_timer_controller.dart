@@ -1,7 +1,9 @@
 import 'package:get/get.dart';
+
 import '../models/interval_timer.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
+import '../services/ui_messenger.dart';
 
 class IntervalTimerController extends GetxController {
   final _databaseService = DatabaseService();
@@ -23,7 +25,10 @@ class IntervalTimerController extends GetxController {
       timers.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       intervalTimers.assignAll(timers);
     } catch (e) {
-      Get.snackbar('Error', 'Failed to load interval timers: $e');
+      UiMessenger().showMessage(
+        'Failed to load interval timers: $e',
+        title: 'Error',
+      );
     } finally {
       isLoading.value = false;
     }
@@ -63,10 +68,13 @@ class IntervalTimerController extends GetxController {
 
       // Delay snackbar slightly to ensure any dialog has closed
       await Future<void>.delayed(const Duration(milliseconds: 100));
-      Get.snackbar('Success', 'Interval timer deleted');
+      UiMessenger().showMessage('Interval timer deleted', title: 'Success');
     } catch (e) {
       await Future<void>.delayed(const Duration(milliseconds: 100));
-      Get.snackbar('Error', 'Failed to delete interval timer: $e');
+      UiMessenger().showMessage(
+        'Failed to delete interval timer: $e',
+        title: 'Error',
+      );
     }
   }
 

@@ -58,7 +58,7 @@ class _BrewRunScreenState extends State<BrewRunScreen> {
           leading: IconButton(
             icon: const Icon(Icons.keyboard_arrow_down),
             tooltip: 'Minimize',
-            onPressed: () => Get.back<void>(),
+            onPressed: () => Navigator.pop(context),
           ),
           title: Text(widget.recipe.name),
         ),
