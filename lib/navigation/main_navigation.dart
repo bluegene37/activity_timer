@@ -149,11 +149,15 @@ class _MainNavigationState extends State<MainNavigation> {
                 ),
                 child: SafeArea(
                   top: false,
-                  child: SizedBox(
-                    height: 52,
+                  // A minimum, not a fixed height: at 52 the icon-plus-label
+                  // column clipped its own labels on 375pt-wide phones at the
+                  // default text size, and worse at accessibility scales.
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 52),
                     child: Row(
                       children: [
                         _buildNavItem(
+                          context: context,
                           index: 0,
                           label: 'Activities',
                           icon: CupertinoIcons.timer,
@@ -161,6 +165,7 @@ class _MainNavigationState extends State<MainNavigation> {
                           colorScheme: colorScheme,
                         ),
                         _buildNavItem(
+                          context: context,
                           index: 1,
                           label: 'Brew',
                           icon: Icons.coffee_outlined,
@@ -168,6 +173,7 @@ class _MainNavigationState extends State<MainNavigation> {
                           colorScheme: colorScheme,
                         ),
                         _buildNavItem(
+                          context: context,
                           index: 2,
                           label: 'Intervals',
                           icon: CupertinoIcons.stopwatch,
@@ -175,6 +181,7 @@ class _MainNavigationState extends State<MainNavigation> {
                           colorScheme: colorScheme,
                         ),
                         _buildNavItem(
+                          context: context,
                           index: 3,
                           label: 'Settings',
                           icon: CupertinoIcons.gear_alt,
@@ -194,6 +201,7 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   Widget _buildNavItem({
+    required BuildContext context,
     required int index,
     required String label,
     required IconData icon,
@@ -222,6 +230,12 @@ class _MainNavigationState extends State<MainNavigation> {
               const SizedBox(height: 3),
               Text(
                 label,
+                // The icon already carries the meaning, so the label is
+                // capped well below the system maximum: unbounded scaling
+                // pushes the nav strip over a third of the screen.
+                textScaler: TextScaler.linear(
+                  MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.3),
+                ),
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,

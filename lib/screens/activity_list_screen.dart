@@ -222,19 +222,25 @@ class ActivityListScreen extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  TextButton.icon(
-                    onPressed:
-                        () => _showPresetsBottomSheet(context, controller),
-                    icon: Icon(
-                      CupertinoIcons.sparkles,
-                      size: 16,
-                      color: colorScheme.primary,
-                    ),
-                    label: Text(
-                      'Explore Presets',
-                      style: textTheme.bodyMedium?.copyWith(
+                  // Flexible on both sides: at accessibility text sizes the
+                  // heading and the button together are wider than a 320pt
+                  // phone, and an unbounded button pushed the row off-screen.
+                  Flexible(
+                    child: TextButton.icon(
+                      onPressed:
+                          () => _showPresetsBottomSheet(context, controller),
+                      icon: Icon(
+                        CupertinoIcons.sparkles,
+                        size: 16,
                         color: colorScheme.primary,
-                        fontWeight: FontWeight.w600,
+                      ),
+                      label: Text(
+                        'Explore Presets',
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),

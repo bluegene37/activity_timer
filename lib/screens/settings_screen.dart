@@ -488,10 +488,18 @@ class SettingsScreen extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        trailing: Text(
-                          '1.0.0',
-                          style: textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
+                        // ListTile gives its trailing widget the width it
+                        // asks for, so at accessibility text sizes this value
+                        // claimed the whole tile and the title vanished.
+                        trailing: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 140),
+                          child: Text(
+                            '1.0.0',
+                            textAlign: TextAlign.end,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
@@ -510,10 +518,18 @@ class SettingsScreen extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        trailing: Text(
-                          'genexis.dev',
-                          style: textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
+                        // ListTile gives its trailing widget the width it
+                        // asks for, so at accessibility text sizes this value
+                        // claimed the whole tile and the title vanished.
+                        trailing: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 140),
+                          child: Text(
+                            'genexis.dev',
+                            textAlign: TextAlign.end,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
