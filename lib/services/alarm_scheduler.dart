@@ -75,17 +75,32 @@ abstract interface class AlarmScheduler {
 
 /// The production scheduler, backed by OS local notifications.
 class LocalNotificationAlarmScheduler implements AlarmScheduler {
-  LocalNotificationAlarmScheduler({FlutterLocalNotificationsPlugin? plugin})
-    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+  LocalNotificationAlarmScheduler({
+    FlutterLocalNotificationsPlugin? plugin,
+    this.idBase = activityIdBase,
+  }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   static const String channelId = 'activity_timer_alarms';
   static const String channelName = 'Timer alarms';
   static const String channelDescription =
       'Fires when a timer, interval, or brew step reaches its end.';
 
+  /// How many notification ids one session type owns. Every scheduler gets
+  /// its own block because an activity routine, a brew, and an interval
+  /// schedule can all be live at once (each has its own floater in
+  /// `MainNavigation`) and each numbers its alarms from zero — one shared
+  /// block would let a brew's step alarm quietly replace a routine's.
+  static const int idSpaceSize = 1000;
+
   /// Notifications survive the process, so ids must not collide with a
-  /// previous run: every session's alarms live in one reserved block.
-  static const int idBase = 9000;
+  /// previous run: every session type's alarms live in one reserved block.
+  static const int activityIdBase = 9000;
+  static const int brewIdBase = activityIdBase + idSpaceSize;
+  static const int intervalIdBase = activityIdBase + 2 * idSpaceSize;
+
+  /// The first notification id this scheduler owns. It owns
+  /// [idSpaceSize] ids from here.
+  final int idBase;
 
   final FlutterLocalNotificationsPlugin _plugin;
 
@@ -203,6 +218,9 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
         if (!alarm.at.isAfter(now)) {
           continue; // Already elapsed: the in-app cue covered it.
         }
+        if (alarm.id < 0 || alarm.id >= idSpaceSize) {
+          continue; // Outside this scheduler's block: never another's alarm.
+        }
         await _plugin.zonedSchedule(
           id: idBase + alarm.id,
           title: alarm.title,
@@ -257,7 +275,17 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
   Future<void> cancelAll() async {
     try {
       await _init();
-      for (final id in _pending) {
+      // Notifications outlive the process, so a session killed mid-run
+      // leaves alarms this in-memory set knows nothing about. Sweep the
+      // whole owned block instead, or those orphans fire in the middle of
+      // an unrelated session days later.
+      final ids = <int>{..._pending};
+      for (final request in await _plugin.pendingNotificationRequests()) {
+        if (request.id >= idBase && request.id < idBase + idSpaceSize) {
+          ids.add(request.id);
+        }
+      }
+      for (final id in ids) {
         await _plugin.cancel(id: id);
       }
       _pending.clear();

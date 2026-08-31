@@ -33,7 +33,11 @@ class ActivityRunController {
     Future<void> Function(TimerSequence)? sequenceSaver,
     this.tickInterval = const Duration(milliseconds: 100),
   }) : _cuePlayer = cuePlayer ?? AudioCuePlayer(),
-       _scheduler = scheduler ?? LocalNotificationAlarmScheduler(),
+       _scheduler =
+           scheduler ??
+           LocalNotificationAlarmScheduler(
+             idBase: LocalNotificationAlarmScheduler.activityIdBase,
+           ),
        _now = clock ?? DateTime.now,
        _logHistory =
            historyLogger ??
@@ -373,6 +377,24 @@ class ActivityRunController {
           sound: _soundFor(0),
         ),
       );
+      // Keep going past the countdown. The OS is the only thing running once
+      // the phone is pocketed — Dart timers are suspended, so
+      // _finishPreparation() never fires to hand over the rest. Stopping at
+      // the prep alarm left a routine started and immediately pocketed
+      // ringing exactly once and then silent for the whole session.
+      for (var i = 0; i < timers.length; i++) {
+        offsetMs += timers[i].durationInSeconds * 1000;
+        alarms.add(
+          ScheduledAlarm(
+            id: i + 1,
+            at: from.add(Duration(milliseconds: offsetMs)),
+            title: sequence.name,
+            body: _bodyFor(i),
+            sound: _soundFor(i),
+            isCompletion: _endsSessionAt(i),
+          ),
+        );
+      }
     } else {
       alarms.add(
         ScheduledAlarm(

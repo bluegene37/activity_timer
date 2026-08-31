@@ -18,7 +18,11 @@ class BrewRunController {
     DateTime Function()? clock,
     this.tickInterval = const Duration(milliseconds: 200),
   }) : _cuePlayer = cuePlayer ?? AudioCuePlayer(),
-       _scheduler = scheduler ?? LocalNotificationAlarmScheduler(),
+       _scheduler =
+           scheduler ??
+           LocalNotificationAlarmScheduler(
+             idBase: LocalNotificationAlarmScheduler.brewIdBase,
+           ),
        _now = clock ?? DateTime.now;
 
   final BrewRecipe recipe;

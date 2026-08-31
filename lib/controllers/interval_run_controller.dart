@@ -25,7 +25,11 @@ class IntervalRunController {
     Future<void> Function(SessionHistory)? historyLogger,
     this.tickInterval = const Duration(seconds: 1),
   }) : _cuePlayer = cuePlayer ?? AudioCuePlayer(),
-       _scheduler = scheduler ?? LocalNotificationAlarmScheduler(),
+       _scheduler =
+           scheduler ??
+           LocalNotificationAlarmScheduler(
+             idBase: LocalNotificationAlarmScheduler.intervalIdBase,
+           ),
        _now = clock ?? DateTime.now,
        _logHistory =
            historyLogger ??
