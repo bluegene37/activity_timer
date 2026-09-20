@@ -63,10 +63,30 @@ key.properties
 .env.*
 *.env
 
-# Agent / tooling state (local only)
-.gstack/
+# Agent / tooling state & AI files (local only)
+.agents/
+.agent/
+.claude/
+.gemini/
 .superpowers/
-.claude/settings.local.json
+.gstack/
+.cursor/
+.windsurf/
+.antigravity/
+
+# AI Instruction & Rule Files
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+COPILOT.md
+.cursorrules
+.windsurfrules
+
+# AI Plans, Specs & Artifacts
+plan.md
+implementation_plan.md
+walkthrough.md
+task.md
 
 # Test coverage output
 coverage/
