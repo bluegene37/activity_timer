@@ -107,15 +107,16 @@ class ActivityListScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(
-                      CupertinoIcons.square_arrow_down,
-                      color: colorScheme.onSurfaceVariant,
-                      size: 22,
-                    ),
-                    onPressed: () => _showImportDialog(context, controller),
-                    tooltip: 'Import Routine JSON',
-                  ),
+                  // Temporarily hidden: Import Routine JSON
+                  // IconButton(
+                  //   icon: Icon(
+                  //     CupertinoIcons.square_arrow_down,
+                  //     color: colorScheme.onSurfaceVariant,
+                  //     size: 22,
+                  //   ),
+                  //   onPressed: () => _showImportDialog(context, controller),
+                  //   tooltip: 'Import Routine JSON',
+                  // ),
                   IconButton(
                     icon: Icon(
                       CupertinoIcons.chart_bar_alt_fill,
@@ -618,58 +619,59 @@ class ActivityListScreen extends StatelessWidget {
     );
   }
 
-  void _showImportDialog(
-    BuildContext context,
-    ActivityListController controller,
-  ) {
-    final textController = TextEditingController();
-    showDialog<void>(
-      context: context,
-      builder:
-          (dialogContext) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            title: const Text('Import Routine JSON'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Paste a timer routine JSON string below to import it:',
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: textController,
-                  maxLines: 5,
-                  decoration: InputDecoration(
-                    hintText: '{\n  "name": "My Shared Workout",\n  ...\n}',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  final jsonStr = textController.text.trim();
-                  if (jsonStr.isNotEmpty) {
-                    Navigator.pop(dialogContext);
-                    await controller.importSequenceFromJson(jsonStr);
-                  }
-                },
-                child: const Text('Import'),
-              ),
-            ],
-          ),
-    );
-  }
+  // Temporarily hidden: Import routine dialog
+  // void _showImportDialog(
+  //   BuildContext context,
+  //   ActivityListController controller,
+  // ) {
+  //   final textController = TextEditingController();
+  //   showDialog<void>(
+  //     context: context,
+  //     builder:
+  //         (dialogContext) => AlertDialog(
+  //           shape: RoundedRectangleBorder(
+  //             borderRadius: BorderRadius.circular(18),
+  //           ),
+  //           title: const Text('Import Routine JSON'),
+  //           content: Column(
+  //             mainAxisSize: MainAxisSize.min,
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               const Text(
+  //                 'Paste a timer routine JSON string below to import it:',
+  //               ),
+  //               const SizedBox(height: 12),
+  //               TextField(
+  //                 controller: textController,
+  //                 maxLines: 5,
+  //                 decoration: InputDecoration(
+  //                   hintText: '{\n  "name": "My Shared Workout",\n  ...\n}',
+  //                   border: OutlineInputBorder(
+  //                     borderRadius: BorderRadius.circular(12),
+  //                   ),
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //           actions: [
+  //             TextButton(
+  //               onPressed: () => Navigator.pop(dialogContext),
+  //               child: const Text('Cancel'),
+  //             ),
+  //             ElevatedButton(
+  //               onPressed: () async {
+  //                 final jsonStr = textController.text.trim();
+  //                 if (jsonStr.isNotEmpty) {
+  //                   Navigator.pop(dialogContext);
+  //                   await controller.importSequenceFromJson(jsonStr);
+  //                 }
+  //               },
+  //               child: const Text('Import'),
+  //             ),
+  //           ],
+  //         ),
+  //   );
+  // }
 
   void _showPresetsBottomSheet(
     BuildContext context,
