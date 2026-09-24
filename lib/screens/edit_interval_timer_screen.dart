@@ -198,11 +198,17 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
           ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          children: [
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 14,
+              bottom: 32,
+            ),
+            children: [
             Text(
               'Timer Name',
               style: textTheme.titleSmall?.copyWith(
@@ -571,8 +577,9 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildSectionHeader(String title, TextTheme textTheme) {
     return Text(

@@ -315,9 +315,15 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        child: Column(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 14,
+            bottom: 32,
+          ),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Phase Selector
@@ -608,8 +614,9 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildQuickDurationButton(
     int seconds,

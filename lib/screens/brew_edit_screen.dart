@@ -149,13 +149,19 @@ class _BrewEditScreenState extends State<BrewEditScreen> {
         // materializes children near the viewport, so it would silently stop
         // rendering the trailing error text (and step rows below the fold)
         // without a scroll.
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextField(
-                key: const Key('brew-name-field'),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: 40,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  key: const Key('brew-name-field'),
                 controller: _nameField,
                 decoration: const InputDecoration(labelText: 'Name'),
               ),
@@ -255,8 +261,9 @@ class _BrewEditScreenState extends State<BrewEditScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _StepRow extends StatelessWidget {
