@@ -134,7 +134,7 @@ class SettingsScreen extends StatelessWidget {
                                     segments: const [
                                       ButtonSegment(
                                         value: AppThemeStyle.ios,
-                                        label: Text('iOS'),
+                                        label: Text('Modern'),
                                         icon: Icon(
                                           CupertinoIcons.device_phone_portrait,
                                           size: 16,

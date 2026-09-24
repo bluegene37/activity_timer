@@ -43,7 +43,7 @@ void main() {
   });
 
   testWidgets(
-    'ActivityListScreen renders header, category filter chips, search, and preset button',
+    'ActivityListScreen renders header, category segmented control, search, and preset button',
     (tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -54,9 +54,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('Activity Timer'), findsOneWidget);
-      expect(find.text('All Routines'), findsOneWidget);
-      expect(find.text('Fitness & Sports'), findsOneWidget);
-      expect(find.text('Work & Focus'), findsOneWidget);
+      expect(find.text('All'), findsOneWidget);
+      expect(find.text('Fitness'), findsOneWidget);
+      expect(find.text('Work'), findsOneWidget);
       expect(find.text('Explore Presets'), findsOneWidget);
     },
   );

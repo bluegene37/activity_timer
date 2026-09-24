@@ -144,90 +144,39 @@ class IntervalTimerListScreen extends StatelessWidget {
               ),
               const SizedBox(height: 22),
 
-              // 1-Click Quick Presets for Workplace & Activity
-              Text(
-                'Quick Check-in Presets',
-                style: textTheme.titleSmall?.copyWith(
-                  color: colorScheme.primary,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              const SizedBox(height: 10),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildPresetCard(
-                      title: '💼 1-Hr Boss Check-in',
-                      subtitle: 'Every 1 hr (8 hrs)',
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                      isDark: isDark,
-                      onTap:
-                          () => _addWorkplacePreset(
-                            name: 'Hourly Boss Check-in',
-                            intervalValue: 1,
-                            intervalType: IntervalType.hour,
-                            durationHours: 8,
-                          ),
+              // Your Interval Timers Section Header with Quick Presets Action
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Text(
+                      'Your Interval Timers',
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(width: 10),
-                    _buildPresetCard(
-                      title: '💼 2-Hr Progress Report',
-                      subtitle: 'Every 2 hrs (8 hrs)',
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                      isDark: isDark,
-                      onTap:
-                          () => _addWorkplacePreset(
-                            name: 'Bi-Hourly Status Report',
-                            intervalValue: 2,
-                            intervalType: IntervalType.hour,
-                            durationHours: 8,
-                          ),
+                  ),
+                  Flexible(
+                    child: TextButton.icon(
+                      onPressed: () => _showPresetsBottomSheet(context),
+                      icon: Icon(
+                        CupertinoIcons.sparkles,
+                        size: 16,
+                        color: colorScheme.primary,
+                      ),
+                      label: Text(
+                        'Quick Presets',
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 10),
-                    _buildPresetCard(
-                      title: '💧 30-Min Hydration',
-                      subtitle: 'Every 30 mins (6 hrs)',
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                      isDark: isDark,
-                      onTap:
-                          () => _addWorkplacePreset(
-                            name: 'Stand & Hydrate Ping',
-                            intervalValue: 30,
-                            intervalType: IntervalType.minute,
-                            durationHours: 6,
-                          ),
-                    ),
-                    const SizedBox(width: 10),
-                    _buildPresetCard(
-                      title: '⚡ 15-Min Drills Ping',
-                      subtitle: 'Every 15 mins (2 hrs)',
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                      isDark: isDark,
-                      onTap:
-                          () => _addWorkplacePreset(
-                            name: '15-Min Sprint Drills',
-                            intervalValue: 15,
-                            intervalType: IntervalType.minute,
-                            durationHours: 2,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              Text(
-                'Your Interval Timers',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.3,
-                ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
 
@@ -264,8 +213,17 @@ class IntervalTimerListScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Tap a quick preset above or press + to create one',
+                              'Choose a quick preset or tap + to create one',
                               style: textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: () => _showPresetsBottomSheet(context),
+                              icon: const Icon(
+                                CupertinoIcons.sparkles,
+                                size: 18,
+                              ),
+                              label: const Text('Add from Presets'),
                             ),
                           ],
                         ),
@@ -533,49 +491,351 @@ class IntervalTimerListScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPresetCard({
-    required String title,
-    required String subtitle,
-    required ColorScheme colorScheme,
-    required TextTheme textTheme,
-    required bool isDark,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppTheme.cardBackground(isDark: isDark),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppTheme.separator(isDark: isDark),
-            width: 0.8,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
+  void _showPresetsBottomSheet(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      builder: (sheetContext) {
+        String searchQuery = '';
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final filteredPresets = _presets.where((p) {
+              if (searchQuery.isEmpty) return true;
+              final q = searchQuery.toLowerCase();
+              return p.name.toLowerCase().contains(q) ||
+                  p.description.toLowerCase().contains(q) ||
+                  p.category.toLowerCase().contains(q) ||
+                  '${p.intervalValue}'.contains(q);
+            }).toList();
+
+            return DraggableScrollableSheet(
+              expand: false,
+              initialChildSize: 0.75,
+              maxChildSize: 0.92,
+              minChildSize: 0.45,
+              builder: (context, scrollController) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20.0,
+                    vertical: 12.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // iOS modal drag bar
+                      Center(
+                        child: Container(
+                          width: 36,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: colorScheme.onSurfaceVariant.withValues(
+                              alpha: 0.3,
+                            ),
+                            borderRadius: BorderRadius.circular(2.5),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Interval Presets',
+                              style: textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              CupertinoIcons.xmark_circle_fill,
+                              size: 22,
+                            ),
+                            color: colorScheme.onSurfaceVariant,
+                            onPressed: () => Navigator.pop(sheetContext),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '1-Click recurring interval alarms for work, focus, and health.',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      // Search Bar
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppTheme.cardBackground(isDark: isDark),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppTheme.separator(isDark: isDark),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: TextField(
+                          onChanged: (val) {
+                            setSheetState(() {
+                              searchQuery = val.trim();
+                            });
+                          },
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: colorScheme.onSurface,
+                          ),
+                          decoration: InputDecoration(
+                            hintText:
+                                'Search presets (e.g. 1-hr, hydration, work)...',
+                            hintStyle: TextStyle(
+                              fontSize: 14,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            prefixIcon: Icon(
+                              CupertinoIcons.search,
+                              color: colorScheme.onSurfaceVariant,
+                              size: 18,
+                            ),
+                            filled: false,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                            border: InputBorder.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Expanded(
+                        child:
+                            filteredPresets.isEmpty
+                                ? Center(
+                                  child: Text(
+                                    'No presets match "$searchQuery"',
+                                    style: textTheme.bodyMedium?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                )
+                                : ListView.builder(
+                                  controller: scrollController,
+                                  itemCount: filteredPresets.length,
+                                  itemBuilder: (context, index) {
+                                    final preset = filteredPresets[index];
+                                    return Container(
+                                      margin: const EdgeInsets.only(bottom: 10),
+                                      padding: const EdgeInsets.all(14),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.cardBackground(
+                                          isDark: isDark,
+                                        ),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: AppTheme.separator(
+                                            isDark: isDark,
+                                          ),
+                                          width: 0.8,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: colorScheme.primary
+                                                  .withValues(alpha: 0.15),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(
+                                              preset.icon,
+                                              color: colorScheme.primary,
+                                              size: 20,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  preset.name,
+                                                  style: textTheme.titleSmall
+                                                      ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                      ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  preset.description,
+                                                  style: textTheme.bodySmall,
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  preset.intervalBadge,
+                                                  style: textTheme.bodySmall
+                                                      ?.copyWith(
+                                                        color:
+                                                            colorScheme.primary,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          ElevatedButton(
+                                            onPressed: () {
+                                              HapticFeedback.selectionClick();
+                                              Navigator.pop(sheetContext);
+                                              _addWorkplacePreset(
+                                                name: preset.name,
+                                                intervalValue:
+                                                    preset.intervalValue,
+                                                intervalType:
+                                                    preset.intervalType,
+                                                durationHours:
+                                                    preset.durationHours,
+                                                alarmSound: preset.alarmSound,
+                                              );
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 14,
+                                                    vertical: 8,
+                                                  ),
+                                              minimumSize: Size.zero,
+                                              tapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                            ),
+                                            child: const Text('Add'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
+
+  static const List<_IntervalPresetTemplate> _presets = [
+    _IntervalPresetTemplate(
+      name: 'Hourly Boss Check-in',
+      description: 'Regular hourly check-ins during work hours',
+      category: 'Work',
+      intervalValue: 1,
+      intervalType: IntervalType.hour,
+      durationHours: 8,
+      alarmSound: AlarmSound.bell,
+      icon: CupertinoIcons.briefcase_fill,
+    ),
+    _IntervalPresetTemplate(
+      name: 'Bi-Hourly Status Report',
+      description: 'Progress report ping every 2 hours',
+      category: 'Work',
+      intervalValue: 2,
+      intervalType: IntervalType.hour,
+      durationHours: 8,
+      alarmSound: AlarmSound.bell,
+      icon: CupertinoIcons.chart_bar_alt_fill,
+    ),
+    _IntervalPresetTemplate(
+      name: 'Stand & Hydrate Ping',
+      description: 'Regular reminders to hydrate and stretch',
+      category: 'Wellness',
+      intervalValue: 30,
+      intervalType: IntervalType.minute,
+      durationHours: 6,
+      alarmSound: AlarmSound.chime,
+      icon: CupertinoIcons.drop_fill,
+    ),
+    _IntervalPresetTemplate(
+      name: '15-Min Sprint Drills',
+      description: 'Short high-intensity interval drills',
+      category: 'Fitness',
+      intervalValue: 15,
+      intervalType: IntervalType.minute,
+      durationHours: 2,
+      alarmSound: AlarmSound.alert,
+      icon: CupertinoIcons.bolt_fill,
+    ),
+    _IntervalPresetTemplate(
+      name: 'Pomodoro Focus Interval',
+      description: 'Focused work interval with scheduled alerts',
+      category: 'Work',
+      intervalValue: 25,
+      intervalType: IntervalType.minute,
+      durationHours: 4,
+      alarmSound: AlarmSound.beep,
+      icon: CupertinoIcons.timer,
+    ),
+    _IntervalPresetTemplate(
+      name: '20-20-20 Eye Rest Ping',
+      description: 'Look 20ft away for 20s to reduce digital eye strain',
+      category: 'Wellness',
+      intervalValue: 20,
+      intervalType: IntervalType.minute,
+      durationHours: 8,
+      alarmSound: AlarmSound.chime,
+      icon: CupertinoIcons.eye_fill,
+    ),
+  ];
 }
+
+class _IntervalPresetTemplate {
+  const _IntervalPresetTemplate({
+    required this.name,
+    required this.description,
+    required this.category,
+    required this.intervalValue,
+    required this.intervalType,
+    required this.durationHours,
+    this.alarmSound = AlarmSound.bell,
+    required this.icon,
+  });
+
+  final String name;
+  final String description;
+  final String category;
+  final int intervalValue;
+  final IntervalType intervalType;
+  final int durationHours;
+  final AlarmSound alarmSound;
+  final IconData icon;
+
+  String get intervalBadge {
+    final unit =
+        intervalValue == 1 ? intervalType.name : '${intervalType.name}s';
+    return 'Every $intervalValue $unit • ${durationHours}h duration';
+  }
+}
+

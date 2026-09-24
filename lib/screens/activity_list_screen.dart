@@ -166,43 +166,55 @@ class ActivityListScreen extends StatelessWidget {
               ),
               const SizedBox(height: 14),
 
-              // Category Filter Bar (iOS Pill Tabs)
+              // Category Filter Bar (Segmented Control)
               SignalBuilder(
                 builder:
-                    (_) => SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildCategoryChip(
-                            label: 'All Routines',
-                            icon: CupertinoIcons.square_grid_2x2,
+                    (_) => SizedBox(
+                      width: double.infinity,
+                      child: SegmentedButton<String>(
+                        segments: const [
+                          ButtonSegment(
                             value: 'all',
-                            selected:
-                                controller.selectedCategory.value == 'all',
-                            onTap: () => controller.setCategory('all'),
-                            colorScheme: colorScheme,
+                            label: Text('All'),
+                            icon: Icon(
+                              CupertinoIcons.square_grid_2x2,
+                              size: 16,
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          _buildCategoryChip(
-                            label: 'Fitness & Sports',
-                            icon: CupertinoIcons.bolt_fill,
+                          ButtonSegment(
                             value: 'fitness',
-                            selected:
-                                controller.selectedCategory.value == 'fitness',
-                            onTap: () => controller.setCategory('fitness'),
-                            colorScheme: colorScheme,
+                            label: Text('Fitness'),
+                            icon: Icon(
+                              CupertinoIcons.bolt_fill,
+                              size: 16,
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          _buildCategoryChip(
-                            label: 'Work & Focus',
-                            icon: CupertinoIcons.briefcase_fill,
+                          ButtonSegment(
                             value: 'work',
-                            selected:
-                                controller.selectedCategory.value == 'work',
-                            onTap: () => controller.setCategory('work'),
-                            colorScheme: colorScheme,
+                            label: Text('Work'),
+                            icon: Icon(
+                              CupertinoIcons.briefcase_fill,
+                              size: 16,
+                            ),
                           ),
                         ],
+                        selected: {controller.selectedCategory.value},
+                        onSelectionChanged: (selection) {
+                          HapticFeedback.selectionClick();
+                          controller.setCategory(selection.first);
+                        },
+                        style: SegmentedButton.styleFrom(
+                          selectedBackgroundColor: colorScheme.primary
+                              .withValues(alpha: 0.18),
+                          selectedForegroundColor: colorScheme.primary,
+                          side: BorderSide(
+                            color: AppTheme.separator(isDark: isDark),
+                            width: 0.8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
                       ),
                     ),
               ),
@@ -586,52 +598,6 @@ class ActivityListScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryChip({
-    required String label,
-    required IconData icon,
-    required String value,
-    required bool selected,
-    required VoidCallback onTap,
-    required ColorScheme colorScheme,
-  }) {
-    return InkWell(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? colorScheme.primary : colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-          border: Border.all(
-            color: selected ? colorScheme.primary : colorScheme.outlineVariant,
-            width: 0.8,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 15,
-              color: selected ? Colors.white : colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? Colors.white : colorScheme.onSurface,
-                letterSpacing: -0.1,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildSmallCategoryBadge(String label, Color color) {
     return Container(
