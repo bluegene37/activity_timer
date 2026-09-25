@@ -38,15 +38,20 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Set up release keystore
+      - name: Set up release keystore & validate secrets
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           if [ -z "$KEYSTORE_BASE64" ]; then
             echo "::error::ANDROID_KEYSTORE_BASE64 secret is not set!"
+            exit 1
+          fi
+          if [ -z "$PLAY_JSON" ]; then
+            echo "::error::PLAY_SERVICE_ACCOUNT_JSON secret is not set! Please add it in GitHub repository Settings -> Secrets and variables -> Actions."
             exit 1
           fi
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
