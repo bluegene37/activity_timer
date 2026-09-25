@@ -57,11 +57,13 @@ Android release builds look for `android/key.properties` (which is gitignored).
    keyAlias=upload
    storeFile=/path/to/upload-keystore.jks
    ```
-4. **CI Keystore Secrets**:
-   To enable automatic release signing in GitHub Actions, configure repository secrets:
+4. **CI Secrets**:
+   To enable automatic release signing and Play Store deployment in GitHub Actions, configure repository secrets:
    - `ANDROID_KEYSTORE_BASE64` (generated via `base64 -i upload-keystore.jks`)
    - `ANDROID_KEYSTORE_PASSWORD`
    - `ANDROID_KEY_PASSWORD`
+   - `ANDROID_KEY_ALIAS` (optional, defaults to `upload`)
+   - `PLAY_SERVICE_ACCOUNT_JSON` (Google Play service account JSON key with release management permissions)
 
 *(Note: Without `key.properties` present, local builds fall back to debug keys so `flutter run --release` continues to work seamlessly.)*
 
@@ -96,12 +98,23 @@ iOS signing uses Xcode Automatic Signing with Team ID `8AD458D2K2`.
    - Validate that tag `v1.0.0` matches `pubspec.yaml` version `1.0.0`.
    - Run tests and static analysis with `--fatal-infos`.
    - Build Android `.aab` bundle and standalone `.apk` + symbols archive.
+   - If `PLAY_SERVICE_ACCOUNT_JSON` is configured, automatically deploy the `.aab` to the Google Play Internal track.
    - Build iOS `.xcarchive.zip` + symbols archive.
    - Publish a GitHub Release with attached binaries and auto-generated release notes.
 
 ---
 
-### 2. Local Release Builds
+### 2. Fast-Track Google Play Internal Testing (Manual Workflow)
+
+For pushing internal testing builds directly to Google Play without creating a git release tag:
+1. Go to **Actions** → **Deploy to Google Play Internal Testing** in GitHub.
+2. Click **Run workflow**.
+3. Choose whether `auto_increment_build` should be enabled (default: `true`, which assigns build number `10 + run_number` to avoid version code collisions on Google Play).
+4. GitHub Actions will test, build, and deploy the `.aab` straight to the Google Play **Internal** testing track.
+
+---
+
+### 3. Local Release Builds
 
 #### Android Bundle & APK
 ```bash

@@ -1,0 +1,86 @@
+name: Deploy to Google Play Internal Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      auto_increment_build:
+        description: 'Use GitHub run number as build number (avoids duplicate versionCode)'
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-internal-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-internal:
+    name: Build & Deploy to Play Store (Internal)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Set up release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 secret is not set!"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          cat > android/key.properties <<EOF
+          storeFile=$RUNNER_TEMP/upload.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=${KEY_ALIAS:-upload}
+          keyPassword=$KEY_PASSWORD
+          EOF
+          echo "Keystore setup complete."
+
+      - name: Build Android App Bundle (.aab)
+        run: |
+          if [ "${{ github.event.inputs.auto_increment_build }}" = "true" ]; then
+            VERSION_NAME=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
+            # Use offset + run_number so build number is always safely higher than existing releases
+            BUILD_NUMBER=$(( 10 + ${{ github.run_number }} ))
+            echo "Building $VERSION_NAME+$BUILD_NUMBER"
+            flutter build appbundle --release \
+              --build-name="$VERSION_NAME" \
+              --build-number="$BUILD_NUMBER" \
+              --obfuscate \
+              --split-debug-info=build/symbols/android
+          else
+            flutter build appbundle --release \
+              --obfuscate \
+              --split-debug-info=build/symbols/android
+          fi
+
+      - name: Upload to Google Play Internal Track
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: dev.genexis.activitytimer
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed

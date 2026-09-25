@@ -58,6 +58,7 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         if: env.KEYSTORE_B64 != ''
         run: |
@@ -65,7 +66,7 @@ jobs:
           cat > android/key.properties <<EOF
           storePassword=$KEYSTORE_PASSWORD
           keyPassword=$KEY_PASSWORD
-          keyAlias=upload
+          keyAlias=${KEY_ALIAS:-upload}
           storeFile=$RUNNER_TEMP/upload-keystore.jks
           EOF
 
@@ -87,6 +88,18 @@ jobs:
           if [ -d "build/symbols/android" ]; then
             (cd build/symbols && zip -r "$GITHUB_WORKSPACE/dist/symbols-android.zip" android)
           fi
+
+      - name: Upload to Google Play Internal Track (optional)
+        if: env.PLAY_JSON != ''
+        uses: r0adkll/upload-google-play@v1
+        env:
+          PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: dev.genexis.activitytimer
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
 
       - name: Upload Android Artifacts
         uses: actions/upload-artifact@v4
