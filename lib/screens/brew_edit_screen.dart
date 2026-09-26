@@ -162,108 +162,110 @@ class _BrewEditScreenState extends State<BrewEditScreen> {
               children: [
                 TextField(
                   key: const Key('brew-name-field'),
-                controller: _nameField,
-                decoration: const InputDecoration(labelText: 'Name'),
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<BrewMethod>(
-                key: const Key('brew-method-field'),
-                initialValue: _draft.method,
-                decoration: const InputDecoration(labelText: 'Method'),
-                items: [
-                  for (final method in BrewMethod.values)
-                    DropdownMenuItem(
-                      value: method,
-                      child: Text(method.displayName),
-                    ),
-                ],
-                onChanged: (method) {
-                  if (method != null) {
-                    setState(() => _draft.method = method);
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      key: const Key('brew-dose-field'),
-                      controller: _doseField,
-                      keyboardType: TextInputType.number,
-                      onChanged: _onDoseChanged,
-                      decoration: const InputDecoration(labelText: 'Dose (g)'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      key: const Key('brew-ratio-field'),
-                      controller: _ratioField,
-                      keyboardType: TextInputType.number,
-                      onChanged: _onRatioChanged,
-                      decoration: const InputDecoration(
-                        labelText: 'Ratio (1:x)',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Total water ${_totalWater.round()}g',
-                style: TextStyle(color: palette.inkSoft),
-              ),
-              const SizedBox(height: 20),
-              for (var i = 0; i < _draft.steps.length; i++)
-                _StepRow(
-                  // Keyed by step identity, not position: BrewStep has no ==
-                  // override, so this is reference identity. Reorder and
-                  // delete shift which index a step sits at; keying by index
-                  // would make Flutter reuse the old State object (and its
-                  // TextFormField.initialValue, which only seeds on first
-                  // build) for the new occupant of that slot, leaving stale
-                  // text on screen even though _draft.steps is correct.
-                  key: ValueKey(_draft.steps[i]),
-                  index: i,
-                  step: _draft.steps[i],
-                  targetGrams: _draft.targetGramsAt(i),
-                  palette: palette,
-                  onTargetChanged: (grams) => _setStepTargetGrams(i, grams),
-                  onChanged: () => setState(() {}),
-                  onDelete: () => setState(() => _draft.steps.removeAt(i)),
-                  onMoveUp: () => _moveStep(i, -1),
-                  onMoveDown: () => _moveStep(i, 1),
+                  controller: _nameField,
+                  decoration: const InputDecoration(labelText: 'Name'),
                 ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed:
-                    () => setState(
-                      () => _draft.steps.add(
-                        BrewStep(
-                          name: 'New step',
-                          seconds: 30,
-                          kind: BrewStepKind.wait,
+                const SizedBox(height: 16),
+                DropdownButtonFormField<BrewMethod>(
+                  key: const Key('brew-method-field'),
+                  initialValue: _draft.method,
+                  decoration: const InputDecoration(labelText: 'Method'),
+                  items: [
+                    for (final method in BrewMethod.values)
+                      DropdownMenuItem(
+                        value: method,
+                        child: Text(method.displayName),
+                      ),
+                  ],
+                  onChanged: (method) {
+                    if (method != null) {
+                      setState(() => _draft.method = method);
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        key: const Key('brew-dose-field'),
+                        controller: _doseField,
+                        keyboardType: TextInputType.number,
+                        onChanged: _onDoseChanged,
+                        decoration: const InputDecoration(
+                          labelText: 'Dose (g)',
                         ),
                       ),
                     ),
-                child: const Text('Add step'),
-              ),
-              if (_errors.isNotEmpty) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        key: const Key('brew-ratio-field'),
+                        controller: _ratioField,
+                        keyboardType: TextInputType.number,
+                        onChanged: _onRatioChanged,
+                        decoration: const InputDecoration(
+                          labelText: 'Ratio (1:x)',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Total water ${_totalWater.round()}g',
+                  style: TextStyle(color: palette.inkSoft),
+                ),
                 const SizedBox(height: 20),
-                for (final error in _errors)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Text(error, style: TextStyle(color: palette.lead)),
+                for (var i = 0; i < _draft.steps.length; i++)
+                  _StepRow(
+                    // Keyed by step identity, not position: BrewStep has no ==
+                    // override, so this is reference identity. Reorder and
+                    // delete shift which index a step sits at; keying by index
+                    // would make Flutter reuse the old State object (and its
+                    // TextFormField.initialValue, which only seeds on first
+                    // build) for the new occupant of that slot, leaving stale
+                    // text on screen even though _draft.steps is correct.
+                    key: ValueKey(_draft.steps[i]),
+                    index: i,
+                    step: _draft.steps[i],
+                    targetGrams: _draft.targetGramsAt(i),
+                    palette: palette,
+                    onTargetChanged: (grams) => _setStepTargetGrams(i, grams),
+                    onChanged: () => setState(() {}),
+                    onDelete: () => setState(() => _draft.steps.removeAt(i)),
+                    onMoveUp: () => _moveStep(i, -1),
+                    onMoveDown: () => _moveStep(i, 1),
                   ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed:
+                      () => setState(
+                        () => _draft.steps.add(
+                          BrewStep(
+                            name: 'New step',
+                            seconds: 30,
+                            kind: BrewStepKind.wait,
+                          ),
+                        ),
+                      ),
+                  child: const Text('Add step'),
+                ),
+                if (_errors.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  for (final error in _errors)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(error, style: TextStyle(color: palette.lead)),
+                    ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 class _StepRow extends StatelessWidget {

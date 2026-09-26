@@ -324,139 +324,98 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
             bottom: 32,
           ),
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Phase Selector
-            Text(
-              'Interval Phase',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: AppTheme.cardBackground(isDark: isDark),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: AppTheme.separator(isDark: isDark),
-                  width: 0.8,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Phase Selector
+              Text(
+                'Interval Phase',
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              child: Row(
-                children:
-                    IntervalPhase.values.map((phase) {
-                      final isSelected = _phase == phase;
-                      return Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            unawaited(HapticFeedback.selectionClick());
-                            setState(() => _phase = phase);
-                          },
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            decoration: BoxDecoration(
-                              color:
-                                  isSelected
-                                      ? phase.defaultColor.withValues(
-                                        alpha: 0.18,
-                                      )
-                                      : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                              border:
-                                  isSelected
-                                      ? Border.all(
-                                        color: phase.defaultColor,
-                                        width: 1.2,
-                                      )
-                                      : null,
-                            ),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  phase.icon,
-                                  size: 18,
-                                  color:
-                                      isSelected
-                                          ? phase.defaultColor
-                                          : colorScheme.onSurfaceVariant,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  phase.displayName,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight:
-                                        isSelected
-                                            ? FontWeight.w700
-                                            : FontWeight.normal,
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppTheme.cardBackground(isDark: isDark),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppTheme.separator(isDark: isDark),
+                    width: 0.8,
+                  ),
+                ),
+                child: Row(
+                  children:
+                      IntervalPhase.values.map((phase) {
+                        final isSelected = _phase == phase;
+                        return Expanded(
+                          child: InkWell(
+                            onTap: () {
+                              unawaited(HapticFeedback.selectionClick());
+                              setState(() => _phase = phase);
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color:
+                                    isSelected
+                                        ? phase.defaultColor.withValues(
+                                          alpha: 0.18,
+                                        )
+                                        : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                                border:
+                                    isSelected
+                                        ? Border.all(
+                                          color: phase.defaultColor,
+                                          width: 1.2,
+                                        )
+                                        : null,
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    phase.icon,
+                                    size: 18,
                                     color:
                                         isSelected
                                             ? phase.defaultColor
                                             : colorScheme.onSurfaceVariant,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    phase.displayName,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight:
+                                          isSelected
+                                              ? FontWeight.w700
+                                              : FontWeight.normal,
+                                      color:
+                                          isSelected
+                                              ? phase.defaultColor
+                                              : colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    }).toList(),
+                        );
+                      }).toList(),
+                ),
               ),
-            ),
-            const SizedBox(height: 22),
+              const SizedBox(height: 22),
 
-            Text(
-              'Timer Name',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: AppTheme.cardBackground(isDark: isDark),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppTheme.separator(isDark: isDark),
-                  width: 0.8,
+              Text(
+                'Timer Name',
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              child: TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  hintText: 'e.g. Sprint, Rest, Work Block',
-                  filled: false,
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 14,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 22),
-
-            Text(
-              'Duration',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            InkWell(
-              onTap: () {
-                unawaited(HapticFeedback.selectionClick());
-                _showTimePickerDialog();
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 14,
-                ),
+              const SizedBox(height: 8),
+              DecoratedBox(
                 decoration: BoxDecoration(
                   color: AppTheme.cardBackground(isDark: isDark),
                   borderRadius: BorderRadius.circular(12),
@@ -465,158 +424,214 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                     width: 0.8,
                   ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _formatDuration(),
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                child: TextField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. Sprint, Rest, Work Block',
+                    filled: false,
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
                     ),
-                    Icon(
-                      CupertinoIcons.clock,
-                      color: colorScheme.primary,
-                      size: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-
-            Text(
-              'Quick Presets',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildQuickDurationButton(15, colorScheme, textTheme, isDark),
-                _buildQuickDurationButton(20, colorScheme, textTheme, isDark),
-                _buildQuickDurationButton(30, colorScheme, textTheme, isDark),
-                _buildQuickDurationButton(45, colorScheme, textTheme, isDark),
-                _buildQuickDurationButton(60, colorScheme, textTheme, isDark),
-                _buildQuickDurationButton(120, colorScheme, textTheme, isDark),
-                _buildQuickDurationButton(300, colorScheme, textTheme, isDark),
-                _buildQuickDurationButton(1500, colorScheme, textTheme, isDark),
-              ],
-            ),
-            const SizedBox(height: 22),
-
-            Text(
-              'Custom Alarm Sound',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            InkWell(
-              onTap: () {
-                unawaited(HapticFeedback.selectionClick());
-                _selectAlarmSound();
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 14,
-                ),
-                decoration: BoxDecoration(
-                  color: AppTheme.cardBackground(isDark: isDark),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppTheme.separator(isDark: isDark),
-                    width: 0.8,
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _selectedAlarmSound != null
-                          ? _selectedAlarmSound!.displayName
-                          : 'Default App Sound',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Icon(
-                      CupertinoIcons.music_note,
-                      color: colorScheme.primary,
-                      size: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 22),
-
-            Text(
-              'Description (optional)',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: AppTheme.cardBackground(isDark: isDark),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppTheme.separator(isDark: isDark),
-                  width: 0.8,
-                ),
-              ),
-              child: TextField(
-                controller: _descriptionController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  hintText: 'e.g. Burpees, Hydrate, Deep focus',
-                  filled: false,
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 14,
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 32),
+              const SizedBox(height: 22),
 
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () {
+              Text(
+                'Duration',
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () {
                   unawaited(HapticFeedback.selectionClick());
-                  _saveTimer();
+                  _showTimePickerDialog();
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.cardBackground(isDark: isDark),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.separator(isDark: isDark),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _formatDuration(),
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Icon(
+                        CupertinoIcons.clock,
+                        color: colorScheme.primary,
+                        size: 20,
+                      ),
+                    ],
                   ),
                 ),
-                child: const Text(
-                  'Save Timer',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 18),
+
+              Text(
+                'Quick Presets',
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 10),
+
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildQuickDurationButton(15, colorScheme, textTheme, isDark),
+                  _buildQuickDurationButton(20, colorScheme, textTheme, isDark),
+                  _buildQuickDurationButton(30, colorScheme, textTheme, isDark),
+                  _buildQuickDurationButton(45, colorScheme, textTheme, isDark),
+                  _buildQuickDurationButton(60, colorScheme, textTheme, isDark),
+                  _buildQuickDurationButton(
+                    120,
+                    colorScheme,
+                    textTheme,
+                    isDark,
+                  ),
+                  _buildQuickDurationButton(
+                    300,
+                    colorScheme,
+                    textTheme,
+                    isDark,
+                  ),
+                  _buildQuickDurationButton(
+                    1500,
+                    colorScheme,
+                    textTheme,
+                    isDark,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+
+              Text(
+                'Custom Alarm Sound',
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () {
+                  unawaited(HapticFeedback.selectionClick());
+                  _selectAlarmSound();
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.cardBackground(isDark: isDark),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.separator(isDark: isDark),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _selectedAlarmSound != null
+                            ? _selectedAlarmSound!.displayName
+                            : 'Default App Sound',
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Icon(
+                        CupertinoIcons.music_note,
+                        color: colorScheme.primary,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 22),
+
+              Text(
+                'Description (optional)',
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppTheme.cardBackground(isDark: isDark),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.separator(isDark: isDark),
+                    width: 0.8,
+                  ),
+                ),
+                child: TextField(
+                  controller: _descriptionController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. Burpees, Hydrate, Deep focus',
+                    filled: false,
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () {
+                    unawaited(HapticFeedback.selectionClick());
+                    _saveTimer();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Save Timer',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildQuickDurationButton(
     int seconds,

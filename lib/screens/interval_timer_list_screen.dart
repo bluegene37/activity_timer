@@ -508,14 +508,15 @@ class IntervalTimerListScreen extends StatelessWidget {
         String searchQuery = '';
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            final filteredPresets = _presets.where((p) {
-              if (searchQuery.isEmpty) return true;
-              final q = searchQuery.toLowerCase();
-              return p.name.toLowerCase().contains(q) ||
-                  p.description.toLowerCase().contains(q) ||
-                  p.category.toLowerCase().contains(q) ||
-                  '${p.intervalValue}'.contains(q);
-            }).toList();
+            final filteredPresets =
+                _presets.where((p) {
+                  if (searchQuery.isEmpty) return true;
+                  final q = searchQuery.toLowerCase();
+                  return p.name.toLowerCase().contains(q) ||
+                      p.description.toLowerCase().contains(q) ||
+                      p.category.toLowerCase().contains(q) ||
+                      '${p.intervalValue}'.contains(q);
+                }).toList();
 
             return DraggableScrollableSheet(
               expand: false,
@@ -838,4 +839,3 @@ class _IntervalPresetTemplate {
     return 'Every $intervalValue $unit • ${durationHours}h duration';
   }
 }
-

@@ -185,18 +185,12 @@ class ActivityListScreen extends StatelessWidget {
                           ButtonSegment(
                             value: 'fitness',
                             label: Text('Fitness'),
-                            icon: Icon(
-                              CupertinoIcons.bolt_fill,
-                              size: 16,
-                            ),
+                            icon: Icon(CupertinoIcons.bolt_fill, size: 16),
                           ),
                           ButtonSegment(
                             value: 'work',
                             label: Text('Work'),
-                            icon: Icon(
-                              CupertinoIcons.briefcase_fill,
-                              size: 16,
-                            ),
+                            icon: Icon(CupertinoIcons.briefcase_fill, size: 16),
                           ),
                         ],
                         selected: {controller.selectedCategory.value},
@@ -598,7 +592,6 @@ class ActivityListScreen extends StatelessWidget {
       ),
     );
   }
-
 
   Widget _buildSmallCategoryBadge(String label, Color color) {
     return Container(

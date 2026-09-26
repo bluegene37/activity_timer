@@ -177,7 +177,10 @@ void main() {
       final afterPrep = preparing.pendingAlarms().skip(1).toList();
       final direct = running.pendingAlarms();
       expect(afterPrep.map((a) => a.body), direct.map((a) => a.body));
-      expect(afterPrep.map((a) => a.isCompletion), direct.map((a) => a.isCompletion));
+      expect(
+        afterPrep.map((a) => a.isCompletion),
+        direct.map((a) => a.isCompletion),
+      );
 
       preparing.onClose();
       running.onClose();
