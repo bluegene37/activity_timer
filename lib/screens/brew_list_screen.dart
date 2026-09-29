@@ -102,8 +102,12 @@ class BrewListScreen extends StatelessWidget {
     final brightness = Theme.of(context).brightness;
     final palette = BrewTheme.paletteFor(brightness);
 
+    final theme = BrewTheme.themeFor(brightness);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
     return Theme(
-      data: BrewTheme.themeFor(brightness),
+      data: theme,
       child: Scaffold(
         backgroundColor: palette.paper,
         body: SafeArea(
@@ -113,13 +117,63 @@ class BrewListScreen extends StatelessWidget {
                 (_) => ListView(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
                   children: [
-                    Text(
-                      'Brew',
-                      style: TextStyle(
-                        fontSize: 34,
-                        letterSpacing: -1.9,
-                        color: palette.ink,
-                      ),
+                    // Top Header
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                colorScheme.primary,
+                                colorScheme.primary.withValues(alpha: 0.8),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: colorScheme.primary.withValues(
+                                  alpha: 0.3,
+                                ),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.coffee,
+                            color: Colors.white,
+                            size: 26,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Brew',
+                                style: textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.8,
+                                ),
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                'Pour-Over & Specialty Coffee',
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     OutlinedButton.icon(
