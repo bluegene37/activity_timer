@@ -35,19 +35,20 @@ void main() {
     }
   });
 
-  testWidgets('renders top header with coffee icon badge, bold title, and subtitle', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const MaterialApp(home: BrewListScreen()));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'renders top header with coffee icon badge, bold title, and subtitle',
+    (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: BrewListScreen()));
+      await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.coffee), findsOneWidget);
-    final titleFinder = find.text('Brew');
-    expect(titleFinder, findsOneWidget);
-    final Text titleWidget = tester.widget(titleFinder);
-    expect(titleWidget.style?.fontWeight, FontWeight.w800);
-    expect(find.text('Pour-Over & Specialty Coffee'), findsOneWidget);
-  });
+      expect(find.byIcon(Icons.coffee), findsOneWidget);
+      final titleFinder = find.text('Brew');
+      expect(titleFinder, findsOneWidget);
+      final Text titleWidget = tester.widget(titleFinder);
+      expect(titleWidget.style?.fontWeight, FontWeight.w800);
+      expect(find.text('Pour-Over & Specialty Coffee'), findsOneWidget);
+    },
+  );
 
   testWidgets('empty state invites the library', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: BrewListScreen()));
