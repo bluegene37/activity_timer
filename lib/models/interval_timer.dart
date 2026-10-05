@@ -39,6 +39,21 @@ enum IntervalType {
   /// 'Every hour' for 1, 'Every 3 hours' otherwise.
   String everyLabel(int value) =>
       value == 1 ? 'Every $singularUnit' : 'Every $value $pluralUnit';
+
+  // Gene - Oct, 06, 2026: Added shortUnit and shortEveryLabel to support compact tags (e.g. 'Every 15 min').
+  String get shortUnit {
+    switch (this) {
+      case IntervalType.hour:
+        return 'hr';
+      case IntervalType.minute:
+        return 'min';
+      case IntervalType.second:
+        return 'sec';
+    }
+  }
+
+  /// 'Every 1 hr', 'Every 2 hr', 'Every 15 min', 'Every 30 sec'.
+  String shortEveryLabel(int value) => 'Every $value $shortUnit';
 }
 
 @HiveType(typeId: 3)
@@ -136,4 +151,8 @@ class IntervalTimer extends HiveObject {
 
   /// 'Every hour', 'Every 30 minutes', …
   String get intervalString => intervalType.everyLabel(intervalValue);
+
+  // Gene - Oct, 06, 2026: Added shortIntervalString for compact badge representations like 'Every 15 min'.
+  /// 'Every 1 hr', 'Every 15 min', …
+  String get shortIntervalString => intervalType.shortEveryLabel(intervalValue);
 }

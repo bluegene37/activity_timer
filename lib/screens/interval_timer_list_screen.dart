@@ -144,22 +144,57 @@ class IntervalTimerListScreen extends StatelessWidget {
               ),
               const SizedBox(height: 22),
 
-              // Your Interval Timers Section Header with Quick Presets Action
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Flexible(
-                    child: Text(
+              // Gene - Oct, 06, 2026: Use Wrap with full width so "Your Interval Timers" is not truncated beside Quick Presets, and cleanly wraps without RenderFlex overflow at accessibility text scales.
+              // // Old implementation wrapped both header and button in Flexible(flex: 1), capping each to 50% width and truncating "Your Interval Timers":
+              // Row(
+              //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              //   children: [
+              //     Flexible(
+              //       child: Text(
+              //         'Your Interval Timers',
+              //         style: textTheme.titleLarge?.copyWith(
+              //           fontWeight: FontWeight.w700,
+              //           letterSpacing: -0.3,
+              //         ),
+              //         overflow: TextOverflow.ellipsis,
+              //       ),
+              //     ),
+              //     Flexible(
+              //       child: TextButton.icon(
+              //         onPressed: () => _showPresetsBottomSheet(context),
+              //         icon: Icon(
+              //           CupertinoIcons.sparkles,
+              //           size: 16,
+              //           color: colorScheme.primary,
+              //         ),
+              //         label: Text(
+              //           'Quick Presets',
+              //           overflow: TextOverflow.ellipsis,
+              //           style: textTheme.bodyMedium?.copyWith(
+              //             color: colorScheme.primary,
+              //             fontWeight: FontWeight.w600,
+              //           ),
+              //         ),
+              //       ),
+              //     ),
+              //   ],
+              // ),
+              SizedBox(
+                width: double.infinity,
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    Text(
                       'Your Interval Timers',
                       style: textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.3,
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Flexible(
-                    child: TextButton.icon(
+                    TextButton.icon(
                       onPressed: () => _showPresetsBottomSheet(context),
                       icon: Icon(
                         CupertinoIcons.sparkles,
@@ -168,15 +203,18 @@ class IntervalTimerListScreen extends StatelessWidget {
                       ),
                       label: Text(
                         'Quick Presets',
-                        overflow: TextOverflow.ellipsis,
                         style: textTheme.bodyMedium?.copyWith(
                           color: colorScheme.primary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 12),
 
@@ -411,8 +449,17 @@ class IntervalTimerListScreen extends StatelessWidget {
                                           color: AppTheme.iosBlue,
                                         ),
                                         const SizedBox(width: 4),
+                                        // Gene - Oct, 06, 2026: Shorten interval badge to 'Every 15 min' instead of 'Every 15 minutes'.
+                                        // Text(
+                                        //   timer.intervalString,
+                                        //   style: const TextStyle(
+                                        //     fontSize: 12,
+                                        //     color: AppTheme.iosBlue,
+                                        //     fontWeight: FontWeight.w700,
+                                        //   ),
+                                        // ),
                                         Text(
-                                          timer.intervalString,
+                                          timer.shortIntervalString,
                                           style: const TextStyle(
                                             fontSize: 12,
                                             color: AppTheme.iosBlue,

@@ -17,7 +17,9 @@ void main() {
         alarmSoundName: AlarmSound.bell.name,
       );
 
+      // Gene - Oct, 06, 2026: Added assertion for shortIntervalString on 1 hour interval timer.
       expect(timer.intervalString, 'Every hour');
+      expect(timer.shortIntervalString, 'Every 1 hr');
       expect(timer.totalAlarms, 9); // 9:00, 10:00, ..., 17:00 (9 alarms total)
 
       final alarmTimes = timer.getAllAlarmTimes();
@@ -44,7 +46,9 @@ void main() {
         intervalType: IntervalType.hour,
       );
 
+      // Gene - Oct, 06, 2026: Added assertion for shortIntervalString on 2 hour interval timer.
       expect(timer.intervalString, 'Every 2 hours');
+      expect(timer.shortIntervalString, 'Every 2 hr');
       expect(timer.totalAlarms, 5); // 9:00, 11:00, 13:00, 15:00, 17:00
 
       final alarmTimes = timer.getAllAlarmTimes();
@@ -70,11 +74,23 @@ void main() {
           intervalType: IntervalType.minute,
         );
 
+        // Gene - Oct, 06, 2026: Added assertions for shortIntervalString on 30 min and 15 min interval timers.
         expect(timer.intervalString, 'Every 30 minutes');
+        expect(timer.shortIntervalString, 'Every 30 min');
         expect(
           timer.totalAlarms,
           7,
         ); // 9:00, 9:30, 10:00, 10:30, 11:00, 11:30, 12:00
+
+        final sprintTimer = IntervalTimer(
+          name: '15-Min Sprint Drills',
+          startTime: startTime,
+          endTime: endTime,
+          intervalValue: 15,
+          intervalType: IntervalType.minute,
+        );
+        expect(sprintTimer.intervalString, 'Every 15 minutes');
+        expect(sprintTimer.shortIntervalString, 'Every 15 min');
       },
     );
   });
