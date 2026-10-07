@@ -86,29 +86,54 @@ jobs:
                   <key>dev.genexis.activitytimer</key>
                   <string>$profile_name</string>
               </dict>
+              <key>manageAppVersionAndBuildNumber</key>
+              <false/>
           </dict>
           </plist>
           EOF
           echo "Generated ios/ExportOptions.plist:"
           cat ios/ExportOptions.plist
 
-      - name: Build iOS IPA
+      # Gene - Oct 07, 2026: Build unsigned archive with Flutter to bypass Xcode account check, then sign and export via xcodebuild -exportArchive
+      # - name: Build iOS IPA
+      #   run: |
+      #     if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event.inputs.auto_increment_build }}" = "true" ]; then
+      #       VERSION_NAME=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
+      #       # Use offset + run_number so build number is always safely incremental
+      #       BUILD_NUMBER=$(( 10 + ${{ github.run_number }} ))
+      #       echo "Building $VERSION_NAME+$BUILD_NUMBER"
+      #       flutter build ipa --release \
+      #         --build-name="$VERSION_NAME" \
+      #         --build-number="$BUILD_NUMBER" \
+      #         --export-options-plist=ios/ExportOptions.plist \
+      #         --obfuscate --split-debug-info=build/symbols/ios
+      #     else
+      #       flutter build ipa --release \
+      #         --export-options-plist=ios/ExportOptions.plist \
+      #         --obfuscate --split-debug-info=build/symbols/ios
+      #     fi
+      - name: Build iOS Archive (unsigned)
         run: |
-          if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event.inputs.auto_increment_build }}" = "true" ]; then
+          if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event.inputs.auto_increment_build }}" != "false" ]; then
             VERSION_NAME=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
             # Use offset + run_number so build number is always safely incremental
             BUILD_NUMBER=$(( 10 + ${{ github.run_number }} ))
             echo "Building $VERSION_NAME+$BUILD_NUMBER"
-            flutter build ipa --release \
+            flutter build ipa --release --no-codesign \
               --build-name="$VERSION_NAME" \
               --build-number="$BUILD_NUMBER" \
-              --export-options-plist=ios/ExportOptions.plist \
               --obfuscate --split-debug-info=build/symbols/ios
           else
-            flutter build ipa --release \
-              --export-options-plist=ios/ExportOptions.plist \
+            flutter build ipa --release --no-codesign \
               --obfuscate --split-debug-info=build/symbols/ios
           fi
+
+      - name: Export and Sign IPA
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist ios/ExportOptions.plist
 
       - name: Locate IPA file
         id: find_ipa
