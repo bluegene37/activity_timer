@@ -485,8 +485,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
-				// Gene - Oct, 7, 2026: Updated Apple Development Team ID to J9V2X635Y6 for enrolled Apple Developer account.
-				DEVELOPMENT_TEAM = J9V2X635Y6;
+				// Gene - Oct, 7, 2026: Updated Apple Development Team ID to paid Apple Developer account T7LB768N2Z for App Store distribution.
+				DEVELOPMENT_TEAM = T7LB768N2Z;
+				// DEVELOPMENT_TEAM = J9V2X635Y6;
 				// DEVELOPMENT_TEAM = 8AD458D2K2;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
@@ -670,8 +671,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
-				// Gene - Oct, 7, 2026: Updated Apple Development Team ID to J9V2X635Y6 for enrolled Apple Developer account.
-				DEVELOPMENT_TEAM = J9V2X635Y6;
+				// Gene - Oct, 7, 2026: Updated Apple Development Team ID to paid Apple Developer account T7LB768N2Z for App Store distribution.
+				DEVELOPMENT_TEAM = T7LB768N2Z;
+				// DEVELOPMENT_TEAM = J9V2X635Y6;
 				// DEVELOPMENT_TEAM = 8AD458D2K2;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
@@ -695,8 +697,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
-				// Gene - Oct, 7, 2026: Updated Apple Development Team ID to J9V2X635Y6 for enrolled Apple Developer account.
-				DEVELOPMENT_TEAM = J9V2X635Y6;
+				// Gene - Oct, 7, 2026: Updated Apple Development Team ID to paid Apple Developer account T7LB768N2Z for App Store distribution.
+				DEVELOPMENT_TEAM = T7LB768N2Z;
+				// DEVELOPMENT_TEAM = J9V2X635Y6;
 				// DEVELOPMENT_TEAM = 8AD458D2K2;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;

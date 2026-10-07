@@ -1,0 +1,133 @@
+name: Deploy to Apple TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      auto_increment_build:
+        description: 'Use GitHub run number as build number (avoids duplicate CFBundleVersion)'
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-testflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-testflight:
+    name: Build & Deploy to TestFlight
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Import Apple Distribution Certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          p12-password: ${{ secrets.P12_PASSWORD }}
+
+      - name: Install Apple Provisioning Profile
+        env:
+          PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+        run: |
+          if [ -z "$PROVISION_PROFILE_BASE64" ]; then
+            echo "::error::BUILD_PROVISION_PROFILE_BASE64 secret is not set!"
+            exit 1
+          fi
+          PP_TEMP="$RUNNER_TEMP/profile.mobileprovision"
+          echo "$PROVISION_PROFILE_BASE64" | base64 --decode > "$PP_TEMP"
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+
+          # Extract UUID from provisioning profile so Xcode can locate it
+          UUID=$(security cms -D -i "$PP_TEMP" | plutil -extract UUID raw -)
+          PROFILE_NAME=$(security cms -D -i "$PP_TEMP" | plutil -extract Name raw -)
+
+          cp "$PP_TEMP" ~/Library/MobileDevice/Provisioning\ Profiles/"$UUID.mobileprovision"
+          echo "Installed Profile: $PROFILE_NAME (UUID: $UUID)"
+          echo "profile_uuid=$UUID" >> "$GITHUB_ENV"
+          echo "profile_name=$PROFILE_NAME" >> "$GITHUB_ENV"
+
+      - name: Generate ExportOptions.plist
+        run: |
+          cat <<EOF > ios/ExportOptions.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>teamID</key>
+              <string>T7LB768N2Z</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>destination</key>
+              <string>export</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>dev.genexis.activitytimer</key>
+                  <string>$profile_name</string>
+              </dict>
+          </dict>
+          </plist>
+          EOF
+          echo "Generated ios/ExportOptions.plist:"
+          cat ios/ExportOptions.plist
+
+      - name: Build iOS IPA
+        run: |
+          if [ "${{ github.event.inputs.auto_increment_build }}" = "true" ]; then
+            VERSION_NAME=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
+            # Use offset + run_number so build number is always safely incremental
+            BUILD_NUMBER=$(( 10 + ${{ github.run_number }} ))
+            echo "Building $VERSION_NAME+$BUILD_NUMBER"
+            flutter build ipa --release \
+              --build-name="$VERSION_NAME" \
+              --build-number="$BUILD_NUMBER" \
+              --export-options-plist=ios/ExportOptions.plist \
+              --obfuscate --split-debug-info=build/symbols/ios
+          else
+            flutter build ipa --release \
+              --export-options-plist=ios/ExportOptions.plist \
+              --obfuscate --split-debug-info=build/symbols/ios
+          fi
+
+      - name: Locate IPA file
+        id: find_ipa
+        run: |
+          IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -n 1)
+          if [ -z "$IPA_PATH" ]; then
+            echo "::error::No IPA file found in build/ios/ipa!"
+            exit 1
+          fi
+          echo "Found IPA file at: $IPA_PATH"
+          echo "ipa_path=$IPA_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v5
+        with:
+          app-path: ${{ steps.find_ipa.outputs.ipa_path }}
+          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+
+      - name: Upload Build Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-testflight-build
+          path: |
+            build/ios/ipa/*.ipa
+            build/symbols/ios
