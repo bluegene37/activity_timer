@@ -54,6 +54,24 @@ void main() {
     }
   });
 
+  // Gene - Oct, 7, 2026: Await controller.loadRecipes() inside runAsync and avoid mounting the whole app router to prevent unawaited initial load races on CI.
+  testWidgets('addFromTemplate stores an editable copy and reloads', (
+    tester,
+  ) async {
+    final controller = locator<BrewController>();
+    final template = DatabaseService().getBrewTemplates().first;
+
+    await tester.runAsync(() async {
+      await controller.loadRecipes();
+      await controller.addFromTemplate(template);
+    });
+
+    expect(controller.recipes, hasLength(1));
+    expect(controller.recipes.first.name, template.name);
+    expect(controller.recipes.first.id, isNot(template.id));
+  });
+
+  /*
   testWidgets('addFromTemplate stores an editable copy and reloads', (
     tester,
   ) async {
@@ -77,7 +95,30 @@ void main() {
     expect(controller.recipes.first.name, template.name);
     expect(controller.recipes.first.id, isNot(template.id));
   });
+  */
 
+  // Gene - Oct, 7, 2026: Await controller.loadRecipes() inside runAsync to ensure clean sequential state without background Hive read conflicts.
+  testWidgets('deleteBrew removes the recipe from the list and the box', (
+    tester,
+  ) async {
+    final controller = locator<BrewController>();
+    final template = DatabaseService().getBrewTemplates().first;
+
+    await tester.runAsync(() async {
+      await controller.loadRecipes();
+      await controller.addFromTemplate(template);
+    });
+    final id = controller.recipes.first.id;
+
+    await tester.runAsync(() => controller.deleteBrew(id));
+
+    expect(controller.recipes, isEmpty);
+    await tester.runAsync(() async {
+      expect(await DatabaseService().getBrewRecipe(id), isNull);
+    });
+  });
+
+  /*
   testWidgets('deleteBrew removes the recipe from the list and the box', (
     tester,
   ) async {
@@ -104,6 +145,7 @@ void main() {
       expect(await DatabaseService().getBrewRecipe(id), isNull);
     });
   });
+  */
 
   testWidgets('addNewBrew opens the editor and reloads when it saves', (
     tester,
