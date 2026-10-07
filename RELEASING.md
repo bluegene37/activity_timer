@@ -69,7 +69,9 @@ Android release builds look for `android/key.properties` (which is gitignored).
 
 ### iOS Signing (Apple App Store)
 
-iOS signing uses Xcode Automatic Signing with Team ID `8AD458D2K2`.
+<!-- Gene - Oct, 7, 2026: Updated Apple Developer Team ID to J9V2X635Y6 -->
+iOS signing uses Xcode Automatic Signing with Team ID `J9V2X635Y6`.
+<!-- iOS signing uses Xcode Automatic Signing with Team ID `8AD458D2K2`. -->
 
 1. Open `ios/Runner.xcworkspace` in Xcode.
 2. Under **Runner Target** → **Signing & Capabilities**, select your provisioned Apple Developer Team.
