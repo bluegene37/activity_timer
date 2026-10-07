@@ -1,6 +1,12 @@
 name: Deploy to Apple TestFlight
 
 on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
   workflow_dispatch:
     inputs:
       auto_increment_build:
@@ -88,7 +94,7 @@ jobs:
 
       - name: Build iOS IPA
         run: |
-          if [ "${{ github.event.inputs.auto_increment_build }}" = "true" ]; then
+          if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event.inputs.auto_increment_build }}" = "true" ]; then
             VERSION_NAME=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
             # Use offset + run_number so build number is always safely incremental
             BUILD_NUMBER=$(( 10 + ${{ github.run_number }} ))
