@@ -3,7 +3,9 @@ description: "Offline activity, interval, and coffee pour-over timer for workout
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.0+1
+# Gene - Oct 8, 2026: Bumped build number to +2 for Closed Testing release track
+# version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.7.0
