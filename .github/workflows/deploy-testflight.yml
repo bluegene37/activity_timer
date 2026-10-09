@@ -1,12 +1,15 @@
 name: Deploy to Apple TestFlight
 
+# Gene - Oct, 09, 2026: Removed auto-trigger on push to main to allow manual triggers only via terminal/CLI
+# on:
+#   push:
+#     branches:
+#       - main
+#     paths-ignore:
+#       - '**.md'
+#       - '.gitignore'
+#   workflow_dispatch:
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - '**.md'
-      - '.gitignore'
   workflow_dispatch:
     inputs:
       auto_increment_build:
