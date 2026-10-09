@@ -106,6 +106,8 @@ iOS signing uses Xcode Automatic Signing with Team ID `J9V2X635Y6`.
 
 ---
 
+<!-- Gene - Oct, 09, 2026: Added terminal GitHub CLI release dispatch commands for Apple TestFlight and Google Play -->
+<!--
 ### 2. Fast-Track Google Play Internal Testing (Manual Workflow)
 
 For pushing internal testing builds directly to Google Play without creating a git release tag:
@@ -113,6 +115,26 @@ For pushing internal testing builds directly to Google Play without creating a g
 2. Click **Run workflow**.
 3. Choose whether `auto_increment_build` should be enabled (default: `true`, which assigns build number `10 + run_number` to avoid version code collisions on Google Play).
 4. GitHub Actions will test, build, and deploy the `.aab` straight to the Google Play **Internal** testing track.
+-->
+### 2. Manual Release Dispatch via Terminal (`gh`)
+
+You can trigger store deployments directly from the terminal without manual web clicks or automatic CI runs on push:
+
+```bash
+# Deploy both Apple TestFlight and Google Play (Closed Testing):
+gh workflow run release.yml -f platform=all
+
+# Deploy only to Apple TestFlight:
+gh workflow run release.yml -f platform=ios
+
+# Deploy only to Google Play Internal Testing:
+gh workflow run release.yml -f platform=android -f track=internal
+
+# Deploy only to Google Play Closed Testing (alpha default):
+gh workflow run release.yml -f platform=android
+```
+
+*(Note: Build numbers auto-increment via the GitHub run number to prevent collision on App Store Connect and Google Play Console).*
 
 ---
 

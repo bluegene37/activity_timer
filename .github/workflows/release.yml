@@ -1,11 +1,40 @@
 name: Release
 
+# Gene - Oct, 09, 2026: Added platform, track, and auto_increment_build inputs for terminal dispatch
+# on:
+#   push:
+#     tags:
+#       - 'v*'
+#   workflow_dispatch:
+#     inputs:
+#       version_tag:
+#         description: 'Target version tag (e.g., v1.0.0)'
+#         required: false
+#         type: string
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
     inputs:
+      platform:
+        description: 'Target platform to build and release (all, ios, android)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - ios
+          - android
+      track:
+        description: 'Google Play track for Android (alpha, internal, beta, production, none)'
+        required: false
+        default: 'alpha'
+        type: string
+      auto_increment_build:
+        description: 'Use GitHub run number as build number (avoids duplicate build numbers)'
+        type: boolean
+        default: true
       version_tag:
         description: 'Target version tag (e.g., v1.0.0)'
         required: false
@@ -15,21 +44,42 @@ permissions:
   contents: write
 
 jobs:
+# Gene - Oct, 09, 2026: Conditional execution for android job based on platform input
+#   android:
+#     name: Build Android Artifacts
+#     runs-on: ubuntu-latest
   android:
     name: Build Android Artifacts
+    if: github.event_name == 'push' || github.event.inputs.platform == 'all' || github.event.inputs.platform == 'android' || github.event.inputs.platform == '' || github.event.inputs.platform == null
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Gene - Oct, 09, 2026: Only enforce tag version alignment if version_tag is specified or triggered by git tag
+      # - name: Validate Version Alignment
+      #   run: |
+      #     PUBSPEC_VERSION=$(sed -n 's/^version: \([0-9.]*\)+.*/\1/p' pubspec.yaml)
+      #     REF_TAG="${{ github.event.inputs.version_tag || github.ref_name }}"
+      #     TAG_VERSION="${REF_TAG#v}"
+      #     if [ -n "$TAG_VERSION" ] && [ "$PUBSPEC_VERSION" != "$TAG_VERSION" ]; then
+      #       echo "::error::Tag version ($TAG_VERSION) does not match pubspec.yaml version ($PUBSPEC_VERSION)"
+      #       exit 1
+      #     fi
+      #     echo "VERSION=$PUBSPEC_VERSION" >> "$GITHUB_ENV"
       - name: Validate Version Alignment
         run: |
           PUBSPEC_VERSION=$(sed -n 's/^version: \([0-9.]*\)+.*/\1/p' pubspec.yaml)
-          REF_TAG="${{ github.event.inputs.version_tag || github.ref_name }}"
-          TAG_VERSION="${REF_TAG#v}"
-          if [ -n "$TAG_VERSION" ] && [ "$PUBSPEC_VERSION" != "$TAG_VERSION" ]; then
-            echo "::error::Tag version ($TAG_VERSION) does not match pubspec.yaml version ($PUBSPEC_VERSION)"
-            exit 1
+          REF_TAG="${{ github.event.inputs.version_tag }}"
+          if [ -z "$REF_TAG" ] && [ "${{ github.ref_type }}" = "tag" ]; then
+            REF_TAG="${{ github.ref_name }}"
+          fi
+          if [ -n "$REF_TAG" ]; then
+            TAG_VERSION="${REF_TAG#v}"
+            if [ -n "$TAG_VERSION" ] && [ "$PUBSPEC_VERSION" != "$TAG_VERSION" ]; then
+              echo "::error::Tag version ($TAG_VERSION) does not match pubspec.yaml version ($PUBSPEC_VERSION)"
+              exit 1
+            fi
           fi
           echo "VERSION=$PUBSPEC_VERSION" >> "$GITHUB_ENV"
 
@@ -70,10 +120,27 @@ jobs:
           storeFile=$RUNNER_TEMP/upload-keystore.jks
           EOF
 
+      # Gene - Oct, 09, 2026: Support auto_increment_build for Android bundle to prevent Google Play versionCode collisions
+      # - name: Build Android App Bundle (.aab)
+      #   run: >
+      #     flutter build appbundle --release
+      #     --obfuscate --split-debug-info=build/symbols/android
       - name: Build Android App Bundle (.aab)
-        run: >
-          flutter build appbundle --release
-          --obfuscate --split-debug-info=build/symbols/android
+        run: |
+          if [ "${{ github.event.inputs.auto_increment_build }}" != "false" ]; then
+            VERSION_NAME=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
+            BUILD_NUMBER=$(( 10 + ${{ github.run_number }} ))
+            echo "Building $VERSION_NAME+$BUILD_NUMBER"
+            flutter build appbundle --release \
+              --build-name="$VERSION_NAME" \
+              --build-number="$BUILD_NUMBER" \
+              --obfuscate \
+              --split-debug-info=build/symbols/android
+          else
+            flutter build appbundle --release \
+              --obfuscate \
+              --split-debug-info=build/symbols/android
+          fi
 
       - name: Build Android Standalone APK (.apk)
         run: >
@@ -89,8 +156,20 @@ jobs:
             (cd build/symbols && zip -r "$GITHUB_WORKSPACE/dist/symbols-android.zip" android)
           fi
 
-      - name: Upload to Google Play Internal Track (optional)
-        if: env.PLAY_JSON != ''
+      # Gene - Oct, 09, 2026: Upload to Google Play using track input (defaults to alpha / closed testing)
+      # - name: Upload to Google Play Internal Track (optional)
+      #   if: env.PLAY_JSON != ''
+      #   uses: r0adkll/upload-google-play@v1
+      #   env:
+      #     PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+      #   with:
+      #     serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+      #     packageName: dev.genexis.activitytimer
+      #     releaseFiles: build/app/outputs/bundle/release/app-release.aab
+      #     tracks: internal
+      #     status: completed
+      - name: Upload to Google Play Track (optional)
+        if: env.PLAY_JSON != '' && github.event.inputs.track != 'none'
         uses: r0adkll/upload-google-play@v1
         env:
           PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
@@ -98,7 +177,7 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: dev.genexis.activitytimer
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
-          tracks: internal
+          tracks: ${{ github.event.inputs.track || 'alpha' }}
           status: completed
 
       - name: Upload Android Artifacts
@@ -107,8 +186,76 @@ jobs:
           name: android-release
           path: dist/*
 
+# Gene - Oct, 09, 2026: Upgraded iOS job to deploy to TestFlight and updated publish-release to run when tagged or version_tag provided
+#   ios:
+#     name: Build iOS Artifacts
+#     runs-on: macos-latest
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+# 
+#       - name: Resolve Version
+#         run: |
+#           PUBSPEC_VERSION=$(sed -n 's/^version: \([0-9.]*\)+.*/\1/p' pubspec.yaml)
+#           echo "VERSION=$PUBSPEC_VERSION" >> "$GITHUB_ENV"
+# 
+#       - name: Setup Flutter
+#         uses: subosito/flutter-action@v2
+#         with:
+#           channel: stable
+#           cache: true
+# 
+#       - name: Install dependencies
+#         run: flutter pub get
+# 
+#       - name: Static analysis
+#         run: flutter analyze --fatal-infos
+# 
+#       - name: Run tests
+#         run: flutter test
+# 
+#       - name: Build iOS Release Archive (Unsigned)
+#         run: >
+#           flutter build ipa --release --no-codesign
+#           --obfuscate --split-debug-info=build/symbols/ios
+# 
+#       - name: Stage iOS Distribution Artifacts
+#         run: |
+#           mkdir -p dist
+#           if [ -d "build/ios/archive" ]; then
+#             (cd build/ios/archive && zip -r "$GITHUB_WORKSPACE/dist/Runner-${VERSION}.xcarchive.zip" Runner.xcarchive)
+#           fi
+#           if [ -d "build/symbols/ios" ]; then
+#             (cd build/symbols && zip -r "$GITHUB_WORKSPACE/dist/symbols-ios.zip" ios)
+#           fi
+# 
+#       - name: Upload iOS Artifacts
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: ios-release
+#           path: dist/*
+# 
+#   publish-release:
+#     name: Publish GitHub Release
+#     needs: [android, ios]
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Download all release artifacts
+#         uses: actions/download-artifact@v4
+#         with:
+#           path: dist
+#           merge-multiple: true
+# 
+#       - name: Create GitHub Release & Attach Binaries
+#         uses: softprops/action-gh-release@v2
+#         with:
+#           files: dist/*
+#           generate_release_notes: true
+#           draft: false
+#           prerelease: false
   ios:
-    name: Build iOS Artifacts
+    name: Build & Deploy iOS (TestFlight)
+    if: github.event_name == 'push' || github.event.inputs.platform == 'all' || github.event.inputs.platform == 'ios' || github.event.inputs.platform == '' || github.event.inputs.platform == null
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -134,10 +281,103 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Build iOS Release Archive (Unsigned)
-        run: >
-          flutter build ipa --release --no-codesign
-          --obfuscate --split-debug-info=build/symbols/ios
+      - name: Import Apple Distribution Certificate
+        if: env.CERT_B64 != ''
+        env:
+          CERT_B64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          p12-password: ${{ secrets.P12_PASSWORD }}
+
+      - name: Install Apple Provisioning Profile
+        if: env.PROVISION_PROFILE_BASE64 != ''
+        env:
+          PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+        run: |
+          PP_TEMP="$RUNNER_TEMP/profile.mobileprovision"
+          echo "$PROVISION_PROFILE_BASE64" | base64 --decode > "$PP_TEMP"
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          UUID=$(security cms -D -i "$PP_TEMP" | plutil -extract UUID raw -)
+          PROFILE_NAME=$(security cms -D -i "$PP_TEMP" | plutil -extract Name raw -)
+          cp "$PP_TEMP" ~/Library/MobileDevice/Provisioning\ Profiles/"$UUID.mobileprovision"
+          echo "Installed Profile: $PROFILE_NAME (UUID: $UUID)"
+          echo "profile_uuid=$UUID" >> "$GITHUB_ENV"
+          echo "profile_name=$PROFILE_NAME" >> "$GITHUB_ENV"
+
+      - name: Generate ExportOptions.plist
+        if: env.PROFILE_NAME != ''
+        env:
+          PROFILE_NAME: ${{ env.profile_name }}
+        run: |
+          cat <<EOF > ios/ExportOptions.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>teamID</key>
+              <string>T7LB768N2Z</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>destination</key>
+              <string>export</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>dev.genexis.activitytimer</key>
+                  <string>$PROFILE_NAME</string>
+              </dict>
+              <key>manageAppVersionAndBuildNumber</key>
+              <false/>
+          </dict>
+          </plist>
+          EOF
+          echo "Generated ios/ExportOptions.plist"
+
+      - name: Build iOS Archive (unsigned)
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event.inputs.auto_increment_build }}" != "false" ]; then
+            VERSION_NAME=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
+            BUILD_NUMBER=$(( 10 + ${{ github.run_number }} ))
+            echo "Building $VERSION_NAME+$BUILD_NUMBER"
+            flutter build ipa --release --no-codesign \
+              --build-name="$VERSION_NAME" \
+              --build-number="$BUILD_NUMBER" \
+              --obfuscate --split-debug-info=build/symbols/ios
+          else
+            flutter build ipa --release --no-codesign \
+              --obfuscate --split-debug-info=build/symbols/ios
+          fi
+
+      - name: Export and Sign IPA
+        if: hashFiles('ios/ExportOptions.plist') != ''
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist ios/ExportOptions.plist
+
+      - name: Locate IPA file
+        id: find_ipa
+        if: hashFiles('ios/ExportOptions.plist') != ''
+        run: |
+          IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -n 1)
+          if [ -n "$IPA_PATH" ]; then
+            echo "Found IPA file at: $IPA_PATH"
+            echo "ipa_path=$IPA_PATH" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload to TestFlight
+        if: steps.find_ipa.outputs.ipa_path != '' && env.APPSTORE_KEY != ''
+        env:
+          APPSTORE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        uses: apple-actions/upload-testflight-build@v5
+        with:
+          app-path: ${{ steps.find_ipa.outputs.ipa_path }}
+          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
 
       - name: Stage iOS Distribution Artifacts
         run: |
@@ -147,6 +387,9 @@ jobs:
           fi
           if [ -d "build/symbols/ios" ]; then
             (cd build/symbols && zip -r "$GITHUB_WORKSPACE/dist/symbols-ios.zip" ios)
+          fi
+          if [ -d "build/ios/ipa" ]; then
+            cp build/ios/ipa/*.ipa dist/ 2>/dev/null || true
           fi
 
       - name: Upload iOS Artifacts
@@ -158,6 +401,7 @@ jobs:
   publish-release:
     name: Publish GitHub Release
     needs: [android, ios]
+    if: (!cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')) && (github.ref_type == 'tag' || (github.event.inputs.version_tag != '' && github.event.inputs.version_tag != null))
     runs-on: ubuntu-latest
     steps:
       - name: Download all release artifacts
@@ -169,6 +413,7 @@ jobs:
       - name: Create GitHub Release & Attach Binaries
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.inputs.version_tag || github.ref_name }}
           files: dist/*
           generate_release_notes: true
           draft: false
