@@ -51,53 +51,140 @@ class _MainNavigationState extends State<MainNavigation> {
     }
   }
 
+  // Gene - Oct, 9, 2026: Preserved original _buildFloatingActionButton implementation.
+  // Widget? _buildFloatingActionButton(ColorScheme colorScheme) {
+  //   if (_currentIndex == 0) {
+  //     return FloatingActionButton.extended(
+  //       heroTag: 'activity_list_fab',
+  //       onPressed: () {
+  //         HapticFeedback.selectionClick();
+  //         locator<ActivityListController>().addNewSequence();
+  //       },
+  //       backgroundColor: colorScheme.primary,
+  //       foregroundColor: Colors.white,
+  //       elevation: 4,
+  //       icon: const Icon(CupertinoIcons.plus, size: 18),
+  //       label: const Text(
+  //         'New Routine',
+  //         style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.2),
+  //       ),
+  //     );
+  //   } else if (_currentIndex == 1) {
+  //     return FloatingActionButton.extended(
+  //       heroTag: 'brew_list_fab',
+  //       onPressed: () {
+  //         HapticFeedback.selectionClick();
+  //         unawaited(locator<BrewController>().addNewBrew());
+  //       },
+  //       backgroundColor: colorScheme.primary,
+  //       foregroundColor: Colors.white,
+  //       elevation: 4,
+  //       icon: const Icon(CupertinoIcons.plus, size: 18),
+  //       label: const Text(
+  //         'New Brew',
+  //         style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.2),
+  //       ),
+  //     );
+  //   } else if (_currentIndex == 2) {
+  //     return FloatingActionButton.extended(
+  //       heroTag: 'interval_timer_list_fab',
+  //       onPressed: () {
+  //         HapticFeedback.selectionClick();
+  //         locator<IntervalTimerController>().addNewIntervalTimer();
+  //       },
+  //       backgroundColor: colorScheme.primary,
+  //       foregroundColor: Colors.white,
+  //       elevation: 4,
+  //       icon: const Icon(CupertinoIcons.plus, size: 18),
+  //       label: const Text(
+  //         'New Interval',
+  //         style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.2),
+  //       ),
+  //     );
+  //   }
+  //   return null;
+  // }
+
+  // Gene - Oct, 9, 2026: Made the create/add action buttons ("New Routine", "New Brew", "New Interval")
+  // a smaller oblong pill size (40pt height) with StadiumBorder for proportional rounded corners,
+  // refined 16pt horizontal padding, 6pt icon-label spacing, and 16pt plus icon.
   Widget? _buildFloatingActionButton(ColorScheme colorScheme) {
     if (_currentIndex == 0) {
-      return FloatingActionButton.extended(
-        heroTag: 'activity_list_fab',
-        onPressed: () {
-          HapticFeedback.selectionClick();
-          locator<ActivityListController>().addNewSequence();
-        },
-        backgroundColor: colorScheme.primary,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        icon: const Icon(CupertinoIcons.plus, size: 18),
-        label: const Text(
-          'New Routine',
-          style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.2),
+      return SizedBox(
+        height: 40,
+        child: FloatingActionButton.extended(
+          heroTag: 'activity_list_fab',
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            locator<ActivityListController>().addNewSequence();
+          },
+          backgroundColor: colorScheme.primary,
+          foregroundColor: Colors.white,
+          elevation: 3,
+          shape: const StadiumBorder(),
+          extendedPadding: const EdgeInsets.symmetric(horizontal: 16),
+          extendedIconLabelSpacing: 6,
+          icon: const Icon(CupertinoIcons.plus, size: 16),
+          label: const Text(
+            'New Routine',
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.2,
+            ),
+          ),
         ),
       );
     } else if (_currentIndex == 1) {
-      return FloatingActionButton.extended(
-        heroTag: 'brew_list_fab',
-        onPressed: () {
-          HapticFeedback.selectionClick();
-          unawaited(locator<BrewController>().addNewBrew());
-        },
-        backgroundColor: colorScheme.primary,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        icon: const Icon(CupertinoIcons.plus, size: 18),
-        label: const Text(
-          'New Brew',
-          style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.2),
+      return SizedBox(
+        height: 40,
+        child: FloatingActionButton.extended(
+          heroTag: 'brew_list_fab',
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            unawaited(locator<BrewController>().addNewBrew());
+          },
+          backgroundColor: colorScheme.primary,
+          foregroundColor: Colors.white,
+          elevation: 3,
+          shape: const StadiumBorder(),
+          extendedPadding: const EdgeInsets.symmetric(horizontal: 16),
+          extendedIconLabelSpacing: 6,
+          icon: const Icon(CupertinoIcons.plus, size: 16),
+          label: const Text(
+            'New Brew',
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.2,
+            ),
+          ),
         ),
       );
     } else if (_currentIndex == 2) {
-      return FloatingActionButton.extended(
-        heroTag: 'interval_timer_list_fab',
-        onPressed: () {
-          HapticFeedback.selectionClick();
-          locator<IntervalTimerController>().addNewIntervalTimer();
-        },
-        backgroundColor: colorScheme.primary,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        icon: const Icon(CupertinoIcons.plus, size: 18),
-        label: const Text(
-          'New Interval',
-          style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.2),
+      return SizedBox(
+        height: 40,
+        child: FloatingActionButton.extended(
+          heroTag: 'interval_timer_list_fab',
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            locator<IntervalTimerController>().addNewIntervalTimer();
+          },
+          backgroundColor: colorScheme.primary,
+          foregroundColor: Colors.white,
+          elevation: 3,
+          shape: const StadiumBorder(),
+          extendedPadding: const EdgeInsets.symmetric(horizontal: 16),
+          extendedIconLabelSpacing: 6,
+          icon: const Icon(CupertinoIcons.plus, size: 16),
+          label: const Text(
+            'New Interval',
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.2,
+            ),
+          ),
         ),
       );
     }
@@ -265,7 +352,12 @@ class _BrewFloater extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = BrewSessionService();
-    final palette = BrewTheme.paletteFor(Theme.of(context).brightness);
+    // Gene - Oct, 9, 2026: Preserved original palette resolution.
+    // final palette = BrewTheme.paletteFor(Theme.of(context).brightness);
+
+    // Gene - Oct, 9, 2026: Resolved palette via BrewTheme.of(context) so the
+    // floater chip matches the active app theme (Modern or Coffee).
+    final palette = BrewTheme.of(context);
 
     return SignalBuilder(
       builder: (_) {

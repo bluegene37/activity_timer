@@ -52,8 +52,34 @@ abstract final class BrewTheme {
   static BrewPalette paletteFor(Brightness brightness) =>
       brightness == Brightness.dark ? _dark : _light;
 
-  static BrewPalette of(BuildContext context) =>
-      paletteFor(Theme.of(context).brightness);
+  // Gene - Oct, 9, 2026: Preserved original of(BuildContext) implementation.
+  // static BrewPalette of(BuildContext context) =>
+  //     paletteFor(Theme.of(context).brightness);
+
+  // Gene - Oct, 9, 2026: Adapted BrewTheme.of(context) so Brew screens respect both
+  // Coffee theme (washi palette) and Modern theme (system/iOS palette derived from Theme.of(context)).
+  static BrewPalette of(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
+
+    // When the ambient theme is the washi Coffee theme (using Literata)
+    if (theme.textTheme.bodyMedium?.fontFamily == fontFamily) {
+      return paletteFor(theme.brightness);
+    }
+
+    // When wearing the Modern (iOS / AppTheme) look
+    return BrewPalette(
+      paper: theme.scaffoldBackgroundColor,
+      paperRaised:
+          theme.cardTheme.color ?? AppTheme.cardBackground(isDark: isDark),
+      paperDeep: colorScheme.surfaceContainerHighest,
+      ink: colorScheme.onSurface,
+      inkSoft: colorScheme.onSurfaceVariant,
+      lead: colorScheme.primary,
+      hairline: AppTheme.separator(isDark: isDark),
+    );
+  }
 
   /// A theme that keeps [AppTheme]'s radii and spacing so the Brew section
   /// shares the app's layout grammar while changing palette and type.

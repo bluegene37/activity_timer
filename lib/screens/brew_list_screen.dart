@@ -96,20 +96,34 @@ class BrewListScreen extends StatelessWidget {
     );
   }
 
+  // Gene - Oct, 9, 2026: Preserved original build method that hardcoded BrewTheme.themeFor(brightness).
+  // @override
+  // Widget build(BuildContext context) {
+  //   final controller = locator<BrewController>();
+  //   final brightness = Theme.of(context).brightness;
+  //   final palette = BrewTheme.paletteFor(brightness);
+  //
+  //   final theme = BrewTheme.themeFor(brightness);
+  //   final colorScheme = theme.colorScheme;
+  //   final textTheme = theme.textTheme;
+  //
+  //   return Theme(
+  //     data: theme,
+  //     child: Scaffold(
+  //       backgroundColor: palette.paper,
+
+  // Gene - Oct, 9, 2026: Removed hardcoded BrewTheme wrapper so BrewListScreen dynamically
+  // adopts the Modern theme (AppTheme) as well as the Coffee theme (BrewTheme).
   @override
   Widget build(BuildContext context) {
     final controller = locator<BrewController>();
-    final brightness = Theme.of(context).brightness;
-    final palette = BrewTheme.paletteFor(brightness);
-
-    final theme = BrewTheme.themeFor(brightness);
+    final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final palette = BrewTheme.of(context);
 
-    return Theme(
-      data: theme,
-      child: Scaffold(
-        backgroundColor: palette.paper,
+    return Scaffold(
+      backgroundColor: palette.paper,
         body: SafeArea(
           bottom: false,
           child: SignalBuilder(
@@ -262,7 +276,6 @@ class BrewListScreen extends StatelessWidget {
                 ),
           ),
         ),
-      ),
-    );
+      );
   }
 }

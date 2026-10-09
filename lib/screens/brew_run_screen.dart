@@ -48,15 +48,25 @@ class _BrewRunScreenState extends State<BrewRunScreen> {
     super.dispose();
   }
 
+  // Gene - Oct, 9, 2026: Preserved original build method that hardcoded BrewTheme.themeFor.
+  // @override
+  // Widget build(BuildContext context) {
+  //   final theme = BrewTheme.themeFor(Theme.of(context).brightness);
+  //   final palette = BrewTheme.paletteFor(Theme.of(context).brightness);
+  //
+  //   return Theme(
+  //     data: theme,
+  //     child: Scaffold(
+  //       backgroundColor: palette.paper,
+
+  // Gene - Oct, 9, 2026: Removed hardcoded BrewTheme wrapper so BrewRunScreen dynamically
+  // adopts the Modern theme (AppTheme) as well as the Coffee theme (BrewTheme).
   @override
   Widget build(BuildContext context) {
-    final theme = BrewTheme.themeFor(Theme.of(context).brightness);
-    final palette = BrewTheme.paletteFor(Theme.of(context).brightness);
+    final palette = BrewTheme.of(context);
 
-    return Theme(
-      data: theme,
-      child: Scaffold(
-        backgroundColor: palette.paper,
+    return Scaffold(
+      backgroundColor: palette.paper,
         appBar: AppBar(
           backgroundColor: palette.paper,
           foregroundColor: palette.ink,
@@ -181,7 +191,6 @@ class _BrewRunScreenState extends State<BrewRunScreen> {
             },
           ),
         ),
-      ),
-    );
+      );
   }
 }
