@@ -493,8 +493,17 @@ class SettingsScreen extends StatelessWidget {
                         // claimed the whole tile and the title vanished.
                         trailing: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 140),
+                          // Gene - Nov 3, 2026: Updated display version string to 1.0.3 for TestFlight release
+                          // child: Text(
+                          //   '1.0.0',
+                          //   textAlign: TextAlign.end,
+                          //   overflow: TextOverflow.ellipsis,
+                          //   style: textTheme.bodyMedium?.copyWith(
+                          //     fontWeight: FontWeight.w700,
+                          //   ),
+                          // ),
                           child: Text(
-                            '1.0.0',
+                            '1.0.3',
                             textAlign: TextAlign.end,
                             overflow: TextOverflow.ellipsis,
                             style: textTheme.bodyMedium?.copyWith(

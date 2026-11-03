@@ -65,7 +65,9 @@ void main() {
 
     // App Info
     expect(find.text('Version'), findsOneWidget);
-    expect(find.text('1.0.0'), findsOneWidget);
+    // Gene - Nov 3, 2026: Updated version expectation to 1.0.3 for release
+    // expect(find.text('1.0.0'), findsOneWidget);
+    expect(find.text('1.0.3'), findsOneWidget);
     expect(find.text('Developer'), findsOneWidget);
     expect(find.text('genexis.dev'), findsOneWidget);
 

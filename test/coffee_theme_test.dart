@@ -1,8 +1,22 @@
 import 'dart:io';
 
+// Gene - Nov 3, 2026: Sorted package directives alphabetically to resolve directives_ordering lint
+// import 'package:activity_timer/hive_registrar.g.dart';
+// import 'package:activity_timer/main.dart';
+// import 'package:activity_timer/models/settings.dart';
+// import 'package:activity_timer/services/locator.dart';
+// import 'package:activity_timer/theme/app_theme.dart';
+// import 'package:activity_timer/theme/brew_theme.dart';
+// import 'package:flutter/material.dart';
+// import 'package:flutter_test/flutter_test.dart';
+// import 'package:hive_ce/hive.dart';
+// import 'package:signals/signals_flutter.dart';
+// // Gene - Oct, 9, 2026: Added import for BrewListScreen testing.
+// import 'package:activity_timer/screens/brew_list_screen.dart';
 import 'package:activity_timer/hive_registrar.g.dart';
 import 'package:activity_timer/main.dart';
 import 'package:activity_timer/models/settings.dart';
+import 'package:activity_timer/screens/brew_list_screen.dart';
 import 'package:activity_timer/services/locator.dart';
 import 'package:activity_timer/theme/app_theme.dart';
 import 'package:activity_timer/theme/brew_theme.dart';
@@ -10,8 +24,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:signals/signals_flutter.dart';
-// Gene - Oct, 9, 2026: Added import for BrewListScreen testing.
-import 'package:activity_timer/screens/brew_list_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -183,61 +195,63 @@ void main() {
 
   // Gene - Oct, 9, 2026: Added tests verifying that BrewListScreen inherits the Modern theme
   // when themeStyle is AppThemeStyle.ios and the Coffee theme when themeStyle is AppThemeStyle.coffee.
-  testWidgets('Brew screen is affected by Modern theme when AppThemeStyle.ios', (
-    tester,
-  ) async {
-    await tester.runAsync(() async {
-      await AppSettings().setThemeStyle(AppThemeStyle.ios);
-      setUpLocator();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    });
-    await tester.pumpWidget(const MyApp());
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+  testWidgets(
+    'Brew screen is affected by Modern theme when AppThemeStyle.ios',
+    (tester) async {
+      await tester.runAsync(() async {
+        await AppSettings().setThemeStyle(AppThemeStyle.ios);
+        setUpLocator();
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pumpWidget(const MyApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
-    // Tap Brew tab
-    await tester.tap(find.text('Brew'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+      // Tap Brew tab
+      await tester.tap(find.text('Brew'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
-    final scaffold = tester.widget<Scaffold>(
-      find.descendant(
-        of: find.byType(BrewListScreen),
-        matching: find.byType(Scaffold),
-      ),
-    );
-    // Modern theme scaffold background (not washi paper)
-    expect(scaffold.backgroundColor, isNot(const Color(0xFFF2EDE3)));
-    expect(scaffold.backgroundColor, isNot(const Color(0xFF1B1815)));
-  });
+      final scaffold = tester.widget<Scaffold>(
+        find.descendant(
+          of: find.byType(BrewListScreen),
+          matching: find.byType(Scaffold),
+        ),
+      );
+      // Modern theme scaffold background (not washi paper)
+      expect(scaffold.backgroundColor, isNot(const Color(0xFFF2EDE3)));
+      expect(scaffold.backgroundColor, isNot(const Color(0xFF1B1815)));
+    },
+  );
 
-  testWidgets('Brew screen wears Coffee washi theme when AppThemeStyle.coffee', (
-    tester,
-  ) async {
-    await tester.runAsync(() async {
-      await AppSettings().setThemeStyle(AppThemeStyle.coffee);
-      setUpLocator();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    });
-    await tester.pumpWidget(const MyApp());
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+  testWidgets(
+    'Brew screen wears Coffee washi theme when AppThemeStyle.coffee',
+    (tester) async {
+      await tester.runAsync(() async {
+        await AppSettings().setThemeStyle(AppThemeStyle.coffee);
+        setUpLocator();
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pumpWidget(const MyApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
-    // Tap Brew tab
-    await tester.tap(find.text('Brew'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+      // Tap Brew tab
+      await tester.tap(find.text('Brew'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
-    final scaffold = tester.widget<Scaffold>(
-      find.descendant(
-        of: find.byType(BrewListScreen),
-        matching: find.byType(Scaffold),
-      ),
-    );
-    // Coffee theme washi paper background
-    expect(
-      scaffold.backgroundColor,
-      anyOf(const Color(0xFFF2EDE3), const Color(0xFF1B1815)),
-    );
-  });
+      final scaffold = tester.widget<Scaffold>(
+        find.descendant(
+          of: find.byType(BrewListScreen),
+          matching: find.byType(Scaffold),
+        ),
+      );
+      // Coffee theme washi paper background
+      expect(
+        scaffold.backgroundColor,
+        anyOf(const Color(0xFFF2EDE3), const Color(0xFF1B1815)),
+      );
+    },
+  );
 }

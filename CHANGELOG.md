@@ -5,6 +5,27 @@ All notable changes to **Activity Timer** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-11-03
+
+### Added
+- **Theme & UI Polish**:
+  - Dynamically adapt Coffee Brew screens to modern theme styling and iOS accent colors.
+  - Enhanced Brew List screen header typography and iconography.
+  - Searchable preset bottom sheet and segmented duration controls.
+
+### Changed
+- **Dependencies & SDKs**:
+  - Upgraded Flutter SDK constraints and external package dependencies.
+  - Enhanced TestFlight and Google Play deployment workflows.
+
+### Fixed
+- **Notifications & Background Alarms**:
+  - Segmented notification ID allocations per session type to eliminate sound cue conflicts.
+  - Pre-scheduled full routine alarm timers during preparation countdowns.
+- **Layout & Accessibility**:
+  - Resolved text clipping in settings list tiles across large accessibility dynamic type sizes.
+  - Added safe area padding and scroll insets to edit screens.
+
 ## [1.0.0] - 2026-08-26
 
 ### Added
