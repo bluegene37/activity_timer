@@ -134,3 +134,46 @@ When prompted on the App Content → Exact Alarms page in Play Console:
 - [x] **Screenshots (10 captures):** `~/Documents/personal_projects/screenshots/activity_timer/1.png` through `10.png`
 - [x] **Privacy Policy Source:** `store/privacy_policy.md` (host on genexis.dev or github.io)
 - [x] **Production App Bundle (.aab):** `build/app/outputs/bundle/release/app-release.aab`
+
+<!-- Gene - Nov 5, 2026: Added Apple App Store Connect configuration, metadata, and screenshot asset paths for iOS production release -->
+---
+
+## 🍎 Apple App Store Connect Release Metadata
+
+| Field | Value / Setting |
+|---|---|
+| **App Name** | `Activity Timer` *(14/30 characters)* |
+| **Subtitle** | `Interval, routine & brew timer` *(30/30 characters)* |
+| **Bundle ID** | `dev.genexis.activitytimer` |
+| **SKU** | `dev.genexis.activitytimer` |
+| **Primary Language** | English (U.S.) |
+| **Primary Category** | Health & Fitness |
+| **Secondary Category** | Productivity |
+| **Keywords** | `timer,interval timer,workout timer,hiit,tabata,routine,coffee timer,pour over,study,fitness timer` *(98/100 characters)* |
+| **Support URL** | `https://genexis.dev` |
+| **Marketing URL** | `https://genexis.dev` |
+| **Privacy Policy URL** | `https://genexis.dev/privacy` |
+| **Copyright** | `2026 genexis.dev` |
+
+### 🔒 App Privacy (App Store Connect Questionnaire)
+- **Data Collection:** Select **"No, we do not collect data from this app"**.
+- **Tracking:** No data is used to track users across third-party websites or apps.
+- **Privacy Manifest:** Configured via `ios/Runner/PrivacyInfo.xcprivacy` with `NSPrivacyTracking = false`.
+
+### 🛡️ App Review Information
+- **Sign-In Required:** **No** (Unchecked).
+- **Contact Information:** Gene Ray Medel (`support@genexis.dev`).
+- **Notes for Reviewer:**  
+  > "Activity Timer is an offline utility timer application designed for workouts, habits, and specialty coffee brewing. All routines, intervals, and pour-over timers operate completely offline without user accounts or external network connectivity. Sound cues and timer transitions trigger both in-foreground and via local notifications when backgrounded."
+
+### ⚖️ Export Compliance & Rights
+- **Does your app use encryption?** Select **Yes**, then select **Yes** for exempt encryption.
+  *(Pre-declared in `ios/Runner/Info.plist` with `ITSAppUsesNonExemptEncryption = false`, eliminating compliance prompts).*
+- **Age Rating:** **4+** (No unrestricted web access, no user content, no gambling, no violence).
+
+### 📱 iOS Production Screenshots Ready for Upload
+- [x] **iPhone 6.7" / 6.9" Super Retina (1290 × 2796 PNG, RGB):**  
+  `~/Documents/personal_projects/screenshots/activity_timer/ios_app_store/iphone/` (`1.png` – `10.png`)
+- [x] **iPad 13" iPad Pro (2064 × 2752 PNG, RGB):**  
+  `~/Documents/personal_projects/screenshots/activity_timer/ios_app_store/ipad/` (`1.png` – `10.png`)
+

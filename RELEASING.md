@@ -69,13 +69,14 @@ Android release builds look for `android/key.properties` (which is gitignored).
 
 ### iOS Signing (Apple App Store)
 
-<!-- Gene - Oct, 7, 2026: Updated Apple Developer Team ID to J9V2X635Y6 -->
-iOS signing uses Xcode Automatic Signing with Team ID `J9V2X635Y6`.
+<!-- Gene - Nov 5, 2026: Updated Apple Developer Team ID to T7LB768N2Z and documented automated CI distribution signing via GitHub Actions -->
+iOS signing uses Xcode Automatic Signing with Team ID `T7LB768N2Z`.
+<!-- iOS signing uses Xcode Automatic Signing with Team ID `J9V2X635Y6`. -->
 <!-- iOS signing uses Xcode Automatic Signing with Team ID `8AD458D2K2`. -->
 
 1. Open `ios/Runner.xcworkspace` in Xcode.
-2. Under **Runner Target** → **Signing & Capabilities**, select your provisioned Apple Developer Team.
-3. CI builds produce unsigned archives (`.xcarchive.zip`). Signed distribution IPAs are built on local release machines via `flutter build ipa --release`.
+2. Under **Runner Target** → **Signing & Capabilities**, select Apple Developer Team `T7LB768N2Z`.
+3. In GitHub Actions CI, builds are signed automatically using repository secrets (`BUILD_CERTIFICATE_BASE64`, `P12_PASSWORD`, `BUILD_PROVISION_PROFILE_BASE64`) and uploaded straight to Apple TestFlight / App Store Connect using App Store API credentials (`APPSTORE_ISSUER_ID`, `APPSTORE_KEY_ID`, `APPSTORE_PRIVATE_KEY`). Local distribution builds can also be generated via `flutter build ipa --release`.
 
 ---
 
