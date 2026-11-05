@@ -3,7 +3,9 @@ import 'package:signals/signals.dart';
 import '../controllers/activity_run_controller.dart';
 import '../models/activity_timer.dart';
 import '../utils/signal_scheduling.dart';
+import 'alarm_scheduler.dart';
 import 'cue_player.dart';
+import 'database_service.dart';
 
 /// Owns the one running activity routine, decoupled from any screen.
 ///
@@ -55,11 +57,17 @@ class ActivitySessionService {
     return controller;
   }
 
-  /// Ends the session: cancels the ticker, releases the wakelock, disposes
-  /// the cue player, and withdraws any pending background alarms.
+  // Gene - Nov, 06, 2026: Preserved original clear implementation.
+  // void clear() {
+  //   active.value?.onClose();
+  //   setAfterBuild(active, null);
+  // }
+
+  // Gene - Nov, 06, 2026: Clears in-memory controller and active session record in DatabaseService.
   void clear() {
     active.value?.onClose();
     setAfterBuild(active, null);
+    DatabaseService().clearActiveActivitySession();
   }
 
   /// Called when the run screen is popped: a completed routine has nothing
@@ -68,5 +76,57 @@ class ActivitySessionService {
     if (!hasSessionInProgress) {
       clear();
     }
+  }
+
+  // Gene - Nov, 06, 2026: Restores active session from DatabaseService on cold-boot or app relaunch.
+  Future<ActivityRunController?> restoreSessionIfActive({
+    DatabaseService? databaseService,
+    CuePlayer? cuePlayer,
+    AlarmScheduler? scheduler,
+    DateTime Function()? clock,
+  }) async {
+    final db = databaseService ?? DatabaseService();
+    final data = await db.getActiveActivitySession();
+    if (data == null) {
+      return null;
+    }
+
+    final sequenceId = data['sequenceId'] as String?;
+    if (sequenceId == null) {
+      await db.clearActiveActivitySession();
+      return null;
+    }
+
+    final sequence = await db.getActivitySequence(sequenceId);
+    if (sequence == null) {
+      await db.clearActiveActivitySession();
+      return null;
+    }
+
+    final controller = ActivityRunController(
+      sequence: sequence,
+      cuePlayer: cuePlayer,
+      scheduler: scheduler,
+      clock: clock,
+    );
+
+    controller.restoreFromSnapshot(
+      initialIndex: data['currentIndex'] as int? ?? 0,
+      wasPreparing: data['isPreparing'] as bool? ?? false,
+      wasRunning: data['isRunning'] as bool? ?? false,
+      savedRemainingMs: data['remainingMs'] as int? ?? 0,
+      deadlineMs: data['deadlineMs'] as int?,
+      savedLoopEnabled:
+          data['loopEnabled'] as bool? ?? sequence.defaultLoopEnabled,
+      savedLoopCount: data['loopCount'] as int? ?? 0,
+    );
+
+    if (controller.isCompleted.value) {
+      await db.clearActiveActivitySession();
+      return null;
+    }
+
+    setAfterBuild(active, controller);
+    return controller;
   }
 }

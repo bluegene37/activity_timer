@@ -4,6 +4,8 @@ import '../controllers/interval_run_controller.dart';
 import '../models/interval_timer.dart';
 import '../utils/signal_scheduling.dart';
 import 'cue_player.dart';
+// Gene - Nov, 06, 2026: Added DatabaseService import for interval session persistence.
+import 'database_service.dart';
 
 /// Owns the one running interval session, decoupled from any screen.
 ///
@@ -35,6 +37,32 @@ class IntervalSessionService {
   /// The controller for [timer] — the existing one when the session already
   /// runs this timer (reopening resumes, never restarts), a fresh one
   /// otherwise. Starting a different timer replaces the old session.
+  // Gene - Nov, 06, 2026: Preserved original obtain and clear implementations.
+  // IntervalRunController obtain(IntervalTimer timer, {CuePlayer? cuePlayer}) {
+  //   final current = active.value;
+  //   if (current != null && current.timer.id == timer.id) {
+  //     return current;
+  //   }
+  //   clear();
+  //   final controller = IntervalRunController(
+  //     timer: timer,
+  //     cuePlayer: cuePlayer,
+  //   );
+  //   // Nothing constructs controllers for us, so the service runs the
+  //   // lifecycle hook screens rely on.
+  //   controller.onInit();
+  //   setAfterBuild(active, controller);
+  //   return controller;
+  // }
+  //
+  // /// Ends the session: cancels the ticker, releases the wakelock, disposes
+  // /// the cue player.
+  // void clear() {
+  //   active.value?.onClose();
+  //   setAfterBuild(active, null);
+  // }
+
+  // Gene - Nov, 06, 2026: Persist interval session state and clear it on session end.
   IntervalRunController obtain(IntervalTimer timer, {CuePlayer? cuePlayer}) {
     final current = active.value;
     if (current != null && current.timer.id == timer.id) {
@@ -45,10 +73,12 @@ class IntervalSessionService {
       timer: timer,
       cuePlayer: cuePlayer,
     );
-    // Nothing constructs controllers for us, so the service runs the
-    // lifecycle hook screens rely on.
     controller.onInit();
     setAfterBuild(active, controller);
+    DatabaseService().saveActiveIntervalSession({
+      'timerId': timer.id,
+      'startedAtMs': DateTime.now().millisecondsSinceEpoch,
+    });
     return controller;
   }
 
@@ -57,6 +87,7 @@ class IntervalSessionService {
   void clear() {
     active.value?.onClose();
     setAfterBuild(active, null);
+    DatabaseService().clearActiveIntervalSession();
   }
 
   /// Called when the run screen is popped: a completed schedule has nothing
@@ -65,5 +96,34 @@ class IntervalSessionService {
     if (!hasSessionInProgress) {
       clear();
     }
+  }
+
+  // Gene - Nov, 06, 2026: Restores active interval session from DatabaseService on app relaunch.
+  Future<IntervalRunController?> restoreSessionIfActive({
+    DatabaseService? databaseService,
+    CuePlayer? cuePlayer,
+  }) async {
+    final db = databaseService ?? DatabaseService();
+    final data = await db.getActiveIntervalSession();
+    if (data == null) return null;
+
+    final timerId = data['timerId'] as String?;
+    if (timerId == null) {
+      await db.clearActiveIntervalSession();
+      return null;
+    }
+
+    final timer = await db.getIntervalTimer(timerId);
+    if (timer == null) {
+      await db.clearActiveIntervalSession();
+      return null;
+    }
+
+    final controller = obtain(timer, cuePlayer: cuePlayer);
+    if (controller.isCompleted.value) {
+      clear();
+      return null;
+    }
+    return controller;
   }
 }

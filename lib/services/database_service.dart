@@ -15,11 +15,36 @@ class DatabaseService {
 
   static final DatabaseService _instance = DatabaseService._internal();
 
+  // Gene - Nov, 06, 2026: Preserved original box names and accessors.
+  // // Box names
+  // static const String _sequencesBoxName = 'activity_sequences';
+  // static const String _intervalTimersBoxName = 'interval_timers';
+  // static const String _historyBoxName = 'session_history';
+  // static const String _brewRecipesBoxName = 'brew_recipes';
+  //
+  // // `Hive.openBox` returns the already-open box on subsequent calls, so these
+  // // double as cheap accessors once `init()` has run.
+  // Future<Box<TimerSequence>> get _sequences =>
+  //     Hive.openBox<TimerSequence>(_sequencesBoxName);
+  // Future<Box<IntervalTimer>> get _intervalTimers =>
+  //     Hive.openBox<IntervalTimer>(_intervalTimersBoxName);
+  // Future<Box<SessionHistory>> get _history =>
+  //     Hive.openBox<SessionHistory>(_historyBoxName);
+  // Future<Box<BrewRecipe>> get _brewRecipes =>
+  //     Hive.openBox<BrewRecipe>(_brewRecipesBoxName);
+  //
+  // /// Open every box the app reads from.
+  // Future<void> init() async {
+  //   await (_sequences, _intervalTimers, _history, _brewRecipes).wait;
+  // }
+
+  // Gene - Nov, 06, 2026: Added _activeSessions box to Hive initialization to support session persistence and restoration across background termination.
   // Box names
   static const String _sequencesBoxName = 'activity_sequences';
   static const String _intervalTimersBoxName = 'interval_timers';
   static const String _historyBoxName = 'session_history';
   static const String _brewRecipesBoxName = 'brew_recipes';
+  static const String _activeSessionsBoxName = 'active_sessions';
 
   // `Hive.openBox` returns the already-open box on subsequent calls, so these
   // double as cheap accessors once `init()` has run.
@@ -31,7 +56,30 @@ class DatabaseService {
       Hive.openBox<SessionHistory>(_historyBoxName);
   Future<Box<BrewRecipe>> get _brewRecipes =>
       Hive.openBox<BrewRecipe>(_brewRecipesBoxName);
+  // Gene - Nov, 06, 2026: Preserved initial session box accessor and methods.
+  // Future<Box<dynamic>> get _activeSessions =>
+  //     Hive.openBox<dynamic>(_activeSessionsBoxName);
 
+  // Gene - Nov, 06, 2026: Safe accessor for _activeSessions that returns existing open box if available or null if Hive is closing.
+  Future<Box<dynamic>?> get _activeSessionsBox async {
+    try {
+      if (Hive.isBoxOpen(_activeSessionsBoxName)) {
+        return Hive.box<dynamic>(_activeSessionsBoxName);
+      }
+      return await Hive.openBox<dynamic>(_activeSessionsBoxName);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Gene - Nov, 06, 2026: Commented out unused _activeSessions in favor of _activeSessionsBox.
+  // Future<Box<dynamic>> get _activeSessions async {
+  //   final box = await _activeSessionsBox;
+  //   if (box != null) return box;
+  //   return Hive.openBox<dynamic>(_activeSessionsBoxName);
+  // }
+
+  // Gene - Nov, 06, 2026: Open primary sequence, interval, history, and brew boxes on init; active sessions box is accessed on demand.
   /// Open every box the app reads from.
   Future<void> init() async {
     await (_sequences, _intervalTimers, _history, _brewRecipes).wait;
@@ -709,6 +757,69 @@ class DatabaseService {
 
       await intervalBox.put(workdayTimer.id, workdayTimer);
     }
+  }
+
+  // Gene - Nov, 06, 2026: Added methods for saving, retrieving, and clearing active activity and interval sessions to survive app suspension/kill on iOS and Android.
+  // Gene - Nov, 06, 2026: Added safe try-catch handlers and null-safe box access for active sessions to prevent hanging during Hive teardown.
+  Future<void> saveActiveActivitySession(Map<String, dynamic> data) async {
+    try {
+      final box = await _activeSessionsBox;
+      await box?.put('activity_session', data);
+    } catch (_) {}
+  }
+
+  Future<Map<String, dynamic>?> getActiveActivitySession() async {
+    try {
+      final box = await _activeSessionsBox;
+      final raw = box?.get('activity_session');
+      if (raw is Map) {
+        return Map<String, dynamic>.from(raw);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Gene - Nov, 06, 2026: Fast-path clear methods: only delete if box is open; never attempt to open box during teardown.
+  Future<void> clearActiveActivitySession() async {
+    try {
+      if (!Hive.isBoxOpen(_activeSessionsBoxName)) {
+        return;
+      }
+      final box = Hive.box<dynamic>(_activeSessionsBoxName);
+      await box.delete('activity_session');
+    } catch (_) {}
+  }
+
+  Future<void> saveActiveIntervalSession(Map<String, dynamic> data) async {
+    try {
+      final box = await _activeSessionsBox;
+      await box?.put('interval_session', data);
+    } catch (_) {}
+  }
+
+  Future<Map<String, dynamic>?> getActiveIntervalSession() async {
+    try {
+      final box = await _activeSessionsBox;
+      final raw = box?.get('interval_session');
+      if (raw is Map) {
+        return Map<String, dynamic>.from(raw);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearActiveIntervalSession() async {
+    try {
+      if (!Hive.isBoxOpen(_activeSessionsBoxName)) {
+        return;
+      }
+      final box = Hive.box<dynamic>(_activeSessionsBoxName);
+      await box.delete('interval_session');
+    } catch (_) {}
   }
 
   /// Close all boxes.

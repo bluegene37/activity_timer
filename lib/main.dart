@@ -7,7 +7,11 @@ import 'controllers/app_controller.dart';
 import 'hive_registrar.g.dart';
 import 'models/settings.dart';
 import 'routes/app_pages.dart';
+// Gene - Nov, 06, 2026: Added session services and alarm scheduler imports for session restoration on app startup.
+import 'services/activity_session_service.dart';
+import 'services/alarm_scheduler.dart';
 import 'services/database_service.dart';
+import 'services/interval_session_service.dart';
 import 'services/locator.dart';
 import 'services/ui_messenger.dart';
 import 'theme/app_theme.dart';
@@ -38,8 +42,19 @@ Future<void> main() async {
   // Register controllers strictly after settings have loaded from the
   // database, so the first frame draws with the saved theme instead of
   // flashing defaults.
+  // Gene - Nov, 06, 2026: Preserved original controller setup and runApp sequence.
+  // setUpLocator();
+  // locator<AppController>();
+  //
+  // runApp(const MyApp());
+
+  // Gene - Nov, 06, 2026: Restored active activity and interval sessions and initialized notification launch handling so background runs revive seamlessly upon notification tap.
   setUpLocator();
   locator<AppController>();
+
+  await ActivitySessionService().restoreSessionIfActive();
+  await IntervalSessionService().restoreSessionIfActive();
+  await LocalNotificationAlarmScheduler.initializeAndCheckLaunch();
 
   runApp(const MyApp());
 }

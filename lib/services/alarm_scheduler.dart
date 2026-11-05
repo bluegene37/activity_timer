@@ -1,17 +1,68 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+// Gene - Nov, 06, 2026: Commented out unnecessary foundation.dart import since widgets.dart already exports foundation elements.
+// import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
+// Gene - Nov, 06, 2026: Added widgets, routes, and session service imports to support notification tap handling.
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../models/alarm_sound.dart';
+import '../routes/app_pages.dart';
+import '../routes/app_routes.dart';
+import 'activity_session_service.dart';
+import 'brew_session_service.dart';
 import 'cue_player.dart';
+import 'interval_session_service.dart';
 
 /// One alarm the OS should raise on its own, at [at].
+// Gene - Nov, 06, 2026: Preserved original ScheduledAlarm implementation.
+// @immutable
+// class ScheduledAlarm {
+//   const ScheduledAlarm({
+//     required this.id,
+//     required this.at,
+//     required this.title,
+//     required this.body,
+//     this.sound,
+//     this.isCompletion = false,
+//   });
+//
+//   /// Stable within a session; ids are reused across reschedules so a stale
+//   /// notification is always replaced rather than duplicated.
+//   final int id;
+//   final DateTime at;
+//   final String title;
+//   final String body;
+//
+//   /// The routine's chosen cue. Null falls back to the system default.
+//   final AlarmSound? sound;
+//
+//   /// The end of the whole session, which uses the dedicated completion cue.
+//   final bool isCompletion;
+//
+//   @override
+//   bool operator ==(Object other) =>
+//       other is ScheduledAlarm &&
+//       other.id == id &&
+//       other.at == at &&
+//       other.title == title &&
+//       other.body == body &&
+//       other.sound == sound &&
+//       other.isCompletion == isCompletion;
+//
+//   @override
+//   int get hashCode => Object.hash(id, at, title, body, sound, isCompletion);
+//
+//   @override
+//   String toString() => 'ScheduledAlarm($id, $at, $title)';
+// }
+
+// Gene - Nov, 06, 2026: Added payload property to ScheduledAlarm to support deep navigation when tapping background notifications.
 @immutable
 class ScheduledAlarm {
   const ScheduledAlarm({
@@ -21,6 +72,7 @@ class ScheduledAlarm {
     required this.body,
     this.sound,
     this.isCompletion = false,
+    this.payload,
   });
 
   /// Stable within a session; ids are reused across reschedules so a stale
@@ -36,6 +88,9 @@ class ScheduledAlarm {
   /// The end of the whole session, which uses the dedicated completion cue.
   final bool isCompletion;
 
+  /// Route/session payload used when the notification is tapped.
+  final String? payload;
+
   @override
   bool operator ==(Object other) =>
       other is ScheduledAlarm &&
@@ -44,13 +99,14 @@ class ScheduledAlarm {
       other.title == title &&
       other.body == body &&
       other.sound == sound &&
-      other.isCompletion == isCompletion;
+      other.isCompletion == isCompletion &&
+      other.payload == payload;
 
   @override
-  int get hashCode => Object.hash(id, at, title, body, sound, isCompletion);
+  int get hashCode => Object.hash(id, at, title, body, sound, isCompletion, payload);
 
   @override
-  String toString() => 'ScheduledAlarm($id, $at, $title)';
+  String toString() => 'ScheduledAlarm($id, $at, $title, payload: $payload)';
 }
 
 /// Raises alarms while the app is backgrounded or the screen is locked.
@@ -157,6 +213,72 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
   static String _rawResourceFor(String fileName) =>
       fileName.split('.').first.toLowerCase().replaceAll('-', '_');
 
+  // Gene - Nov, 06, 2026: Callback handling for tapping notifications to restore and route back to running screens.
+  static void onNotificationTapped(NotificationResponse response) {
+    handlePayload(response.payload);
+  }
+
+  static void handlePayload(String? payload) {
+    if (payload == null) return;
+    if (payload.startsWith('activity')) {
+      final active = ActivitySessionService().active.value;
+      if (active != null && !active.isCompleted.value) {
+        AppPages.push<dynamic>(Routes.timer, extra: active.sequence);
+      }
+    } else if (payload.startsWith('interval')) {
+      final active = IntervalSessionService().active.value;
+      if (active != null && !active.isCompleted.value) {
+        AppPages.push<dynamic>(Routes.intervalTimer, extra: active.timer);
+      }
+    } else if (payload.startsWith('brew')) {
+      final active = BrewSessionService().active.value;
+      if (active != null && !active.isFinished.value) {
+        AppPages.push<dynamic>(Routes.brew, extra: active.recipe);
+      }
+    }
+  }
+
+  // Gene - Nov, 06, 2026: Initialize notifications at app launch and check if app was opened via notification tap.
+  static Future<void> initializeAndCheckLaunch({
+    FlutterLocalNotificationsPlugin? plugin,
+  }) async {
+    final scheduler = LocalNotificationAlarmScheduler(plugin: plugin);
+    await scheduler._init();
+    final p = plugin ?? scheduler._plugin;
+    final details = await p.getNotificationAppLaunchDetails();
+    if (details?.didNotificationLaunchApp ?? false) {
+      final payload = details?.notificationResponse?.payload;
+      if (payload != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          handlePayload(payload);
+        });
+      }
+    }
+  }
+
+  // Gene - Nov, 06, 2026: Preserved original _init implementation.
+  // Future<void> _init() async {
+  //   if (_initialized) {
+  //     return;
+  //   }
+  //   tz_data.initializeTimeZones();
+  //   await _plugin.initialize(
+  //     settings: const InitializationSettings(
+  //       android: AndroidInitializationSettings('@mipmap/launcher_icon'),
+  //       // Permission is requested explicitly in ensurePermission() so the
+  //       // prompt lands when the user starts a timer, not at cold start.
+  //       iOS: DarwinInitializationSettings(
+  //         requestAlertPermission: false,
+  //         requestBadgePermission: false,
+  //         requestSoundPermission: false,
+  //       ),
+  //     ),
+  //   );
+  //   await _installDarwinSounds();
+  //   _initialized = true;
+  // }
+
+  // Gene - Nov, 06, 2026: Added onDidReceiveNotificationResponse callback in _init so user notification taps route back to active sessions.
   Future<void> _init() async {
     if (_initialized) {
       return;
@@ -173,6 +295,7 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
           requestSoundPermission: false,
         ),
       ),
+      onDidReceiveNotificationResponse: onNotificationTapped,
     );
     await _installDarwinSounds();
     _initialized = true;
@@ -207,6 +330,39 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
     }
   }
 
+  // Gene - Nov, 06, 2026: Preserved original schedule implementation.
+  // @override
+  // Future<void> schedule(List<ScheduledAlarm> alarms) async {
+  //   try {
+  //     await _init();
+  //     await cancelAll();
+  //
+  //     final now = DateTime.now();
+  //     for (final alarm in alarms) {
+  //       if (!alarm.at.isAfter(now)) {
+  //         continue; // Already elapsed: the in-app cue covered it.
+  //       }
+  //       if (alarm.id < 0 || alarm.id >= idSpaceSize) {
+  //         continue; // Outside this scheduler's block: never another's alarm.
+  //       }
+  //       await _plugin.zonedSchedule(
+  //         id: idBase + alarm.id,
+  //         title: alarm.title,
+  //         body: alarm.body,
+  //         scheduledDate: tz.TZDateTime.from(alarm.at, tz.local),
+  //         notificationDetails: _detailsFor(alarm),
+  //         // Exact timing is the entire point of a timer; inexact scheduling
+  //         // would drift by minutes under Doze.
+  //         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+  //       );
+  //       _pending.add(idBase + alarm.id);
+  //     }
+  //   } catch (_) {
+  //     // Scheduling is best-effort; the in-app cue still fires.
+  //   }
+  // }
+
+  // Gene - Nov, 06, 2026: Passed payload into zonedSchedule to attach session routing info to background notifications.
   @override
   Future<void> schedule(List<ScheduledAlarm> alarms) async {
     try {
@@ -230,6 +386,11 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
           // Exact timing is the entire point of a timer; inexact scheduling
           // would drift by minutes under Doze.
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          payload:
+              alarm.payload ??
+              (idBase == activityIdBase
+                  ? 'activity'
+                  : (idBase == intervalIdBase ? 'interval' : 'brew')),
         );
         _pending.add(idBase + alarm.id);
       }

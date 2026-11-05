@@ -24,6 +24,39 @@ import '../services/ui_messenger.dart';
 /// stopping the routine, and lets the whole thing be tested with a fake
 /// clock instead of a widget tree.
 class ActivityRunController {
+  // Gene - Nov, 06, 2026: Preserved original constructor and fields.
+  // ActivityRunController({
+  //   required this.sequence,
+  //   CuePlayer? cuePlayer,
+  //   AlarmScheduler? scheduler,
+  //   DateTime Function()? clock,
+  //   Future<void> Function(SessionHistory)? historyLogger,
+  //   Future<void> Function(TimerSequence)? sequenceSaver,
+  //   this.tickInterval = const Duration(milliseconds: 100),
+  // }) : _cuePlayer = cuePlayer ?? AudioCuePlayer(),
+  //      _scheduler =
+  //          scheduler ??
+  //          LocalNotificationAlarmScheduler(
+  //            idBase: LocalNotificationAlarmScheduler.activityIdBase,
+  //          ),
+  //      _now = clock ?? DateTime.now,
+  //      _logHistory =
+  //          historyLogger ??
+  //          ((history) => DatabaseService().logSessionHistory(history)),
+  //      _saveSequence =
+  //          sequenceSaver ??
+  //          ((seq) => DatabaseService().updateActivitySequence(seq));
+  //
+  // final TimerSequence sequence;
+  // final Duration tickInterval;
+  //
+  // final CuePlayer _cuePlayer;
+  // final AlarmScheduler _scheduler;
+  // final DateTime Function() _now;
+  // final Future<void> Function(SessionHistory) _logHistory;
+  // final Future<void> Function(TimerSequence) _saveSequence;
+
+  // Gene - Nov, 06, 2026: Added sessionSaver and sessionClearer to ActivityRunController to persist active running state across background kills.
   ActivityRunController({
     required this.sequence,
     CuePlayer? cuePlayer,
@@ -31,6 +64,8 @@ class ActivityRunController {
     DateTime Function()? clock,
     Future<void> Function(SessionHistory)? historyLogger,
     Future<void> Function(TimerSequence)? sequenceSaver,
+    Future<void> Function(Map<String, dynamic>)? sessionSaver,
+    Future<void> Function()? sessionClearer,
     this.tickInterval = const Duration(milliseconds: 100),
   }) : _cuePlayer = cuePlayer ?? AudioCuePlayer(),
        _scheduler =
@@ -44,7 +79,13 @@ class ActivityRunController {
            ((history) => DatabaseService().logSessionHistory(history)),
        _saveSequence =
            sequenceSaver ??
-           ((seq) => DatabaseService().updateActivitySequence(seq));
+           ((seq) => DatabaseService().updateActivitySequence(seq)),
+       _saveSession =
+           sessionSaver ??
+           ((data) => DatabaseService().saveActiveActivitySession(data)),
+       _clearSession =
+           sessionClearer ??
+           (() => DatabaseService().clearActiveActivitySession());
 
   final TimerSequence sequence;
   final Duration tickInterval;
@@ -54,6 +95,8 @@ class ActivityRunController {
   final DateTime Function() _now;
   final Future<void> Function(SessionHistory) _logHistory;
   final Future<void> Function(TimerSequence) _saveSequence;
+  final Future<void> Function(Map<String, dynamic>) _saveSession;
+  final Future<void> Function() _clearSession;
 
   /// The steps being run. A routine saved with no steps still has to run
   /// something, so it falls back to a single 30-second work step.
@@ -125,6 +168,70 @@ class ActivityRunController {
     start();
   }
 
+  // Gene - Nov, 06, 2026: Helper method to persist active session state snapshot to Hive.
+  Future<void> _persistSession() async {
+    if (isCompleted.value) {
+      await _clearSession();
+      return;
+    }
+    final data = <String, dynamic>{
+      'sequenceId': sequence.id,
+      'currentIndex': currentIndex.value,
+      'isPreparing': isPreparing.value,
+      'deadlineMs': _deadline?.millisecondsSinceEpoch,
+      'remainingMs': remainingMs.value,
+      'isRunning': isRunning.value,
+      'loopEnabled': loopEnabled.value,
+      'loopCount': loopCount.value,
+      'lastUpdatedMs': _now().millisecondsSinceEpoch,
+    };
+    try {
+      await _saveSession(data);
+    } catch (_) {}
+  }
+
+  // Gene - Nov, 06, 2026: Preserved original start, pause, and addSeconds implementations.
+  // void start() {
+  //   if (isCompleted.value) {
+  //     return;
+  //   }
+  //   _deadline = _now().add(Duration(milliseconds: remainingMs.value));
+  //   _ticker?.cancel();
+  //   _ticker = Timer.periodic(tickInterval, (_) => _tick());
+  //   unawaited(WakelockPlus.enable());
+  //   isRunning.value = true;
+  //   unawaited(_syncBackgroundAlarms());
+  // }
+  //
+  // void pause() {
+  //   remainingMs.value = math.max(0, remainingMsNow);
+  //   _ticker?.cancel();
+  //   _ticker = null;
+  //   unawaited(WakelockPlus.disable());
+  //   unawaited(_scheduler.cancelAll());
+  //   isRunning.value = false;
+  // }
+  //
+  // void toggle() => isRunning.value ? pause() : start();
+  //
+  // /// The +15s / -15s controls: stretch the running deadline, or the stored
+  // /// remainder when paused. Never drops below one second.
+  // void addSeconds(int deltaSeconds) {
+  //   final deltaMs = deltaSeconds * 1000;
+  //   final deadline = _deadline;
+  //   if (isRunning.value && deadline != null) {
+  //     final extended = deadline.add(Duration(milliseconds: deltaMs));
+  //     if (extended.isAfter(_now().add(const Duration(seconds: 1)))) {
+  //       _deadline = extended;
+  //     }
+  //     remainingMs.value = math.max(0, remainingMsNow);
+  //     unawaited(_syncBackgroundAlarms());
+  //   } else {
+  //     remainingMs.value = math.max(1000, remainingMs.value + deltaMs);
+  //   }
+  // }
+
+  // Gene - Nov, 06, 2026: Added _persistSession() call on start, pause, and addSeconds to maintain snapshot in Hive.
   void start() {
     if (isCompleted.value) {
       return;
@@ -135,6 +242,7 @@ class ActivityRunController {
     unawaited(WakelockPlus.enable());
     isRunning.value = true;
     unawaited(_syncBackgroundAlarms());
+    unawaited(_persistSession());
   }
 
   void pause() {
@@ -144,6 +252,7 @@ class ActivityRunController {
     unawaited(WakelockPlus.disable());
     unawaited(_scheduler.cancelAll());
     isRunning.value = false;
+    unawaited(_persistSession());
   }
 
   void toggle() => isRunning.value ? pause() : start();
@@ -163,6 +272,7 @@ class ActivityRunController {
     } else {
       remainingMs.value = math.max(1000, remainingMs.value + deltaMs);
     }
+    unawaited(_persistSession());
   }
 
   void _tick() {
@@ -205,6 +315,56 @@ class ActivityRunController {
     }
   }
 
+  // Gene - Nov, 06, 2026: Preserved original _finishPreparation and advance implementations.
+  // void _finishPreparation() {
+  //   isPreparing.value = false;
+  //   currentIndex.value = 0;
+  //   remainingMs.value = currentDurationMs;
+  //   _lastHapticSecond = -1;
+  //   unawaited(_cuePlayer.playStart());
+  //   _deadline = _now().add(Duration(milliseconds: remainingMs.value));
+  //   unawaited(_syncBackgroundAlarms());
+  // }
+  //
+  // /// Moves to the next step, carrying any overshoot so a backgrounded
+  // /// routine catches up instead of drifting.
+  // void advance({int overshootMs = 0}) {
+  //   var index = currentIndex.value;
+  //   var carry = overshootMs;
+  //   var loops = loopCount.value;
+  //
+  //   final cycleMs = sequence.totalDuration * 1000;
+  //   while (true) {
+  //     if (index < timers.length - 1) {
+  //       index++;
+  //     } else if (loopEnabled.value && cycleMs > 0) {
+  //       index = 0;
+  //       loops++;
+  //       if (carry >= cycleMs) {
+  //         loops += carry ~/ cycleMs;
+  //         carry %= cycleMs;
+  //       }
+  //     } else {
+  //       _complete();
+  //       return;
+  //     }
+  //
+  //     final durationMs = timers[index].durationInSeconds * 1000;
+  //     if (carry < durationMs) {
+  //       currentIndex.value = index;
+  //       loopCount.value = loops;
+  //       remainingMs.value = durationMs - carry;
+  //       break;
+  //     }
+  //     carry -= durationMs;
+  //   }
+  //
+  //   _lastHapticSecond = -1;
+  //   _deadline = _now().add(Duration(milliseconds: remainingMs.value));
+  //   unawaited(_syncBackgroundAlarms());
+  // }
+
+  // Gene - Nov, 06, 2026: Added _persistSession() call when preparation finishes or steps advance.
   void _finishPreparation() {
     isPreparing.value = false;
     currentIndex.value = 0;
@@ -213,6 +373,7 @@ class ActivityRunController {
     unawaited(_cuePlayer.playStart());
     _deadline = _now().add(Duration(milliseconds: remainingMs.value));
     unawaited(_syncBackgroundAlarms());
+    unawaited(_persistSession());
   }
 
   /// Moves to the next step, carrying any overshoot so a backgrounded
@@ -251,6 +412,7 @@ class ActivityRunController {
     _lastHapticSecond = -1;
     _deadline = _now().add(Duration(milliseconds: remainingMs.value));
     unawaited(_syncBackgroundAlarms());
+    unawaited(_persistSession());
   }
 
   void skipToNext() {
@@ -286,6 +448,35 @@ class ActivityRunController {
     }
   }
 
+  // Gene - Nov, 06, 2026: Preserved original _complete and reset implementations.
+  // void _complete() {
+  //   _ticker?.cancel();
+  //   _ticker = null;
+  //   unawaited(_cuePlayer.playCompletion());
+  //   unawaited(WakelockPlus.disable());
+  //   unawaited(_scheduler.cancelAll());
+  //   isRunning.value = false;
+  //   isCompleted.value = true;
+  //   _logSessionCompletion();
+  // }
+  //
+  // void reset() {
+  //   _ticker?.cancel();
+  //   _ticker = null;
+  //   unawaited(WakelockPlus.disable());
+  //   unawaited(_scheduler.cancelAll());
+  //   isPreparing.value = sequence.preparationSeconds > 0;
+  //   _prepDurationMs = sequence.preparationSeconds * 1000;
+  //   currentIndex.value = 0;
+  //   remainingMs.value = isPreparing.value ? _prepDurationMs : currentDurationMs;
+  //   isRunning.value = false;
+  //   isCompleted.value = false;
+  //   loopCount.value = 0;
+  //   _lastHapticSecond = -1;
+  //   _deadline = null;
+  // }
+
+  // Gene - Nov, 06, 2026: Clear persisted active session on routine completion and reset.
   void _complete() {
     _ticker?.cancel();
     _ticker = null;
@@ -295,6 +486,7 @@ class ActivityRunController {
     isRunning.value = false;
     isCompleted.value = true;
     _logSessionCompletion();
+    unawaited(_clearSession());
   }
 
   void reset() {
@@ -311,6 +503,7 @@ class ActivityRunController {
     loopCount.value = 0;
     _lastHapticSecond = -1;
     _deadline = null;
+    unawaited(_clearSession());
   }
 
   /// The loop toggle is the routine's saved preference, not just a switch
@@ -359,6 +552,67 @@ class ActivityRunController {
   /// The boundaries still ahead, as wall-clock times. A looping routine only
   /// schedules the current pass; the list is refreshed whenever the session
   /// changes state, so the next lap is handed over when it begins.
+  // Gene - Nov, 06, 2026: Preserved original pendingAlarms implementation.
+  // List<ScheduledAlarm> pendingAlarms() {
+  //   final alarms = <ScheduledAlarm>[];
+  //   var offsetMs = remainingMsNow;
+  //   if (offsetMs <= 0) {
+  //     return alarms;
+  //   }
+  //   final from = _now();
+  //
+  //   if (isPreparing.value) {
+  //     alarms.add(
+  //       ScheduledAlarm(
+  //         id: 0,
+  //         at: from.add(Duration(milliseconds: offsetMs)),
+  //         title: sequence.name,
+  //         body: 'Get ready — starting ${timers.first.name}.',
+  //         sound: _soundFor(0),
+  //       ),
+  //     );
+  //     for (var i = 0; i < timers.length; i++) {
+  //       offsetMs += timers[i].durationInSeconds * 1000;
+  //       alarms.add(
+  //         ScheduledAlarm(
+  //           id: i + 1,
+  //           at: from.add(Duration(milliseconds: offsetMs)),
+  //           title: sequence.name,
+  //           body: _bodyFor(i),
+  //           sound: _soundFor(i),
+  //           isCompletion: _endsSessionAt(i),
+  //         ),
+  //       );
+  //     }
+  //   } else {
+  //     alarms.add(
+  //       ScheduledAlarm(
+  //         id: currentIndex.value,
+  //         at: from.add(Duration(milliseconds: offsetMs)),
+  //         title: sequence.name,
+  //         body: _bodyFor(currentIndex.value),
+  //         sound: _soundFor(currentIndex.value),
+  //         isCompletion: _endsSessionAt(currentIndex.value),
+  //       ),
+  //     );
+  //     for (var i = currentIndex.value + 1; i < timers.length; i++) {
+  //       offsetMs += timers[i].durationInSeconds * 1000;
+  //       alarms.add(
+  //         ScheduledAlarm(
+  //           id: i + 1,
+  //           at: from.add(Duration(milliseconds: offsetMs)),
+  //           title: sequence.name,
+  //           body: _bodyFor(i),
+  //           sound: _soundFor(i),
+  //           isCompletion: _endsSessionAt(i),
+  //         ),
+  //       );
+  //     }
+  //   }
+  //   return alarms;
+  // }
+
+  // Gene - Nov, 06, 2026: Included payload with sequence id so background notifications navigate straight to the active routine on tap.
   List<ScheduledAlarm> pendingAlarms() {
     final alarms = <ScheduledAlarm>[];
     var offsetMs = remainingMsNow;
@@ -375,6 +629,7 @@ class ActivityRunController {
           title: sequence.name,
           body: 'Get ready — starting ${timers.first.name}.',
           sound: _soundFor(0),
+          payload: 'activity:${sequence.id}',
         ),
       );
       // Keep going past the countdown. The OS is the only thing running once
@@ -392,6 +647,7 @@ class ActivityRunController {
             body: _bodyFor(i),
             sound: _soundFor(i),
             isCompletion: _endsSessionAt(i),
+            payload: 'activity:${sequence.id}',
           ),
         );
       }
@@ -404,6 +660,7 @@ class ActivityRunController {
           body: _bodyFor(currentIndex.value),
           sound: _soundFor(currentIndex.value),
           isCompletion: _endsSessionAt(currentIndex.value),
+          payload: 'activity:${sequence.id}',
         ),
       );
       for (var i = currentIndex.value + 1; i < timers.length; i++) {
@@ -416,6 +673,7 @@ class ActivityRunController {
             body: _bodyFor(i),
             sound: _soundFor(i),
             isCompletion: _endsSessionAt(i),
+            payload: 'activity:${sequence.id}',
           ),
         );
       }
@@ -456,10 +714,81 @@ class ActivityRunController {
     }
   }
 
+  // Gene - Nov, 06, 2026: Preserved original onClose implementation.
+  // void onClose() {
+  //   _ticker?.cancel();
+  //   unawaited(_cuePlayer.dispose());
+  //   unawaited(_scheduler.cancelAll());
+  //   unawaited(WakelockPlus.disable());
+  // }
+
+  // Gene - Nov, 06, 2026: Dispose ticker, cues, background alarms, and wakelock on controller close. Session clearing is managed by session service and completion.
   void onClose() {
     _ticker?.cancel();
     unawaited(_cuePlayer.dispose());
     unawaited(_scheduler.cancelAll());
     unawaited(WakelockPlus.disable());
+  }
+
+  // Gene - Nov, 06, 2026: Restores controller state from snapshot and synchronizes running deadline to current wall clock.
+  void restoreFromSnapshot({
+    required int initialIndex,
+    required bool wasPreparing,
+    required bool wasRunning,
+    required int savedRemainingMs,
+    required int? deadlineMs,
+    required bool savedLoopEnabled,
+    required int savedLoopCount,
+  }) {
+    loopEnabled.value = savedLoopEnabled;
+    loopCount.value = savedLoopCount;
+    _prepDurationMs = sequence.preparationSeconds * 1000;
+
+    if (!wasRunning) {
+      isPreparing.value = wasPreparing;
+      currentIndex.value = initialIndex.clamp(0, timers.length - 1);
+      remainingMs.value = savedRemainingMs;
+      isRunning.value = false;
+      isCompleted.value = false;
+      return;
+    }
+
+    final now = _now();
+    final deadline =
+        deadlineMs != null
+            ? DateTime.fromMillisecondsSinceEpoch(deadlineMs)
+            : now.add(Duration(milliseconds: savedRemainingMs));
+
+    final diffMs = deadline.difference(now).inMilliseconds;
+
+    if (diffMs > 0) {
+      // The current step is still in progress.
+      isPreparing.value = wasPreparing;
+      currentIndex.value = initialIndex.clamp(0, timers.length - 1);
+      remainingMs.value = diffMs;
+      start();
+      return;
+    }
+
+    // Step has elapsed while app was suspended/killed.
+    final overshootMs = -diffMs;
+    if (wasPreparing) {
+      isPreparing.value = false;
+      currentIndex.value = 0;
+      final d0 = timers[0].durationInSeconds * 1000;
+      if (overshootMs < d0) {
+        remainingMs.value = d0 - overshootMs;
+        start();
+        return;
+      }
+      advance(overshootMs: overshootMs - d0);
+    } else {
+      currentIndex.value = initialIndex.clamp(0, timers.length - 1);
+      advance(overshootMs: overshootMs);
+    }
+
+    if (!isCompleted.value) {
+      start();
+    }
   }
 }
