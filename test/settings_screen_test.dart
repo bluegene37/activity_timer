@@ -71,13 +71,27 @@ void main() {
     expect(find.text('Developer'), findsOneWidget);
     expect(find.text('genexis.dev'), findsOneWidget);
 
+    // Gene - Nov 5, 2026: Default theme mode is light mode; verify initial light mode then test Dark, System, and Light transitions
     // Switching theme mode updates the controller
-    await tester.tap(find.text('Light'));
-    await tester.pumpAndSettle();
+    // await tester.tap(find.text('Light'));
+    // await tester.pumpAndSettle();
+    // expect(appController.themeMode.value, ThemeMode.light);
+    //
+    // await tester.tap(find.text('System'));
+    // await tester.pumpAndSettle();
+    // expect(appController.themeMode.value, ThemeMode.system);
     expect(appController.themeMode.value, ThemeMode.light);
+
+    await tester.tap(find.text('Dark'));
+    await tester.pumpAndSettle();
+    expect(appController.themeMode.value, ThemeMode.dark);
 
     await tester.tap(find.text('System'));
     await tester.pumpAndSettle();
     expect(appController.themeMode.value, ThemeMode.system);
+
+    await tester.tap(find.text('Light'));
+    await tester.pumpAndSettle();
+    expect(appController.themeMode.value, ThemeMode.light);
   });
 }

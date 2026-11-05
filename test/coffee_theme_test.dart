@@ -58,6 +58,22 @@ void main() {
     await settings.setThemeStyle(AppThemeStyle.coffee);
   });
 
+  // Gene - Nov 5, 2026: Added unit test verifying themeMode defaults to light mode
+  test('themeMode persists and defaults to light', () async {
+    final settings = AppSettings();
+    await settings.loadSettings();
+    expect(settings.themeMode, ThemeMode.light, reason: 'default theme mode must be light');
+
+    await settings.setThemeMode(ThemeMode.dark);
+    expect(settings.themeMode, ThemeMode.dark);
+
+    // A fresh load must read the persisted value back.
+    await settings.loadSettings();
+    expect(settings.themeMode, ThemeMode.dark);
+
+    await settings.setThemeMode(ThemeMode.light);
+  });
+
   testWidgets('coffee style paints the whole app washi', (tester) async {
     // Hive IO only progresses outside the fake-async zone.
     await tester.runAsync(() async {

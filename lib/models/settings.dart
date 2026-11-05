@@ -8,7 +8,9 @@ part 'settings.g.dart';
 @HiveType(typeId: 0)
 class AppSettingsData extends HiveObject {
   AppSettingsData({
-    this.themeMode = 'dark',
+    // Gene - Nov 5, 2026: Set default themeMode to 'light' instead of 'dark'
+    // this.themeMode = 'dark',
+    this.themeMode = 'light',
     this.soundEnabled = true,
     this.vibrationEnabled = true,
     this.themeColor = AppSettings.defaultThemeColorValue,
@@ -65,7 +67,9 @@ class AppSettings {
   static const _boxName = 'settings';
   static const _settingsKey = 'app_settings';
 
-  ThemeMode _themeMode = ThemeMode.dark;
+  // Gene - Nov 5, 2026: Changed default _themeMode to ThemeMode.light
+  // ThemeMode _themeMode = ThemeMode.dark;
+  ThemeMode _themeMode = ThemeMode.light;
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
   Color _themeColor = defaultThemeColor;
@@ -81,8 +85,11 @@ class AppSettings {
 
   /// [ThemeMode] values round-trip through their [Enum.name], so persisted
   /// strings ('light' / 'dark' / 'system') need no manual mapping table.
+  // Gene - Nov 5, 2026: Default fallback to ThemeMode.light instead of ThemeMode.dark
+  // static ThemeMode _themeModeFromName(String name) => ThemeMode.values
+  //     .firstWhere((mode) => mode.name == name, orElse: () => ThemeMode.dark);
   static ThemeMode _themeModeFromName(String name) => ThemeMode.values
-      .firstWhere((mode) => mode.name == name, orElse: () => ThemeMode.dark);
+      .firstWhere((mode) => mode.name == name, orElse: () => ThemeMode.light);
 
   Future<void> loadSettings() async {
     final box = await Hive.openBox<AppSettingsData>(_boxName);

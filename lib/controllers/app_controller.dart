@@ -8,7 +8,9 @@ class AppController {
   final _settings = AppSettings();
 
   // Reactive variables
-  final themeMode = signal(ThemeMode.dark);
+  // Gene - Nov 5, 2026: Set default themeMode signal to ThemeMode.light per user requirement
+  // final themeMode = signal(ThemeMode.dark);
+  final themeMode = signal(ThemeMode.light);
   // Initialize with the standard default, but it will be instantly overridden in onInit
   final themeColor = signal<Color>(const Color(0xFF4A6FFF));
   final soundEnabled = signal(true);

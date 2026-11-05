@@ -17,7 +17,9 @@ class AppSettingsDataAdapter extends TypeAdapter<AppSettingsData> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return AppSettingsData(
-      themeMode: fields[0] == null ? 'dark' : fields[0] as String,
+      // Gene - Nov 5, 2026: Default themeMode to 'light' instead of 'dark' when fields[0] is null
+      // themeMode: fields[0] == null ? 'dark' : fields[0] as String,
+      themeMode: fields[0] == null ? 'light' : fields[0] as String,
       soundEnabled: fields[1] == null ? true : fields[1] as bool,
       vibrationEnabled: fields[2] == null ? true : fields[2] as bool,
       themeColor:
