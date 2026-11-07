@@ -502,8 +502,17 @@ class SettingsScreen extends StatelessWidget {
                           //     fontWeight: FontWeight.w700,
                           //   ),
                           // ),
+                          // Gene - Nov 6, 2026: Updated display version string to 1.0.4 for Android Closed Testing and iOS TestFlight release
+                          // child: Text(
+                          //   '1.0.3',
+                          //   textAlign: TextAlign.end,
+                          //   overflow: TextOverflow.ellipsis,
+                          //   style: textTheme.bodyMedium?.copyWith(
+                          //     fontWeight: FontWeight.w700,
+                          //   ),
+                          // ),
                           child: Text(
-                            '1.0.3',
+                            '1.0.4',
                             textAlign: TextAlign.end,
                             overflow: TextOverflow.ellipsis,
                             style: textTheme.bodyMedium?.copyWith(

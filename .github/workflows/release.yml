@@ -83,11 +83,27 @@ jobs:
           fi
           echo "VERSION=$PUBSPEC_VERSION" >> "$GITHUB_ENV"
 
-      - name: Setup Java 17
+      # Gene - Nov 6, 2026: Upgraded Java to 21 to match deploy-internal.yml and Gradle 8.14
+      # - name: Setup Java 17
+      #   uses: actions/setup-java@v4
+      #   with:
+      #     distribution: temurin
+      #     java-version: '17'
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
+
+      # Gene - Nov 7, 2026: Configure curl retries via ~/.curlrc to prevent subosito/flutter-action setup.sh exit code 56 timeouts
+      - name: Configure curl retry resiliency
+        run: |
+          cat <<EOF > ~/.curlrc
+          retry = 5
+          retry-delay = 5
+          retry-all-errors
+          connect-timeout = 30
+          EOF
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -104,14 +120,33 @@ jobs:
       - name: Run tests
         run: flutter test
 
+      # Gene - Nov 6, 2026: Validate keystore inside bash script instead of broken step-level env condition
+      # - name: Configure Keystore
+      #   env:
+      #     KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      #     KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      #     KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      #     KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      #   if: env.KEYSTORE_B64 != ''
+      #   run: |
+      #     echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload-keystore.jks"
+      #     cat > android/key.properties <<EOF
+      #     storePassword=$KEYSTORE_PASSWORD
+      #     keyPassword=$KEY_PASSWORD
+      #     keyAlias=${KEY_ALIAS:-upload}
+      #     storeFile=$RUNNER_TEMP/upload-keystore.jks
+      #     EOF
       - name: Configure Keystore
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        if: env.KEYSTORE_B64 != ''
         run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 secret is not set!"
+            exit 1
+          fi
           echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload-keystore.jks"
           cat > android/key.properties <<EOF
           storePassword=$KEYSTORE_PASSWORD
@@ -129,7 +164,9 @@ jobs:
         run: |
           if [ "${{ github.event.inputs.auto_increment_build }}" != "false" ]; then
             VERSION_NAME=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
-            BUILD_NUMBER=$(( 10 + ${{ github.run_number }} ))
+            # Gene - Nov 7, 2026: Increased build number offset from 10 to 50 so Release workflow run_number stays strictly above deploy-internal/deploy-testflight versionCodes
+            # BUILD_NUMBER=$(( 10 + ${{ github.run_number }} ))
+            BUILD_NUMBER=$(( 50 + ${{ github.run_number }} ))
             echo "Building $VERSION_NAME+$BUILD_NUMBER"
             flutter build appbundle --release \
               --build-name="$VERSION_NAME" \
@@ -168,11 +205,21 @@ jobs:
       #     releaseFiles: build/app/outputs/bundle/release/app-release.aab
       #     tracks: internal
       #     status: completed
+      # Gene - Nov 6, 2026: Removed broken step-level env condition from Play Store upload step
+      # - name: Upload to Google Play Track (optional)
+      #   if: env.PLAY_JSON != '' && github.event.inputs.track != 'none'
+      #   uses: r0adkll/upload-google-play@v1
+      #   env:
+      #     PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+      #   with:
+      #     serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+      #     packageName: dev.genexis.activitytimer
+      #     releaseFiles: build/app/outputs/bundle/release/app-release.aab
+      #     tracks: ${{ github.event.inputs.track || 'alpha' }}
+      #     status: completed
       - name: Upload to Google Play Track (optional)
-        if: env.PLAY_JSON != '' && github.event.inputs.track != 'none'
+        if: github.event.inputs.track != 'none'
         uses: r0adkll/upload-google-play@v1
-        env:
-          PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: dev.genexis.activitytimer
@@ -266,6 +313,16 @@ jobs:
           PUBSPEC_VERSION=$(sed -n 's/^version: \([0-9.]*\)+.*/\1/p' pubspec.yaml)
           echo "VERSION=$PUBSPEC_VERSION" >> "$GITHUB_ENV"
 
+      # Gene - Nov 7, 2026: Configure curl retries via ~/.curlrc to prevent subosito/flutter-action setup.sh exit code 56 timeouts on 2.16GB macOS Flutter SDK download
+      - name: Configure curl retry resiliency
+        run: |
+          cat <<EOF > ~/.curlrc
+          retry = 5
+          retry-delay = 5
+          retry-all-errors
+          connect-timeout = 30
+          EOF
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -281,20 +338,74 @@ jobs:
       - name: Run tests
         run: flutter test
 
+      # Gene - Nov 6, 2026: Synchronized iOS distribution signing steps with deploy-testflight.yml, removing broken step-level env conditions
+      # - name: Import Apple Distribution Certificate
+      #   if: env.CERT_B64 != ''
+      #   env:
+      #     CERT_B64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+      #   uses: apple-actions/import-codesign-certs@v3
+      #   with:
+      #     p12-file-base64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+      #     p12-password: ${{ secrets.P12_PASSWORD }}
+      # 
+      # - name: Install Apple Provisioning Profile
+      #   if: env.PROVISION_PROFILE_BASE64 != ''
+      #   env:
+      #     PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+      #   run: |
+      #     PP_TEMP="$RUNNER_TEMP/profile.mobileprovision"
+      #     echo "$PROVISION_PROFILE_BASE64" | base64 --decode > "$PP_TEMP"
+      #     mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+      #     UUID=$(security cms -D -i "$PP_TEMP" | plutil -extract UUID raw -)
+      #     PROFILE_NAME=$(security cms -D -i "$PP_TEMP" | plutil -extract Name raw -)
+      #     cp "$PP_TEMP" ~/Library/MobileDevice/Provisioning\ Profiles/"$UUID.mobileprovision"
+      #     echo "Installed Profile: $PROFILE_NAME (UUID: $UUID)"
+      #     echo "profile_uuid=$UUID" >> "$GITHUB_ENV"
+      #     echo "profile_name=$PROFILE_NAME" >> "$GITHUB_ENV"
+      # 
+      # - name: Generate ExportOptions.plist
+      #   if: env.PROFILE_NAME != ''
+      #   env:
+      #     PROFILE_NAME: ${{ env.profile_name }}
+      #   run: |
+      #     cat <<EOF > ios/ExportOptions.plist
+      #     <?xml version="1.0" encoding="UTF-8"?>
+      #     <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      #     <plist version="1.0">
+      #     <dict>
+      #         <key>method</key>
+      #         <string>app-store</string>
+      #         <key>teamID</key>
+      #         <string>T7LB768N2Z</string>
+      #         <key>signingStyle</key>
+      #         <string>manual</string>
+      #         <key>destination</key>
+      #         <string>export</string>
+      #         <key>provisioningProfiles</key>
+      #         <dict>
+      #             <key>dev.genexis.activitytimer</key>
+      #             <string>$PROFILE_NAME</string>
+      #         </dict>
+      #         <key>manageAppVersionAndBuildNumber</key>
+      #         <false/>
+      #     </dict>
+      #     </plist>
+      #     EOF
+      #     echo "Generated ios/ExportOptions.plist"
       - name: Import Apple Distribution Certificate
-        if: env.CERT_B64 != ''
-        env:
-          CERT_B64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
         uses: apple-actions/import-codesign-certs@v3
         with:
           p12-file-base64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           p12-password: ${{ secrets.P12_PASSWORD }}
 
       - name: Install Apple Provisioning Profile
-        if: env.PROVISION_PROFILE_BASE64 != ''
         env:
           PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
         run: |
+          if [ -z "$PROVISION_PROFILE_BASE64" ]; then
+            echo "::error::BUILD_PROVISION_PROFILE_BASE64 secret is not set!"
+            exit 1
+          fi
           PP_TEMP="$RUNNER_TEMP/profile.mobileprovision"
           echo "$PROVISION_PROFILE_BASE64" | base64 --decode > "$PP_TEMP"
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
@@ -306,9 +417,6 @@ jobs:
           echo "profile_name=$PROFILE_NAME" >> "$GITHUB_ENV"
 
       - name: Generate ExportOptions.plist
-        if: env.PROFILE_NAME != ''
-        env:
-          PROFILE_NAME: ${{ env.profile_name }}
         run: |
           cat <<EOF > ios/ExportOptions.plist
           <?xml version="1.0" encoding="UTF-8"?>
@@ -326,7 +434,7 @@ jobs:
               <key>provisioningProfiles</key>
               <dict>
                   <key>dev.genexis.activitytimer</key>
-                  <string>$PROFILE_NAME</string>
+                  <string>$profile_name</string>
               </dict>
               <key>manageAppVersionAndBuildNumber</key>
               <false/>
@@ -339,7 +447,9 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event.inputs.auto_increment_build }}" != "false" ]; then
             VERSION_NAME=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
-            BUILD_NUMBER=$(( 10 + ${{ github.run_number }} ))
+            # Gene - Nov 7, 2026: Increased build number offset from 10 to 50 so Release workflow run_number stays strictly above deploy-testflight CFBundleVersions
+            # BUILD_NUMBER=$(( 10 + ${{ github.run_number }} ))
+            BUILD_NUMBER=$(( 50 + ${{ github.run_number }} ))
             echo "Building $VERSION_NAME+$BUILD_NUMBER"
             flutter build ipa --release --no-codesign \
               --build-name="$VERSION_NAME" \
@@ -350,8 +460,36 @@ jobs:
               --obfuscate --split-debug-info=build/symbols/ios
           fi
 
+      # Gene - Nov 6, 2026: Synchronized export and TestFlight upload steps with deploy-testflight.yml without fragile conditions
+      # - name: Export and Sign IPA
+      #   if: hashFiles('ios/ExportOptions.plist') != ''
+      #   run: |
+      #     xcodebuild -exportArchive \
+      #       -archivePath build/ios/archive/Runner.xcarchive \
+      #       -exportPath build/ios/ipa \
+      #       -exportOptionsPlist ios/ExportOptions.plist
+      # 
+      # - name: Locate IPA file
+      #   id: find_ipa
+      #   if: hashFiles('ios/ExportOptions.plist') != ''
+      #   run: |
+      #     IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -n 1)
+      #     if [ -n "$IPA_PATH" ]; then
+      #       echo "Found IPA file at: $IPA_PATH"
+      #       echo "ipa_path=$IPA_PATH" >> "$GITHUB_OUTPUT"
+      #     fi
+      # 
+      # - name: Upload to TestFlight
+      #   if: steps.find_ipa.outputs.ipa_path != '' && env.APPSTORE_KEY != ''
+      #   env:
+      #     APPSTORE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+      #   uses: apple-actions/upload-testflight-build@v5
+      #   with:
+      #     app-path: ${{ steps.find_ipa.outputs.ipa_path }}
+      #     issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+      #     api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
+      #     api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
       - name: Export and Sign IPA
-        if: hashFiles('ios/ExportOptions.plist') != ''
         run: |
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
@@ -360,18 +498,16 @@ jobs:
 
       - name: Locate IPA file
         id: find_ipa
-        if: hashFiles('ios/ExportOptions.plist') != ''
         run: |
           IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -n 1)
-          if [ -n "$IPA_PATH" ]; then
-            echo "Found IPA file at: $IPA_PATH"
-            echo "ipa_path=$IPA_PATH" >> "$GITHUB_OUTPUT"
+          if [ -z "$IPA_PATH" ]; then
+            echo "::error::No IPA file found in build/ios/ipa!"
+            exit 1
           fi
+          echo "Found IPA file at: $IPA_PATH"
+          echo "ipa_path=$IPA_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Upload to TestFlight
-        if: steps.find_ipa.outputs.ipa_path != '' && env.APPSTORE_KEY != ''
-        env:
-          APPSTORE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
         uses: apple-actions/upload-testflight-build@v5
         with:
           app-path: ${{ steps.find_ipa.outputs.ipa_path }}

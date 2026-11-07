@@ -26,6 +26,16 @@ jobs:
           distribution: temurin
           java-version: "21"
 
+      # Gene - Nov 7, 2026: Configure curl retries via ~/.curlrc to prevent subosito/flutter-action setup.sh exit code 56 timeouts
+      - name: Configure curl retry resiliency
+        run: |
+          cat <<EOF > ~/.curlrc
+          retry = 5
+          retry-delay = 5
+          retry-all-errors
+          connect-timeout = 30
+          EOF
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:

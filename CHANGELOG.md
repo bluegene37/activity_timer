@@ -5,6 +5,16 @@ All notable changes to **Activity Timer** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-11-06
+
+### Fixed
+- **Background Session & Floating Run Restoration**:
+  - Persisted active routine state to local Hive storage on all lifecycle transitions (start, pause, resume, preparation completion, and step advancement).
+  - Automatically restored running activity routines upon cold boot or notification tap, computing precise elapsed wall-clock time and handling step overshoots.
+  - Ensured floating run overlay pill (`_ActivityFloater`) renders immediately on launch with the accurate active step and remaining countdown timer.
+  - Handled notification click events to direct user directly to the running routine timer screen.
+  - Safely cleared active session records and canceled pending alarms upon routine completion or dismissal.
+
 ## [1.0.3] - 2026-11-03
 
 ### Added
