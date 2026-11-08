@@ -7,7 +7,9 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # version: 1.0.2+1
 # Gene - Nov 6, 2026: Bumped version to 1.0.4+1 for Android Closed Testing and Apple TestFlight deployment
 # version: 1.0.3+1
-version: 1.0.4+1
+# Gene - Nov, 8, 2026: Incremented build number only to 1.0.4+2 for Apple TestFlight and Google Play Closed Testing release
+# version: 1.0.4+1
+version: 1.0.4+2
 
 environment:
   sdk: ^3.7.0

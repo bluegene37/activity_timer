@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.4] - 2026-11-06
 
+### Added
+- **Alert by Time Mode & Day-of-Week Recurrence**:
+  - Point-in-time single-clock alerts (`Alert at Time`) alongside periodic interval windows, with quick time preset chips (`+15m`, `+30m`, `+1h`, `9:00 AM`, `12:00 PM`, `6:00 PM`).
+  - Weekday recurrence selector (`Every Day`, `Weekdays`, `Weekends`, `One-time`, or custom `M–S` days) and a 1-tap armed schedule switch on each interval card.
+- **Quick Countdown Timer**:
+  - Instant 1-tap countdown chips (`1m`, `3m`, `5m`, `10m`, `15m`, `30m`) and a custom `H:M:S` wheel picker at the top of the Activity Routines tab.
+- **Snooze / Extend Controls & Notification Actions**:
+  - In-session `+1m` and `+5m` adjustment pills, completion `Snooze +1m` / `Snooze +5m` buttons, and OS notification `Snooze 5m` and `Dismiss` action buttons.
+- **3-2-1 Countdown Beeps & 50% Halfway Warning Cue**:
+  - Configurable final 3-second countdown ticks and 50% halfway warning audio cue in Settings.
+
 ### Fixed
+- **Notification Sound & Multi-Floater Restoration**:
+  - Added Android R8/ProGuard `keep.xml` rules for raw alarm sounds, upgraded notification channel importance/audio attributes, and suppressed duplicate in-app completion cues when resuming from a fired background notification.
+  - Persisted and restored running Interval and Coffee Brew sessions across cold launches alongside Activity routines.
 - **Background Session & Floating Run Restoration**:
   - Persisted active routine state to local Hive storage on all lifecycle transitions (start, pause, resume, preparation completion, and step advancement).
   - Automatically restored running activity routines upon cold boot or notification tap, computing precise elapsed wall-clock time and handling step overshoots.
