@@ -60,6 +60,19 @@ class BrewStep extends HiveObject {
     this.description,
   });
 
+  // Gene - Nov, 7, 2026: Added JSON serialization helpers for BrewStep to support active brew session restoration.
+  factory BrewStep.fromJson(Map<String, dynamic> json) => BrewStep(
+    name: json['name'] as String? ?? 'Step',
+    seconds: json['seconds'] as int? ?? 30,
+    kind: BrewStepKind.values.firstWhere(
+      (k) => k.name == json['kind'],
+      orElse: () => BrewStepKind.pour,
+    ),
+    pourToFraction: (json['pourToFraction'] as num?)?.toDouble(),
+    pourSeconds: json['pourSeconds'] as int?,
+    description: json['description'] as String?,
+  );
+
   @HiveField(0)
   String name;
 
@@ -95,6 +108,16 @@ class BrewStep extends HiveObject {
     pourSeconds: pourSeconds ?? this.pourSeconds,
     description: description ?? this.description,
   );
+
+  // Gene - Nov, 7, 2026: Added JSON serialization helpers for BrewStep to support active brew session restoration.
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'seconds': seconds,
+    'kind': kind.name,
+    'pourToFraction': pourToFraction,
+    'pourSeconds': pourSeconds,
+    'description': description,
+  };
 }
 
 @HiveType(typeId: 8)
@@ -114,6 +137,23 @@ class BrewRecipe extends HiveObject {
        alarmSoundName = alarmSoundName ?? AlarmSound.bell.name,
        createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
+
+  // Gene - Nov, 7, 2026: Added JSON serialization helpers for BrewRecipe so active brew sessions can be persisted and restored across background termination.
+  factory BrewRecipe.fromJson(Map<String, dynamic> json) => BrewRecipe(
+    id: json['id'] as String?,
+    name: json['name'] as String? ?? 'Brew',
+    method: BrewMethod.fromString(json['method'] as String?),
+    doseGrams: (json['doseGrams'] as num?)?.toDouble() ?? 20,
+    ratio: (json['ratio'] as num?)?.toDouble() ?? 16,
+    steps: [
+      for (final step in json['steps'] as List<dynamic>? ?? const [])
+        BrewStep.fromJson(Map<String, dynamic>.from(step as Map)),
+    ],
+    notes: json['notes'] as String?,
+    alarmSoundName: json['alarmSoundName'] as String?,
+    createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
+    updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
+  );
 
   @HiveField(0)
   final String id;
@@ -262,4 +302,18 @@ class BrewRecipe extends HiveObject {
     notes: notes,
     alarmSoundName: alarmSoundName,
   );
+
+  // Gene - Nov, 7, 2026: Added JSON serialization helpers for BrewRecipe so active brew sessions can be persisted and restored across background termination.
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'method': method.name,
+    'doseGrams': doseGrams,
+    'ratio': ratio,
+    'steps': [for (final step in steps) step.toJson()],
+    'notes': notes,
+    'alarmSoundName': alarmSoundName,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+  };
 }

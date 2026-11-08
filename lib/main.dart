@@ -10,6 +10,8 @@ import 'routes/app_pages.dart';
 // Gene - Nov, 06, 2026: Added session services and alarm scheduler imports for session restoration on app startup.
 import 'services/activity_session_service.dart';
 import 'services/alarm_scheduler.dart';
+// Gene - Nov, 7, 2026: Added BrewSessionService import so active brew sessions restore on cold startup alongside activity and interval sessions.
+import 'services/brew_session_service.dart';
 import 'services/database_service.dart';
 import 'services/interval_session_service.dart';
 import 'services/locator.dart';
@@ -54,6 +56,8 @@ Future<void> main() async {
 
   await ActivitySessionService().restoreSessionIfActive();
   await IntervalSessionService().restoreSessionIfActive();
+  // Gene - Nov, 7, 2026: Restore active brew session on startup so its floating pill revives upon notification launch.
+  await BrewSessionService().restoreSessionIfActive();
   await LocalNotificationAlarmScheduler.initializeAndCheckLaunch();
 
   runApp(const MyApp());

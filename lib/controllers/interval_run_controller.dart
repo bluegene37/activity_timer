@@ -78,6 +78,29 @@ class IntervalRunController {
 
   /// The alarms still ahead of the current position, as the OS should see
   /// them. Exposed for tests.
+  // Gene - Nov, 7, 2026: Preserved original pendingAlarms implementation without payload.
+  // List<ScheduledAlarm> pendingAlarms() {
+  //   final alarms = <ScheduledAlarm>[];
+  //   for (var i = currentAlarmIndex.value; i < allAlarmTimes.length; i++) {
+  //     final isLast = i == allAlarmTimes.length - 1;
+  //     alarms.add(
+  //       ScheduledAlarm(
+  //         id: i,
+  //         at: allAlarmTimes[i],
+  //         title: timer.name,
+  //         body:
+  //             isLast
+  //                 ? 'Final alarm — the schedule is complete.'
+  //                 : 'Alarm ${i + 1} of ${allAlarmTimes.length}',
+  //         sound: timer.alarmSound,
+  //         isCompletion: isLast,
+  //       ),
+  //     );
+  //   }
+  //   return alarms;
+  // }
+
+  // Gene - Nov, 7, 2026: Added interval payload to ScheduledAlarm and syncWithClock() for background notification tap handling.
   List<ScheduledAlarm> pendingAlarms() {
     final alarms = <ScheduledAlarm>[];
     for (var i = currentAlarmIndex.value; i < allAlarmTimes.length; i++) {
@@ -93,10 +116,19 @@ class IntervalRunController {
                   : 'Alarm ${i + 1} of ${allAlarmTimes.length}',
           sound: timer.alarmSound,
           isCompletion: isLast,
+          payload: 'interval:${timer.id}',
         ),
       );
     }
     return alarms;
+  }
+
+  void syncWithClock() {
+    if (isRunning.value && !isCompleted.value) {
+      _tick();
+    } else if (!isCompleted.value) {
+      currentTime.value = _now();
+    }
   }
 
   void _initialize() {
@@ -214,6 +246,8 @@ class IntervalRunController {
       unawaited(WakelockPlus.disable());
       unawaited(_scheduler.cancelAll());
       _logSessionCompletion();
+      // Gene - Nov, 7, 2026: Clear persisted interval session when schedule completes.
+      unawaited(DatabaseService().clearActiveIntervalSession());
     }
   }
 

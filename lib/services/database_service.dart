@@ -90,10 +90,17 @@ class DatabaseService {
   Future<List<TimerSequence>> getAllActivitySequences() async =>
       (await _sequences).values.toList();
 
-  Future<TimerSequence?> getActivitySequence(String id) async =>
-      (await _sequences).values
-          .where((sequence) => sequence.id == id)
-          .firstOrNull;
+  // Gene - Nov, 7, 2026: Fast-path synchronous box read when already open so session restoration inside widget lifecycle callbacks does not block on Hive.openBox.
+  // Future<TimerSequence?> getActivitySequence(String id) async =>
+  //     (await _sequences).values
+  //         .where((sequence) => sequence.id == id)
+  //         .firstOrNull;
+  Future<TimerSequence?> getActivitySequence(String id) async {
+    final box = Hive.isBoxOpen(_sequencesBoxName)
+        ? Hive.box<TimerSequence>(_sequencesBoxName)
+        : await _sequences;
+    return box.values.where((sequence) => sequence.id == id).firstOrNull;
+  }
 
   Future<String> createActivitySequence(TimerSequence sequence) async {
     await (await _sequences).put(sequence.id, sequence);
@@ -172,10 +179,17 @@ class DatabaseService {
   Future<List<IntervalTimer>> getAllIntervalTimers() async =>
       (await _intervalTimers).values.toList();
 
-  Future<IntervalTimer?> getIntervalTimer(String id) async =>
-      (await _intervalTimers).values
-          .where((timer) => timer.id == id)
-          .firstOrNull;
+  // Gene - Nov, 7, 2026: Fast-path synchronous box read when already open so interval session restoration inside widget lifecycle callbacks does not block on Hive.openBox.
+  // Future<IntervalTimer?> getIntervalTimer(String id) async =>
+  //     (await _intervalTimers).values
+  //         .where((timer) => timer.id == id)
+  //         .firstOrNull;
+  Future<IntervalTimer?> getIntervalTimer(String id) async {
+    final box = Hive.isBoxOpen(_intervalTimersBoxName)
+        ? Hive.box<IntervalTimer>(_intervalTimersBoxName)
+        : await _intervalTimers;
+    return box.values.where((timer) => timer.id == id).firstOrNull;
+  }
 
   Future<String> createIntervalTimer(IntervalTimer timer) async {
     await (await _intervalTimers).put(timer.id, timer);
@@ -195,10 +209,17 @@ class DatabaseService {
   Future<List<BrewRecipe>> getAllBrewRecipes() async =>
       (await _brewRecipes).values.toList();
 
-  Future<BrewRecipe?> getBrewRecipe(String id) async =>
-      (await _brewRecipes).values
-          .where((recipe) => recipe.id == id)
-          .firstOrNull;
+  // Gene - Nov, 7, 2026: Fast-path synchronous box read when already open so brew session restoration inside widget lifecycle callbacks does not block on Hive.openBox.
+  // Future<BrewRecipe?> getBrewRecipe(String id) async =>
+  //     (await _brewRecipes).values
+  //         .where((recipe) => recipe.id == id)
+  //         .firstOrNull;
+  Future<BrewRecipe?> getBrewRecipe(String id) async {
+    final box = Hive.isBoxOpen(_brewRecipesBoxName)
+        ? Hive.box<BrewRecipe>(_brewRecipesBoxName)
+        : await _brewRecipes;
+    return box.values.where((recipe) => recipe.id == id).firstOrNull;
+  }
 
   Future<String> createBrewRecipe(BrewRecipe recipe) async {
     await (await _brewRecipes).put(recipe.id, recipe);
@@ -761,7 +782,74 @@ class DatabaseService {
 
   // Gene - Nov, 06, 2026: Added methods for saving, retrieving, and clearing active activity and interval sessions to survive app suspension/kill on iOS and Android.
   // Gene - Nov, 06, 2026: Added safe try-catch handlers and null-safe box access for active sessions to prevent hanging during Hive teardown.
+  // Future<void> saveActiveActivitySession(Map<String, dynamic> data) async {
+  //   try {
+  //     final box = await _activeSessionsBox;
+  //     await box?.put('activity_session', data);
+  //   } catch (_) {}
+  // }
+  //
+  // Future<Map<String, dynamic>?> getActiveActivitySession() async {
+  //   try {
+  //     final box = await _activeSessionsBox;
+  //     final raw = box?.get('activity_session');
+  //     if (raw is Map) {
+  //       return Map<String, dynamic>.from(raw);
+  //     }
+  //     return null;
+  //   } catch (_) {
+  //     return null;
+  //   }
+  // }
+  //
+  // // Gene - Nov, 06, 2026: Fast-path clear methods: only delete if box is open; never attempt to open box during teardown.
+  // Future<void> clearActiveActivitySession() async {
+  //   try {
+  //     if (!Hive.isBoxOpen(_activeSessionsBoxName)) {
+  //       return;
+  //     }
+  //     final box = Hive.box<dynamic>(_activeSessionsBoxName);
+  //     await box.delete('activity_session');
+  //   } catch (_) {}
+  // }
+  //
+  // Future<void> saveActiveIntervalSession(Map<String, dynamic> data) async {
+  //   try {
+  //     final box = await _activeSessionsBox;
+  //     await box?.put('interval_session', data);
+  //   } catch (_) {}
+  // }
+  //
+  // Future<Map<String, dynamic>?> getActiveIntervalSession() async {
+  //   try {
+  //     final box = await _activeSessionsBox;
+  //     final raw = box?.get('interval_session');
+  //     if (raw is Map) {
+  //       return Map<String, dynamic>.from(raw);
+  //     }
+  //     return null;
+  //   } catch (_) {
+  //     return null;
+  //   }
+  // }
+  //
+  // Future<void> clearActiveIntervalSession() async {
+  //   try {
+  //     if (!Hive.isBoxOpen(_activeSessionsBoxName)) {
+  //       return;
+  //     }
+  //     final box = Hive.box<dynamic>(_activeSessionsBoxName);
+  //     await box.delete('interval_session');
+  //   } catch (_) {}
+  // }
+
+  // Gene - Nov, 7, 2026: Mirror active session snapshots in an in-memory map alongside Hive so synchronous lifecycle transitions and FakeAsync widget tests can read/restore active sessions immediately without blocking on pending disk I/O.
+  final Map<String, Map<String, dynamic>> _activeSessionsMemoryCache = {};
+
   Future<void> saveActiveActivitySession(Map<String, dynamic> data) async {
+    _activeSessionsMemoryCache['activity_session'] = Map<String, dynamic>.from(
+      data,
+    );
     try {
       final box = await _activeSessionsBox;
       await box?.put('activity_session', data);
@@ -769,6 +857,10 @@ class DatabaseService {
   }
 
   Future<Map<String, dynamic>?> getActiveActivitySession() async {
+    final cached = _activeSessionsMemoryCache['activity_session'];
+    if (cached != null) {
+      return Map<String, dynamic>.from(cached);
+    }
     try {
       final box = await _activeSessionsBox;
       final raw = box?.get('activity_session');
@@ -781,8 +873,8 @@ class DatabaseService {
     }
   }
 
-  // Gene - Nov, 06, 2026: Fast-path clear methods: only delete if box is open; never attempt to open box during teardown.
   Future<void> clearActiveActivitySession() async {
+    _activeSessionsMemoryCache.remove('activity_session');
     try {
       if (!Hive.isBoxOpen(_activeSessionsBoxName)) {
         return;
@@ -793,6 +885,9 @@ class DatabaseService {
   }
 
   Future<void> saveActiveIntervalSession(Map<String, dynamic> data) async {
+    _activeSessionsMemoryCache['interval_session'] = Map<String, dynamic>.from(
+      data,
+    );
     try {
       final box = await _activeSessionsBox;
       await box?.put('interval_session', data);
@@ -800,6 +895,10 @@ class DatabaseService {
   }
 
   Future<Map<String, dynamic>?> getActiveIntervalSession() async {
+    final cached = _activeSessionsMemoryCache['interval_session'];
+    if (cached != null) {
+      return Map<String, dynamic>.from(cached);
+    }
     try {
       final box = await _activeSessionsBox;
       final raw = box?.get('interval_session');
@@ -813,12 +912,52 @@ class DatabaseService {
   }
 
   Future<void> clearActiveIntervalSession() async {
+    _activeSessionsMemoryCache.remove('interval_session');
     try {
       if (!Hive.isBoxOpen(_activeSessionsBoxName)) {
         return;
       }
       final box = Hive.box<dynamic>(_activeSessionsBoxName);
       await box.delete('interval_session');
+    } catch (_) {}
+  }
+
+  // Gene - Nov, 7, 2026: Added active brew session persistence methods so running brew floaters survive backgrounding and notification taps.
+  Future<void> saveActiveBrewSession(Map<String, dynamic> data) async {
+    _activeSessionsMemoryCache['brew_session'] = Map<String, dynamic>.from(
+      data,
+    );
+    try {
+      final box = await _activeSessionsBox;
+      await box?.put('brew_session', data);
+    } catch (_) {}
+  }
+
+  Future<Map<String, dynamic>?> getActiveBrewSession() async {
+    final cached = _activeSessionsMemoryCache['brew_session'];
+    if (cached != null) {
+      return Map<String, dynamic>.from(cached);
+    }
+    try {
+      final box = await _activeSessionsBox;
+      final raw = box?.get('brew_session');
+      if (raw is Map) {
+        return Map<String, dynamic>.from(raw);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearActiveBrewSession() async {
+    _activeSessionsMemoryCache.remove('brew_session');
+    try {
+      if (!Hive.isBoxOpen(_activeSessionsBoxName)) {
+        return;
+      }
+      final box = Hive.box<dynamic>(_activeSessionsBoxName);
+      await box.delete('brew_session');
     } catch (_) {}
   }
 

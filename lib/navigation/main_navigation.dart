@@ -32,8 +32,39 @@ class MainNavigation extends StatefulWidget {
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation> {
+// Gene - Nov, 7, 2026: Preserved original _MainNavigationState declaration without WidgetsBindingObserver.
+// class _MainNavigationState extends State<MainNavigation> {
+// Gene - Nov, 7, 2026: Added WidgetsBindingObserver to persist active sessions when backgrounded and sync/restore running floaters immediately upon resuming to foreground.
+class _MainNavigationState extends State<MainNavigation>
+    with WidgetsBindingObserver {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      unawaited(ActivitySessionService().persistActiveSession());
+      unawaited(IntervalSessionService().persistActiveSession());
+      unawaited(BrewSessionService().persistActiveSession());
+    } else if (state == AppLifecycleState.resumed) {
+      unawaited(ActivitySessionService().syncOrRestore());
+      unawaited(IntervalSessionService().syncOrRestore());
+      unawaited(BrewSessionService().syncOrRestore());
+    }
+  }
 
   final List<Widget> _screens = [
     const ActivityListScreen(),

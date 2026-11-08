@@ -12,12 +12,14 @@ import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../models/alarm_sound.dart';
-import '../routes/app_pages.dart';
-import '../routes/app_routes.dart';
+// Gene - Nov, 7, 2026: Commented out unused route imports after updating notification tap handler to surface MainNavigation with the running floater via UiMessenger.
+// import '../routes/app_pages.dart';
+// import '../routes/app_routes.dart';
 import 'activity_session_service.dart';
 import 'brew_session_service.dart';
 import 'cue_player.dart';
 import 'interval_session_service.dart';
+import 'ui_messenger.dart';
 
 /// One alarm the OS should raise on its own, at [at].
 // Gene - Nov, 06, 2026: Preserved original ScheduledAlarm implementation.
@@ -214,27 +216,59 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
       fileName.split('.').first.toLowerCase().replaceAll('-', '_');
 
   // Gene - Nov, 06, 2026: Callback handling for tapping notifications to restore and route back to running screens.
+  // static void onNotificationTapped(NotificationResponse response) {
+  //   handlePayload(response.payload);
+  // }
+  //
+  // static void handlePayload(String? payload) {
+  //   if (payload == null) return;
+  //   if (payload.startsWith('activity')) {
+  //     final active = ActivitySessionService().active.value;
+  //     if (active != null && !active.isCompleted.value) {
+  //       AppPages.push<dynamic>(Routes.timer, extra: active.sequence);
+  //     }
+  //   } else if (payload.startsWith('interval')) {
+  //     final active = IntervalSessionService().active.value;
+  //     if (active != null && !active.isCompleted.value) {
+  //       AppPages.push<dynamic>(Routes.intervalTimer, extra: active.timer);
+  //     }
+  //   } else if (payload.startsWith('brew')) {
+  //     final active = BrewSessionService().active.value;
+  //     if (active != null && !active.isFinished.value) {
+  //       AppPages.push<dynamic>(Routes.brew, extra: active.recipe);
+  //     }
+  //   }
+  // }
+
+  // Gene - Nov, 7, 2026: Synchronize or restore active session on notification tap and surface MainNavigation so the running floating pill appears immediately.
   static void onNotificationTapped(NotificationResponse response) {
-    handlePayload(response.payload);
+    unawaited(handlePayload(response.payload));
   }
 
-  static void handlePayload(String? payload) {
+  static Future<void> handlePayload(String? payload) async {
     if (payload == null) return;
     if (payload.startsWith('activity')) {
-      final active = ActivitySessionService().active.value;
+      final active = await ActivitySessionService().syncOrRestore();
       if (active != null && !active.isCompleted.value) {
-        AppPages.push<dynamic>(Routes.timer, extra: active.sequence);
+        _surfaceMainNavigationWithFloater();
       }
     } else if (payload.startsWith('interval')) {
-      final active = IntervalSessionService().active.value;
+      final active = await IntervalSessionService().syncOrRestore();
       if (active != null && !active.isCompleted.value) {
-        AppPages.push<dynamic>(Routes.intervalTimer, extra: active.timer);
+        _surfaceMainNavigationWithFloater();
       }
     } else if (payload.startsWith('brew')) {
-      final active = BrewSessionService().active.value;
+      final active = await BrewSessionService().syncOrRestore();
       if (active != null && !active.isFinished.value) {
-        AppPages.push<dynamic>(Routes.brew, extra: active.recipe);
+        _surfaceMainNavigationWithFloater();
       }
+    }
+  }
+
+  static void _surfaceMainNavigationWithFloater() {
+    final nav = UiMessenger().navigatorKey.currentState;
+    if (nav != null && nav.canPop()) {
+      nav.popUntil((route) => route.isFirst);
     }
   }
 

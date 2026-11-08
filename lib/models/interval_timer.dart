@@ -74,6 +74,25 @@ class IntervalTimer extends HiveObject {
        updatedAt = updatedAt ?? DateTime.now(),
        alarmSoundName = alarmSoundName ?? AlarmSound.beep.name;
 
+  // Gene - Nov, 7, 2026: Added JSON serialization helpers so active interval sessions can be persisted and restored even if not yet stored in the interval timers box.
+  factory IntervalTimer.fromJson(Map<String, dynamic> json) => IntervalTimer(
+    id: json['id'] as String?,
+    name: json['name'] as String? ?? 'Interval Timer',
+    startTime:
+        DateTime.tryParse(json['startTime'] as String? ?? '') ?? DateTime.now(),
+    endTime:
+        DateTime.tryParse(json['endTime'] as String? ?? '') ?? DateTime.now(),
+    intervalValue: json['intervalValue'] as int? ?? 1,
+    intervalType: IntervalType.values.firstWhere(
+      (t) => t.name == json['intervalType'],
+      orElse: () => IntervalType.hour,
+    ),
+    isActive: json['isActive'] as bool? ?? false,
+    createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
+    updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
+    alarmSoundName: json['alarmSoundName'] as String?,
+  );
+
   @HiveField(0)
   final String id;
 
@@ -155,4 +174,18 @@ class IntervalTimer extends HiveObject {
   // Gene - Oct, 06, 2026: Added shortIntervalString for compact badge representations like 'Every 15 min'.
   /// 'Every 1 hr', 'Every 15 min', …
   String get shortIntervalString => intervalType.shortEveryLabel(intervalValue);
+
+  // Gene - Nov, 7, 2026: Added JSON serialization helpers so active interval sessions can be persisted and restored even if not yet stored in the interval timers box.
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'startTime': startTime.toIso8601String(),
+    'endTime': endTime.toIso8601String(),
+    'intervalValue': intervalValue,
+    'intervalType': intervalType.name,
+    'isActive': isActive,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+    'alarmSoundName': alarmSoundName,
+  };
 }

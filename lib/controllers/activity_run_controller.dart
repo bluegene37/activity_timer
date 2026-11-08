@@ -169,6 +169,30 @@ class ActivityRunController {
   }
 
   // Gene - Nov, 06, 2026: Helper method to persist active session state snapshot to Hive.
+  // Future<void> _persistSession() async {
+  //   if (isCompleted.value) {
+  //     await _clearSession();
+  //     return;
+  //   }
+  //   final data = <String, dynamic>{
+  //     'sequenceId': sequence.id,
+  //     'currentIndex': currentIndex.value,
+  //     'isPreparing': isPreparing.value,
+  //     'deadlineMs': _deadline?.millisecondsSinceEpoch,
+  //     'remainingMs': remainingMs.value,
+  //     'isRunning': isRunning.value,
+  //     'loopEnabled': loopEnabled.value,
+  //     'loopCount': loopCount.value,
+  //     'lastUpdatedMs': _now().millisecondsSinceEpoch,
+  //   };
+  //   try {
+  //     await _saveSession(data);
+  //   } catch (_) {}
+  // }
+
+  // Gene - Nov, 7, 2026: Included serialized sequenceJson in persisted session snapshot so sessions restore reliably even if the sequence is not yet stored in the sequences box, and exposed persistSession() for background lifecycle hooks.
+  Future<void> persistSession() => _persistSession();
+
   Future<void> _persistSession() async {
     if (isCompleted.value) {
       await _clearSession();
@@ -176,6 +200,7 @@ class ActivityRunController {
     }
     final data = <String, dynamic>{
       'sequenceId': sequence.id,
+      'sequenceJson': sequence.toJson(),
       'currentIndex': currentIndex.value,
       'isPreparing': isPreparing.value,
       'deadlineMs': _deadline?.millisecondsSinceEpoch,
@@ -188,6 +213,13 @@ class ActivityRunController {
     try {
       await _saveSession(data);
     } catch (_) {}
+  }
+
+  // Gene - Nov, 7, 2026: Synchronizes running countdown and step boundaries immediately when returning from background or handling a notification tap.
+  void syncWithClock() {
+    if (isRunning.value && !isCompleted.value) {
+      _tick();
+    }
   }
 
   // Gene - Nov, 06, 2026: Preserved original start, pause, and addSeconds implementations.
@@ -283,7 +315,10 @@ class ActivityRunController {
 
     if (remaining <= 0) {
       if (isPreparing.value) {
-        _finishPreparation();
+        // Gene - Nov, 7, 2026: Preserved original _finishPreparation() call without overshoot.
+        // _finishPreparation();
+        // Gene - Nov, 7, 2026: Pass overshootMs when preparation finishes so background elapsed time carries into the first step.
+        _finishPreparation(overshootMs: -remaining);
       } else {
         // The last step of a non-looping routine ends the session, and
         // _complete() owns that cue — so only intermediate boundaries get a
@@ -365,12 +400,32 @@ class ActivityRunController {
   // }
 
   // Gene - Nov, 06, 2026: Added _persistSession() call when preparation finishes or steps advance.
-  void _finishPreparation() {
+  // void _finishPreparation() {
+  //   isPreparing.value = false;
+  //   currentIndex.value = 0;
+  //   remainingMs.value = currentDurationMs;
+  //   _lastHapticSecond = -1;
+  //   unawaited(_cuePlayer.playStart());
+  //   _deadline = _now().add(Duration(milliseconds: remainingMs.value));
+  //   unawaited(_syncBackgroundAlarms());
+  //   unawaited(_persistSession());
+  // }
+
+  // Gene - Nov, 7, 2026: Updated _finishPreparation to carry overshootMs into step 0 (or subsequent steps) when preparation completes while backgrounded.
+  void _finishPreparation({int overshootMs = 0}) {
     isPreparing.value = false;
     currentIndex.value = 0;
-    remainingMs.value = currentDurationMs;
     _lastHapticSecond = -1;
     unawaited(_cuePlayer.playStart());
+    final d0 = currentDurationMs;
+    if (overshootMs <= 0) {
+      remainingMs.value = d0;
+    } else if (overshootMs < d0) {
+      remainingMs.value = d0 - overshootMs;
+    } else {
+      advance(overshootMs: overshootMs - d0);
+      return;
+    }
     _deadline = _now().add(Duration(milliseconds: remainingMs.value));
     unawaited(_syncBackgroundAlarms());
     unawaited(_persistSession());
