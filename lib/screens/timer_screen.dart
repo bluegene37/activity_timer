@@ -333,22 +333,33 @@ class _TimerScreenState extends State<TimerScreen> {
             ),
           ),
 
-          // Live In-Session Adjustment Buttons (+/- 15s)
+          // Gene - Nov, 8, 2026: Added +1m and +5m quick extension buttons alongside -15s / +15s in the portrait adjustment bar.
+          // // Live In-Session Adjustment Buttons (+/- 15s)
+          // Padding(
+          //   padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          //   child: Row(
+          //     mainAxisAlignment: MainAxisAlignment.center,
+          //     children: [ ... ],
+          //   ),
+          // ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 10,
+              runSpacing: 8,
               children: [
                 OutlinedButton.icon(
                   onPressed: () {
                     HapticFeedback.selectionClick();
                     _c.addSeconds(-15);
                   },
-                  icon: const Icon(CupertinoIcons.minus, size: 14),
+                  icon: const Icon(CupertinoIcons.minus, size: 13),
                   label: const Text('-15s'),
                   style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
+                      horizontal: 12,
                       vertical: 8,
                     ),
                     shape: RoundedRectangleBorder(
@@ -356,17 +367,55 @@ class _TimerScreenState extends State<TimerScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 14),
                 OutlinedButton.icon(
                   onPressed: () {
                     HapticFeedback.selectionClick();
                     _c.addSeconds(15);
                   },
-                  icon: const Icon(CupertinoIcons.plus, size: 14),
+                  icon: const Icon(CupertinoIcons.plus, size: 13),
                   label: const Text('+15s'),
                   style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+                    ),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  key: const Key('activity-add-1m'),
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    _c.addSeconds(60);
+                  },
+                  icon: const Icon(CupertinoIcons.plus, size: 13),
+                  label: const Text('+1m'),
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+                    ),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  key: const Key('activity-add-5m'),
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    _c.addSeconds(300);
+                  },
+                  icon: const Icon(CupertinoIcons.plus, size: 13),
+                  label: const Text('+5m'),
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
                       vertical: 8,
                     ),
                     shape: RoundedRectangleBorder(
@@ -785,7 +834,44 @@ class _TimerScreenState extends State<TimerScreen> {
                 ),
               ),
             ],
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
+            // Gene - Nov, 8, 2026: Added +1m and +5m Snooze controls on the completion screen so finished timers can be snoozed in one tap.
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  key: const Key('activity-snooze-1m'),
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    _c.snooze(const Duration(minutes: 1));
+                  },
+                  icon: const Icon(CupertinoIcons.zzz, size: 16),
+                  label: const Text('Snooze +1m'),
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+                    ),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  key: const Key('activity-snooze-5m'),
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    _c.snooze(const Duration(minutes: 5));
+                  },
+                  icon: const Icon(CupertinoIcons.zzz, size: 16),
+                  label: const Text('Snooze +5m'),
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               width: 260,
               height: 50,

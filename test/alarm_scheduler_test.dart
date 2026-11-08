@@ -9,6 +9,8 @@ import 'package:activity_timer/models/session_history.dart';
 import 'package:activity_timer/services/alarm_scheduler.dart';
 import 'package:activity_timer/services/cue_player.dart';
 import 'package:flutter/services.dart';
+// Gene - Nov, 8, 2026: Added flutter_local_notifications import to verify Android/iOS notification sound and banner details.
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _SilentCuePlayer implements CuePlayer {
@@ -262,6 +264,74 @@ void main() {
       }
       expect(raw, contains('timer_complete'));
     });
+
+    // Gene - Nov, 8, 2026: Ensure R8 resource shrinking is prevented from stripping raw notification sounds in release builds, and platform notification details explicitly enable sound and banner presentation.
+    test(
+      'android/app/src/main/res/raw/keep.xml preserves @raw/* from R8 resource shrinking',
+      () {
+        final keepFile = File('android/app/src/main/res/raw/keep.xml');
+        expect(
+          keepFile.existsSync(),
+          isTrue,
+          reason:
+              'Without keep.xml, R8 shrinkResources strips dynamically-referenced res/raw sound files to 0 bytes in release builds.',
+        );
+        final contents = keepFile.readAsStringSync();
+        expect(contents, contains('tools:keep'));
+        expect(contents, contains('@raw/*'));
+      },
+    );
+
+    test(
+      'platform NotificationDetails explicitly enable sound and banner presentation for every cue and completion',
+      () {
+        final scheduler = LocalNotificationAlarmScheduler();
+        for (final sound in AlarmSound.values) {
+          final details = scheduler.detailsForTesting(
+            ScheduledAlarm(
+              id: 1,
+              at: DateTime(2026, 1, 1, 8),
+              title: 'Routine',
+              body: 'Next step',
+              sound: sound,
+            ),
+          );
+          expect(details.android, isNotNull);
+          expect(details.android!.playSound, isTrue);
+          expect(details.android!.enableVibration, isTrue);
+          expect(
+            details.android!.channelAction,
+            AndroidNotificationChannelAction.update,
+          );
+          expect(
+            details.android!.sound,
+            isA<RawResourceAndroidNotificationSound>(),
+          );
+          expect(details.iOS, isNotNull);
+          expect(details.iOS!.presentSound, isTrue);
+          expect(details.iOS!.presentBanner, isTrue);
+          expect(details.iOS!.presentAlert, isTrue);
+          expect(details.iOS!.presentList, isTrue);
+          expect(details.iOS!.sound, sound.fileName);
+        }
+
+        final completionDetails = scheduler.detailsForTesting(
+          ScheduledAlarm(
+            id: 2,
+            at: DateTime(2026, 1, 1, 8, 1),
+            title: 'Routine',
+            body: 'Routine complete.',
+            sound: AlarmSound.chime,
+            isCompletion: true,
+          ),
+        );
+        expect(completionDetails.android!.playSound, isTrue);
+        expect(
+          completionDetails.iOS!.sound,
+          AudioCuePlayer.completionSound,
+        );
+      },
+    );
 
     test('interval alarms carry the timer\'s sound and mark the last one', () {
       final scheduler = _RecordingScheduler();

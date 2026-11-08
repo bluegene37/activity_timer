@@ -225,9 +225,23 @@ class BrewRunController {
     } catch (_) {}
   }
 
+  // Gene - Nov, 8, 2026: Suspend the in-app periodic ticker when backgrounded so it never races and cancels OS notifications as they fire, and resume it cleanly in syncWithClock without re-playing already-fired cues.
+  // void syncWithClock() {
+  //   if (isRunning.value && !isFinished.value) {
+  //     _tick();
+  //   }
+  // }
+  void suspendTickerForBackground() {
+    _ticker?.cancel();
+    _ticker = null;
+  }
+
   void syncWithClock() {
     if (isRunning.value && !isFinished.value) {
-      _tick();
+      _tick(playCue: false);
+      if (isRunning.value && !isFinished.value && _ticker == null) {
+        _ticker = Timer.periodic(tickInterval, (_) => _tick());
+      }
     }
   }
 
@@ -312,7 +326,40 @@ class BrewRunController {
     unawaited(DatabaseService().clearActiveBrewSession());
   }
 
-  void _tick() {
+  // Gene - Nov, 8, 2026: Added playCue flag to _tick so background step catch-up does not double-play cues over OS notification sounds.
+  // void _tick() {
+  //   final startedAt = _stepStartedAt;
+  //   if (startedAt == null) {
+  //     return;
+  //   }
+  //   elapsedInStepMs.value =
+  //       _carriedMs + _now().difference(startedAt).inMilliseconds;
+  //
+  //   var advancedStep = false;
+  //   while (!isFinished.value &&
+  //       elapsedInStepMs.value >= currentStep.seconds * 1000) {
+  //     final overflowMs = elapsedInStepMs.value - currentStep.seconds * 1000;
+  //
+  //     if (stepIndex.value == recipe.steps.length - 1) {
+  //       // The final boundary gets the dedicated completion alarm rather
+  //       // than a step cue.
+  //       unawaited(_cuePlayer.playCompletion());
+  //       _finish();
+  //       return;
+  //     }
+  //     unawaited(_cuePlayer.playAlarm(recipe.alarmSound));
+  //
+  //     stepIndex.value += 1;
+  //     _carriedMs = overflowMs;
+  //     _stepStartedAt = _now();
+  //     elapsedInStepMs.value = overflowMs;
+  //     advancedStep = true;
+  //   }
+  //   if (advancedStep) {
+  //     unawaited(_persistSession());
+  //   }
+  // }
+  void _tick({bool playCue = true}) {
     final startedAt = _stepStartedAt;
     if (startedAt == null) {
       return;
@@ -328,11 +375,15 @@ class BrewRunController {
       if (stepIndex.value == recipe.steps.length - 1) {
         // The final boundary gets the dedicated completion alarm rather
         // than a step cue.
-        unawaited(_cuePlayer.playCompletion());
+        if (playCue) {
+          unawaited(_cuePlayer.playCompletion());
+        }
         _finish();
         return;
       }
-      unawaited(_cuePlayer.playAlarm(recipe.alarmSound));
+      if (playCue) {
+        unawaited(_cuePlayer.playAlarm(recipe.alarmSound));
+      }
 
       stepIndex.value += 1;
       _carriedMs = overflowMs;
@@ -381,7 +432,9 @@ class BrewRunController {
     _carriedMs = savedCarriedMs;
     _stepStartedAt = startedAt;
     isRunning.value = true;
-    _tick();
+    // Gene - Nov, 8, 2026: Catch up elapsed brew steps silently on restore so OS notification audio is not duplicated.
+    // _tick();
+    _tick(playCue: false);
     if (!isFinished.value) {
       _ticker?.cancel();
       _ticker = Timer.periodic(tickInterval, (_) => _tick());

@@ -8,6 +8,8 @@ import 'package:signals/signals_flutter.dart';
 
 import '../controllers/activity_list_controller.dart';
 import '../models/activity_timer.dart';
+// Gene - Nov, 8, 2026: Added IntervalPhase import for Quick Countdown Timer steps.
+import '../models/interval_phase.dart';
 import '../routes/app_pages.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
@@ -129,6 +131,10 @@ class ActivityListScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
+
+              // Gene - Nov, 8, 2026: Added Quick Countdown Timer card for instant 1-tap timers (1m, 3m, 5m, 10m, 15m, 30m) and custom H:M:S countdowns without creating a multi-step routine.
+              _buildQuickTimerCard(context, isDark, colorScheme, textTheme),
+              const SizedBox(height: 14),
 
               // iOS Styled Search Bar
               DecoratedBox(
@@ -1328,5 +1334,280 @@ class ActivityListScreen extends StatelessWidget {
     if (confirm == true) {
       unawaited(controller.deleteSequence(index));
     }
+  }
+
+  // Gene - Nov, 8, 2026: Added Quick Countdown Timer card and custom H:M:S bottom sheet so users can start an instant single-step timer in one tap.
+  Widget _buildQuickTimerCard(
+    BuildContext context,
+    bool isDark,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    const presets = <(String, int)>[
+      ('1m', 1),
+      ('3m', 3),
+      ('5m', 5),
+      ('10m', 10),
+      ('15m', 15),
+      ('30m', 30),
+    ];
+
+    return DecoratedBox(
+      key: const Key('quick-timer-card'),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground(isDark: isDark),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        border: Border.all(
+          color: AppTheme.separator(isDark: isDark),
+          width: 0.8,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        CupertinoIcons.timer_fill,
+                        size: 16,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Quick Timer',
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton.icon(
+                  key: const Key('quick-timer-custom-button'),
+                  onPressed: () {
+                    unawaited(HapticFeedback.selectionClick());
+                    _showQuickTimerCustomSheet(context);
+                  },
+                  icon: Icon(
+                    CupertinoIcons.slider_horizontal_3,
+                    size: 14,
+                    color: colorScheme.primary,
+                  ),
+                  label: Text(
+                    'Custom',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final (label, minutes) in presets)
+                  ActionChip(
+                    key: Key('quick-timer-$label'),
+                    label: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                    backgroundColor: colorScheme.primary.withValues(
+                      alpha: 0.12,
+                    ),
+                    side: BorderSide.none,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () {
+                      unawaited(HapticFeedback.selectionClick());
+                      _startQuickTimer(
+                        Duration(minutes: minutes),
+                        customTitle: '$minutes Min Timer',
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _startQuickTimer(Duration duration, {String? customTitle}) {
+    final totalSeconds = duration.inSeconds.clamp(1, 86400);
+    final label =
+        (customTitle != null && customTitle.trim().isNotEmpty)
+            ? customTitle.trim()
+            : 'Quick Timer';
+    final quickSequence = TimerSequence(
+      name: label,
+      preparationSeconds: 0,
+      defaultLoopEnabled: false,
+      category: 'custom',
+      timers: [
+        ActivityTimer(
+          name: label,
+          durationInSeconds: totalSeconds,
+          phase: IntervalPhase.work,
+        ),
+      ],
+    );
+    unawaited(AppPages.push<void>(Routes.timer, extra: quickSequence));
+  }
+
+  void _showQuickTimerCustomSheet(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+    final isDark = theme.brightness == Brightness.dark;
+    Duration selectedDuration = const Duration(minutes: 5);
+    final labelController = TextEditingController();
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 14,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Custom Quick Timer',
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      CupertinoIcons.xmark_circle_fill,
+                      size: 22,
+                    ),
+                    color: colorScheme.onSurfaceVariant,
+                    onPressed: () => Navigator.pop(sheetContext),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppTheme.cardBackground(isDark: isDark),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.separator(isDark: isDark),
+                    width: 0.8,
+                  ),
+                ),
+                child: TextField(
+                  controller: labelController,
+                  decoration: const InputDecoration(
+                    hintText: 'Timer label (optional, e.g. Pasta, Nap)...',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 180,
+                child: CupertinoTimerPicker(
+                  mode: CupertinoTimerPickerMode.hms,
+                  initialTimerDuration: selectedDuration,
+                  onTimerDurationChanged: (newDuration) {
+                    if (newDuration.inSeconds > 0) {
+                      selectedDuration = newDuration;
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  key: const Key('start-custom-quick-timer-button'),
+                  onPressed: () {
+                    final label = labelController.text.trim();
+                    Navigator.pop(sheetContext);
+                    _startQuickTimer(
+                      selectedDuration,
+                      customTitle: label.isEmpty ? null : label,
+                    );
+                  },
+                  icon: const Icon(CupertinoIcons.play_fill, size: 16),
+                  label: const Text(
+                    'Start Quick Timer',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    ).whenComplete(() {
+      Future<void>.delayed(
+        const Duration(milliseconds: 500),
+        labelController.dispose,
+      );
+    });
   }
 }

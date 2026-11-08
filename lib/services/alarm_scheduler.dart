@@ -133,15 +133,27 @@ abstract interface class AlarmScheduler {
 
 /// The production scheduler, backed by OS local notifications.
 class LocalNotificationAlarmScheduler implements AlarmScheduler {
+  // Gene - Nov, 8, 2026: Added optional clock parameter, operation serialization, and scheduled fire-time tracking so cancelAll never silences already-delivered notifications.
+  // LocalNotificationAlarmScheduler({
+  //   FlutterLocalNotificationsPlugin? plugin,
+  //   this.idBase = activityIdBase,
+  // }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
   LocalNotificationAlarmScheduler({
     FlutterLocalNotificationsPlugin? plugin,
     this.idBase = activityIdBase,
-  }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+    DateTime Function()? clock,
+  }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
+       _clock = clock ?? DateTime.now;
 
   static const String channelId = 'activity_timer_alarms';
+  // Gene - Nov, 8, 2026: Versioned Android notification channel prefix so devices with previously cached silent channels create fresh channels with sound bound.
+  static const String channelIdV2 = '${channelId}_v2';
   static const String channelName = 'Timer alarms';
   static const String channelDescription =
       'Fires when a timer, interval, or brew step reaches its end.';
+  // Gene - Nov, 8, 2026: Added notification action identifiers for Snooze (+5m) and Dismiss.
+  static const String snooze5mActionId = 'snooze_5m';
+  static const String dismissActionId = 'dismiss_alarm';
 
   /// How many notification ids one session type owns. Every scheduler gets
   /// its own block because an activity routine, a brew, and an interval
@@ -161,9 +173,25 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
   final int idBase;
 
   final FlutterLocalNotificationsPlugin _plugin;
+  final DateTime Function() _clock;
 
   bool _initialized = false;
-  final Set<int> _pending = <int>{};
+  // Gene - Nov, 8, 2026: Replaced Set<int> _pending with Map<int, DateTime> _pending to track each notification's scheduled fire time and avoid cancelling delivered notifications whose sound is playing.
+  // final Set<int> _pending = <int>{};
+  final Map<int, DateTime> _pending = <int, DateTime>{};
+  Future<void> _opChain = Future<void>.value();
+
+  Future<T> _serialize<T>(Future<T> Function() action) {
+    final completer = Completer<T>();
+    _opChain = _opChain.then((_) async {
+      try {
+        completer.complete(await action());
+      } catch (e, st) {
+        completer.completeError(e, st);
+      }
+    });
+    return completer.future;
+  }
 
   /// iOS plays notification audio only from the app bundle or the app
   /// container's Library/Sounds directory — a Flutter asset is neither. So
@@ -182,7 +210,11 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
       }
       for (final fileName in _cueFileNames) {
         final target = File('${sounds.path}/$fileName');
-        if (target.existsSync()) {
+        // Gene - Nov, 8, 2026: Ensure existing sound file is non-empty before skipping copy so a partial/0-byte file never silences iOS notifications.
+        // if (target.existsSync()) {
+        //   continue;
+        // }
+        if (target.existsSync() && target.lengthSync() > 0) {
           continue;
         }
         final data = await rootBundle.load('assets/sounds/$fileName');
@@ -205,11 +237,18 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
 
   /// Android ties a sound to its channel and will not let it change
   /// afterwards, so each cue gets its own channel.
+  // Gene - Nov, 8, 2026: Versioned Android notification channel IDs to _v2 so Android registers fresh channels with raw sound resources instead of reusing cached silent v1 channels.
+  // static String channelIdFor(AlarmSound? sound, {required bool isCompletion}) {
+  //   if (isCompletion) {
+  //     return '${channelId}_complete';
+  //   }
+  //   return sound == null ? channelId : '${channelId}_${sound.name}';
+  // }
   static String channelIdFor(AlarmSound? sound, {required bool isCompletion}) {
     if (isCompletion) {
-      return '${channelId}_complete';
+      return '${channelIdV2}_complete';
     }
-    return sound == null ? channelId : '${channelId}_${sound.name}';
+    return sound == null ? channelIdV2 : '${channelIdV2}_${sound.name}';
   }
 
   static String _rawResourceFor(String fileName) =>
@@ -241,12 +280,75 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
   // }
 
   // Gene - Nov, 7, 2026: Synchronize or restore active session on notification tap and surface MainNavigation so the running floating pill appears immediately.
+  // Gene - Nov, 8, 2026: Support notification action buttons (snooze_5m and dismiss_alarm) in onNotificationTapped and handlePayload.
+  // static void onNotificationTapped(NotificationResponse response) {
+  //   unawaited(handlePayload(response.payload));
+  // }
+  //
+  // static Future<void> handlePayload(String? payload) async {
+  //   if (payload == null) return;
+  //   if (payload.startsWith('activity')) {
+  //     final active = await ActivitySessionService().syncOrRestore();
+  //     if (active != null && !active.isCompleted.value) {
+  //       _surfaceMainNavigationWithFloater();
+  //     }
+  //   } else if (payload.startsWith('interval')) {
+  //     final active = await IntervalSessionService().syncOrRestore();
+  //     if (active != null && !active.isCompleted.value) {
+  //       _surfaceMainNavigationWithFloater();
+  //     }
+  //   } else if (payload.startsWith('brew')) {
+  //     final active = await BrewSessionService().syncOrRestore();
+  //     if (active != null && !active.isFinished.value) {
+  //       _surfaceMainNavigationWithFloater();
+  //     }
+  //   }
+  // }
   static void onNotificationTapped(NotificationResponse response) {
-    unawaited(handlePayload(response.payload));
+    unawaited(
+      handlePayload(response.payload, actionId: response.actionId),
+    );
   }
 
-  static Future<void> handlePayload(String? payload) async {
+  static Future<void> handlePayload(
+    String? payload, {
+    String? actionId,
+  }) async {
     if (payload == null) return;
+
+    if (actionId == snooze5mActionId) {
+      if (payload.startsWith('activity')) {
+        final active = await ActivitySessionService().snoozeActiveOrRestored(
+          const Duration(minutes: 5),
+        );
+        if (active != null) {
+          _surfaceMainNavigationWithFloater();
+        }
+        return;
+      } else if (payload.startsWith('interval')) {
+        final active = await IntervalSessionService().snoozeActiveOrRestored(
+          const Duration(minutes: 5),
+        );
+        if (active != null) {
+          _surfaceMainNavigationWithFloater();
+        }
+        return;
+      }
+    }
+
+    if (actionId == dismissActionId) {
+      if (payload.startsWith('activity')) {
+        ActivitySessionService().clear();
+        return;
+      } else if (payload.startsWith('interval')) {
+        IntervalSessionService().clear();
+        return;
+      } else if (payload.startsWith('brew')) {
+        BrewSessionService().clear();
+        return;
+      }
+    }
+
     if (payload.startsWith('activity')) {
       final active = await ActivitySessionService().syncOrRestore();
       if (active != null && !active.isCompleted.value) {
@@ -313,6 +415,28 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
   // }
 
   // Gene - Nov, 06, 2026: Added onDidReceiveNotificationResponse callback in _init so user notification taps route back to active sessions.
+  // Gene - Nov, 8, 2026: Also clean up legacy v1 Android notification channels so devices migrate cleanly to v2 sound-enabled channels.
+  // Future<void> _init() async {
+  //   if (_initialized) {
+  //     return;
+  //   }
+  //   tz_data.initializeTimeZones();
+  //   await _plugin.initialize(
+  //     settings: const InitializationSettings(
+  //       android: AndroidInitializationSettings('@mipmap/launcher_icon'),
+  //       // Permission is requested explicitly in ensurePermission() so the
+  //       // prompt lands when the user starts a timer, not at cold start.
+  //       iOS: DarwinInitializationSettings(
+  //         requestAlertPermission: false,
+  //         requestBadgePermission: false,
+  //         requestSoundPermission: false,
+  //       ),
+  //     ),
+  //     onDidReceiveNotificationResponse: onNotificationTapped,
+  //   );
+  //   await _installDarwinSounds();
+  //   _initialized = true;
+  // }
   Future<void> _init() async {
     if (_initialized) {
       return;
@@ -331,8 +455,29 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
       ),
       onDidReceiveNotificationResponse: onNotificationTapped,
     );
+    await _cleanupLegacyAndroidChannels();
     await _installDarwinSounds();
     _initialized = true;
+  }
+
+  Future<void> _cleanupLegacyAndroidChannels() async {
+    try {
+      final android =
+          _plugin
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
+      if (android == null) {
+        return;
+      }
+      await android.deleteNotificationChannel(channelId: channelId);
+      await android.deleteNotificationChannel(channelId: '${channelId}_complete');
+      for (final sound in AlarmSound.values) {
+        await android.deleteNotificationChannel(
+          channelId: '${channelId}_${sound.name}',
+        );
+      }
+    } catch (_) {}
   }
 
   @override
@@ -397,13 +542,49 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
   // }
 
   // Gene - Nov, 06, 2026: Passed payload into zonedSchedule to attach session routing info to background notifications.
+  // Gene - Nov, 8, 2026: Serialized schedule/cancelAll operations and recorded scheduled fire times so already-delivered notifications are never cancelled while their sound plays.
+  // @override
+  // Future<void> schedule(List<ScheduledAlarm> alarms) async {
+  //   try {
+  //     await _init();
+  //     await cancelAll();
+  //
+  //     final now = DateTime.now();
+  //     for (final alarm in alarms) {
+  //       if (!alarm.at.isAfter(now)) {
+  //         continue; // Already elapsed: the in-app cue covered it.
+  //       }
+  //       if (alarm.id < 0 || alarm.id >= idSpaceSize) {
+  //         continue; // Outside this scheduler's block: never another's alarm.
+  //       }
+  //       await _plugin.zonedSchedule(
+  //         id: idBase + alarm.id,
+  //         title: alarm.title,
+  //         body: alarm.body,
+  //         scheduledDate: tz.TZDateTime.from(alarm.at, tz.local),
+  //         notificationDetails: _detailsFor(alarm),
+  //         // Exact timing is the entire point of a timer; inexact scheduling
+  //         // would drift by minutes under Doze.
+  //         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+  //         payload:
+  //             alarm.payload ??
+  //             (idBase == activityIdBase
+  //                 ? 'activity'
+  //                 : (idBase == intervalIdBase ? 'interval' : 'brew')),
+  //       );
+  //       _pending.add(idBase + alarm.id);
+  //     }
+  //   } catch (_) {
+  //     // Scheduling is best-effort; the in-app cue still fires.
+  //   }
+  // }
   @override
-  Future<void> schedule(List<ScheduledAlarm> alarms) async {
+  Future<void> schedule(List<ScheduledAlarm> alarms) => _serialize(() async {
     try {
       await _init();
-      await cancelAll();
+      await _cancelUnfiredPending();
 
-      final now = DateTime.now();
+      final now = _clock();
       for (final alarm in alarms) {
         if (!alarm.at.isAfter(now)) {
           continue; // Already elapsed: the in-app cue covered it.
@@ -411,8 +592,9 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
         if (alarm.id < 0 || alarm.id >= idSpaceSize) {
           continue; // Outside this scheduler's block: never another's alarm.
         }
+        final notificationId = idBase + alarm.id;
         await _plugin.zonedSchedule(
-          id: idBase + alarm.id,
+          id: notificationId,
           title: alarm.title,
           body: alarm.body,
           scheduledDate: tz.TZDateTime.from(alarm.at, tz.local),
@@ -426,15 +608,51 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
                   ? 'activity'
                   : (idBase == intervalIdBase ? 'interval' : 'brew')),
         );
-        _pending.add(idBase + alarm.id);
+        _pending[notificationId] = alarm.at;
       }
     } catch (_) {
       // Scheduling is best-effort; the in-app cue still fires.
     }
-  }
+  });
+
+  // Gene - Nov, 8, 2026: Expose notification details builder for unit test verification of platform sound and banner settings.
+  @visibleForTesting
+  NotificationDetails detailsForTesting(ScheduledAlarm alarm) =>
+      _detailsFor(alarm);
 
   /// The alarm's own cue, on both platforms, so a background alarm sounds
   /// like the one the routine was set up with.
+  // Gene - Nov, 8, 2026: Explicitly enabled playSound, enableVibration, channelAction.update on Android and presentSound/presentBanner/presentList/presentAlert on iOS so notification toasts always play their sound.
+  // NotificationDetails _detailsFor(ScheduledAlarm alarm) {
+  //   final fileName =
+  //       alarm.isCompletion
+  //           ? AudioCuePlayer.completionSound
+  //           : alarm.sound?.fileName;
+  //
+  //   return NotificationDetails(
+  //     android: AndroidNotificationDetails(
+  //       channelIdFor(alarm.sound, isCompletion: alarm.isCompletion),
+  //       channelName,
+  //       channelDescription: channelDescription,
+  //       importance: Importance.max,
+  //       priority: Priority.high,
+  //       // An alarm should read as an alarm on the lock screen.
+  //       category: AndroidNotificationCategory.alarm,
+  //       fullScreenIntent: true,
+  //       audioAttributesUsage: AudioAttributesUsage.alarm,
+  //       sound:
+  //           fileName == null
+  //               ? null
+  //               : RawResourceAndroidNotificationSound(
+  //                 _rawResourceFor(fileName),
+  //               ),
+  //     ),
+  //     iOS: DarwinNotificationDetails(
+  //       interruptionLevel: InterruptionLevel.timeSensitive,
+  //       sound: fileName,
+  //     ),
+  //   );
+  // }
   NotificationDetails _detailsFor(ScheduledAlarm alarm) {
     final fileName =
         alarm.isCompletion
@@ -448,6 +666,9 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
         channelDescription: channelDescription,
         importance: Importance.max,
         priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+        channelAction: AndroidNotificationChannelAction.update,
         // An alarm should read as an alarm on the lock screen.
         category: AndroidNotificationCategory.alarm,
         fullScreenIntent: true,
@@ -458,33 +679,82 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
                 : RawResourceAndroidNotificationSound(
                   _rawResourceFor(fileName),
                 ),
+        // Gene - Nov, 8, 2026: Attach Snooze 5m and Dismiss action buttons to alarm notifications.
+        actions: const <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            snooze5mActionId,
+            'Snooze 5m',
+            showsUserInterface: true,
+          ),
+          AndroidNotificationAction(
+            dismissActionId,
+            'Dismiss',
+            cancelNotification: true,
+            showsUserInterface: true,
+          ),
+        ],
       ),
       iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBanner: true,
+        presentList: true,
+        presentSound: true,
         interruptionLevel: InterruptionLevel.timeSensitive,
         sound: fileName,
       ),
     );
   }
 
+  // Gene - Nov, 8, 2026: Only cancel unfired pending notifications so already-delivered notifications in the system tray keep playing their alarm sound.
+  // @override
+  // Future<void> cancelAll() async {
+  //   try {
+  //     await _init();
+  //     // Notifications outlive the process, so a session killed mid-run
+  //     // leaves alarms this in-memory set knows nothing about. Sweep the
+  //     // whole owned block instead, or those orphans fire in the middle of
+  //     // an unrelated session days later.
+  //     final ids = <int>{..._pending};
+  //     for (final request in await _plugin.pendingNotificationRequests()) {
+  //       if (request.id >= idBase && request.id < idBase + idSpaceSize) {
+  //         ids.add(request.id);
+  //       }
+  //     }
+  //     for (final id in ids) {
+  //       await _plugin.cancel(id: id);
+  //     }
+  //     _pending.clear();
+  //   } catch (_) {}
+  // }
   @override
-  Future<void> cancelAll() async {
+  Future<void> cancelAll() => _serialize(() async {
     try {
       await _init();
-      // Notifications outlive the process, so a session killed mid-run
-      // leaves alarms this in-memory set knows nothing about. Sweep the
-      // whole owned block instead, or those orphans fire in the middle of
-      // an unrelated session days later.
-      final ids = <int>{..._pending};
-      for (final request in await _plugin.pendingNotificationRequests()) {
-        if (request.id >= idBase && request.id < idBase + idSpaceSize) {
-          ids.add(request.id);
-        }
-      }
-      for (final id in ids) {
-        await _plugin.cancel(id: id);
-      }
-      _pending.clear();
+      await _cancelUnfiredPending();
     } catch (_) {}
+  });
+
+  Future<void> _cancelUnfiredPending() async {
+    final now = _clock();
+    // Notifications outlive the process, so a session killed mid-run
+    // leaves alarms this in-memory map knows nothing about. Sweep all
+    // unfired pending requests in the owned block, plus any in-memory IDs
+    // whose scheduled fire time is still in the future. Do NOT cancel IDs
+    // whose fire time has already arrived, because _plugin.cancel(id) also
+    // dismisses delivered notifications and cuts off their sound mid-playback.
+    final ids = <int>{
+      for (final entry in _pending.entries)
+        if (entry.value.isAfter(now)) entry.key,
+    };
+    for (final request in await _plugin.pendingNotificationRequests()) {
+      if (request.id >= idBase && request.id < idBase + idSpaceSize) {
+        ids.add(request.id);
+      }
+    }
+    for (final id in ids) {
+      await _plugin.cancel(id: id);
+    }
+    _pending.clear();
   }
 }
 

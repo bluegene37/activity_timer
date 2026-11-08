@@ -403,6 +403,103 @@ class SettingsScreen extends StatelessWidget {
                         height: 1,
                         color: AppTheme.separator(isDark: isDark),
                       ),
+                      // Gene - Nov, 8, 2026: Added Countdown Beeps (3-2-1) and Halfway Alert (50%) toggles to SettingsScreen.
+                      SignalBuilder(
+                        builder:
+                            (_) => Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 12,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Countdown Beeps (3-2-1)',
+                                          style: textTheme.titleSmall?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Short ticks on the final 3 seconds',
+                                          style: textTheme.bodySmall,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  CupertinoSwitch(
+                                    key: const Key('settings-countdown-beeps'),
+                                    value:
+                                        appController
+                                            .countdownBeepsEnabled
+                                            .value,
+                                    activeTrackColor: colorScheme.primary,
+                                    onChanged: (value) {
+                                      HapticFeedback.selectionClick();
+                                      controller.toggleCountdownBeeps(value);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                      ),
+                      Divider(
+                        height: 1,
+                        color: AppTheme.separator(isDark: isDark),
+                      ),
+                      SignalBuilder(
+                        builder:
+                            (_) => Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 12,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Halfway Alert (50%)',
+                                          style: textTheme.titleSmall?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Gentle chime at the midpoint of steps',
+                                          style: textTheme.bodySmall,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  CupertinoSwitch(
+                                    key: const Key('settings-halfway-warning'),
+                                    value:
+                                        appController
+                                            .halfwayWarningEnabled
+                                            .value,
+                                    activeTrackColor: colorScheme.primary,
+                                    onChanged: (value) {
+                                      HapticFeedback.selectionClick();
+                                      controller.toggleHalfwayWarning(value);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                      ),
+                      Divider(
+                        height: 1,
+                        color: AppTheme.separator(isDark: isDark),
+                      ),
                       SignalBuilder(
                         builder:
                             (_) => ListTile(

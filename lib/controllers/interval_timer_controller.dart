@@ -4,6 +4,8 @@ import '../models/interval_timer.dart';
 import '../routes/app_pages.dart';
 import '../routes/app_routes.dart';
 import '../services/database_service.dart';
+// Gene - Nov, 8, 2026: Added IntervalSessionService import to arm/disarm schedules directly from the card switch.
+import '../services/interval_session_service.dart';
 import '../services/ui_messenger.dart';
 
 class IntervalTimerController {
@@ -76,5 +78,39 @@ class IntervalTimerController {
 
   Future<void> refreshTimers() async {
     await loadIntervalTimers();
+  }
+
+  // Gene - Nov, 8, 2026: Toggle an interval timer or time alert armed/disarmed directly from the list card switch.
+  Future<void> toggleTimerActive(IntervalTimer timer, bool active) async {
+    try {
+      timer.isActive = active;
+      timer.updatedAt = DateTime.now();
+      await _databaseService.updateIntervalTimer(timer);
+
+      if (active) {
+        for (final other in intervalTimers) {
+          if (other.id != timer.id && other.isActive) {
+            other.isActive = false;
+            await _databaseService.updateIntervalTimer(other);
+          }
+        }
+        IntervalSessionService().obtain(timer);
+        UiMessenger().showMessage(
+          'Armed "${timer.name}" (${timer.recurrenceLabel})',
+          title: 'Alert Armed',
+        );
+      } else {
+        final running = IntervalSessionService().active.value;
+        if (running != null && running.timer.id == timer.id) {
+          IntervalSessionService().clear();
+        }
+      }
+      intervalTimers.value = List.of(intervalTimers);
+    } catch (e) {
+      UiMessenger().showMessage(
+        'Failed to update alert state: $e',
+        title: 'Error',
+      );
+    }
   }
 }

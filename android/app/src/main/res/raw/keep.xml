@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gene - Nov, 8, 2026: Prevent R8 resource shrinking from stripping raw notification sound assets and notification icons in release builds -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/*,@mipmap/*,@raw/*" />

@@ -562,7 +562,27 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 36),
+            const SizedBox(height: 24),
+            // Gene - Nov, 8, 2026: Added Snooze +5m button on the completed interval/time-alert screen.
+            SizedBox(
+              width: 260,
+              height: 46,
+              child: OutlinedButton.icon(
+                key: const Key('interval-snooze-5m'),
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  _c.snooze(const Duration(minutes: 5));
+                },
+                icon: const Icon(CupertinoIcons.zzz, size: 18),
+                label: const Text('Snooze +5m'),
+                style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             SizedBox(
               width: 260,
               height: 50,

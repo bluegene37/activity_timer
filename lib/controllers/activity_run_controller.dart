@@ -126,6 +126,8 @@ class ActivityRunController {
   DateTime? _deadline;
   int _prepDurationMs = 0;
   int _lastHapticSecond = -1;
+  // Gene - Nov, 8, 2026: Track whether the 50% halfway cue has fired for the current step.
+  bool _halfwayCuePlayed = false;
 
   ActivityTimer get currentTimer => timers[currentIndex.value];
 
@@ -216,9 +218,24 @@ class ActivityRunController {
   }
 
   // Gene - Nov, 7, 2026: Synchronizes running countdown and step boundaries immediately when returning from background or handling a notification tap.
+  // void syncWithClock() {
+  //   if (isRunning.value && !isCompleted.value) {
+  //     _tick();
+  //   }
+  // }
+
+  // Gene - Nov, 8, 2026: Suspend the in-app periodic ticker when backgrounded so it never races and cancels OS notifications as they fire, and resume it cleanly in syncWithClock without re-playing already-fired cues.
+  void suspendTickerForBackground() {
+    _ticker?.cancel();
+    _ticker = null;
+  }
+
   void syncWithClock() {
     if (isRunning.value && !isCompleted.value) {
-      _tick();
+      _tick(playCue: false);
+      if (isRunning.value && !isCompleted.value && _ticker == null) {
+        _ticker = Timer.periodic(tickInterval, (_) => _tick());
+      }
     }
   }
 
@@ -307,7 +324,50 @@ class ActivityRunController {
     unawaited(_persistSession());
   }
 
-  void _tick() {
+  // Gene - Nov, 8, 2026: Added playCue flag to _tick, _finishPreparation, advance, and _complete so catching up backgrounded boundaries does not double-play in-app audio over OS notification sounds.
+  // void _tick() {
+  //   if (!isRunning.value) {
+  //     return;
+  //   }
+  //   final remaining = _deadline!.difference(_now()).inMilliseconds;
+  //
+  //   if (remaining <= 0) {
+  //     if (isPreparing.value) {
+  //       // Gene - Nov, 7, 2026: Preserved original _finishPreparation() call without overshoot.
+  //       // _finishPreparation();
+  //       // Gene - Nov, 7, 2026: Pass overshootMs when preparation finishes so background elapsed time carries into the first step.
+  //       _finishPreparation(overshootMs: -remaining);
+  //     } else {
+  //       // The last step of a non-looping routine ends the session, and
+  //       // _complete() owns that cue — so only intermediate boundaries get a
+  //       // step alarm here. Completion is announced from one place, which
+  //       // also covers a catch-up that crosses several boundaries at once.
+  //       final endsSession =
+  //           currentIndex.value == timers.length - 1 &&
+  //           !(loopEnabled.value && sequence.totalDuration > 0);
+  //       if (!endsSession) {
+  //         unawaited(
+  //           _cuePlayer.playAlarm(
+  //             currentTimer.alarmSound ?? AppSettings().defaultAlarmSound,
+  //           ),
+  //         );
+  //       }
+  //       advance(overshootMs: -remaining);
+  //     }
+  //     return;
+  //   }
+  //
+  //   remainingMs.value = remaining;
+  //
+  //   final secondsLeft = (remaining / 1000).ceil();
+  //   if (secondsLeft <= 3 && secondsLeft != _lastHapticSecond) {
+  //     _lastHapticSecond = secondsLeft;
+  //     if (AppSettings().vibrationEnabled) {
+  //       unawaited(HapticFeedback.selectionClick());
+  //     }
+  //   }
+  // }
+  void _tick({bool playCue = true}) {
     if (!isRunning.value) {
       return;
     }
@@ -318,7 +378,7 @@ class ActivityRunController {
         // Gene - Nov, 7, 2026: Preserved original _finishPreparation() call without overshoot.
         // _finishPreparation();
         // Gene - Nov, 7, 2026: Pass overshootMs when preparation finishes so background elapsed time carries into the first step.
-        _finishPreparation(overshootMs: -remaining);
+        _finishPreparation(overshootMs: -remaining, playCue: playCue);
       } else {
         // The last step of a non-looping routine ends the session, and
         // _complete() owns that cue — so only intermediate boundaries get a
@@ -327,25 +387,46 @@ class ActivityRunController {
         final endsSession =
             currentIndex.value == timers.length - 1 &&
             !(loopEnabled.value && sequence.totalDuration > 0);
-        if (!endsSession) {
+        if (!endsSession && playCue) {
           unawaited(
             _cuePlayer.playAlarm(
               currentTimer.alarmSound ?? AppSettings().defaultAlarmSound,
             ),
           );
         }
-        advance(overshootMs: -remaining);
+        advance(overshootMs: -remaining, playCue: playCue);
       }
       return;
     }
 
     remainingMs.value = remaining;
 
+    // Gene - Nov, 8, 2026: Trigger 50% halfway warning cue (for steps >= 10s) and 3-2-1 countdown audio ticks when enabled in AppSettings.
+    // final secondsLeft = (remaining / 1000).ceil();
+    // if (secondsLeft <= 3 && secondsLeft != _lastHapticSecond) {
+    //   _lastHapticSecond = secondsLeft;
+    //   if (AppSettings().vibrationEnabled) {
+    //     unawaited(HapticFeedback.selectionClick());
+    //   }
+    // }
+    if (!isPreparing.value &&
+        !_halfwayCuePlayed &&
+        currentDurationMs >= 10000 &&
+        remaining <= currentDurationMs ~/ 2) {
+      _halfwayCuePlayed = true;
+      if (playCue && AppSettings().halfwayWarningEnabled) {
+        unawaited(_cuePlayer.playHalfwayWarning());
+      }
+    }
+
     final secondsLeft = (remaining / 1000).ceil();
     if (secondsLeft <= 3 && secondsLeft != _lastHapticSecond) {
       _lastHapticSecond = secondsLeft;
       if (AppSettings().vibrationEnabled) {
         unawaited(HapticFeedback.selectionClick());
+      }
+      if (playCue && AppSettings().countdownBeepsEnabled) {
+        unawaited(_cuePlayer.playCountdownTick());
       }
     }
   }
@@ -412,18 +493,44 @@ class ActivityRunController {
   // }
 
   // Gene - Nov, 7, 2026: Updated _finishPreparation to carry overshootMs into step 0 (or subsequent steps) when preparation completes while backgrounded.
-  void _finishPreparation({int overshootMs = 0}) {
+  // Gene - Nov, 8, 2026: Respect playCue flag when finishing preparation or catching up elapsed background steps.
+  // void _finishPreparation({int overshootMs = 0}) {
+  //   isPreparing.value = false;
+  //   currentIndex.value = 0;
+  //   _lastHapticSecond = -1;
+  //   unawaited(_cuePlayer.playStart());
+  //   final d0 = currentDurationMs;
+  //   if (overshootMs <= 0) {
+  //     remainingMs.value = d0;
+  //   } else if (overshootMs < d0) {
+  //     remainingMs.value = d0 - overshootMs;
+  //   } else {
+  //     advance(overshootMs: overshootMs - d0);
+  //     return;
+  //   }
+  //   _deadline = _now().add(Duration(milliseconds: remainingMs.value));
+  //   unawaited(_syncBackgroundAlarms());
+  //   unawaited(_persistSession());
+  // }
+  void _finishPreparation({int overshootMs = 0, bool playCue = true}) {
     isPreparing.value = false;
     currentIndex.value = 0;
     _lastHapticSecond = -1;
-    unawaited(_cuePlayer.playStart());
+    // Gene - Nov, 8, 2026: Reset halfway cue flag when step 0 starts after preparation.
+    _halfwayCuePlayed = false;
     final d0 = currentDurationMs;
     if (overshootMs <= 0) {
+      if (playCue) {
+        unawaited(_cuePlayer.playStart());
+      }
       remainingMs.value = d0;
     } else if (overshootMs < d0) {
+      if (playCue) {
+        unawaited(_cuePlayer.playStart());
+      }
       remainingMs.value = d0 - overshootMs;
     } else {
-      advance(overshootMs: overshootMs - d0);
+      advance(overshootMs: overshootMs - d0, playCue: playCue);
       return;
     }
     _deadline = _now().add(Duration(milliseconds: remainingMs.value));
@@ -433,7 +540,44 @@ class ActivityRunController {
 
   /// Moves to the next step, carrying any overshoot so a backgrounded
   /// routine catches up instead of drifting.
-  void advance({int overshootMs = 0}) {
+  // Gene - Nov, 8, 2026: Added playCue flag to advance and avoided redundant double _syncBackgroundAlarms in skipToNext.
+  // void advance({int overshootMs = 0}) {
+  //   var index = currentIndex.value;
+  //   var carry = overshootMs;
+  //   var loops = loopCount.value;
+  //
+  //   final cycleMs = sequence.totalDuration * 1000;
+  //   while (true) {
+  //     if (index < timers.length - 1) {
+  //       index++;
+  //     } else if (loopEnabled.value && cycleMs > 0) {
+  //       index = 0;
+  //       loops++;
+  //       if (carry >= cycleMs) {
+  //         loops += carry ~/ cycleMs;
+  //         carry %= cycleMs;
+  //       }
+  //     } else {
+  //       _complete();
+  //       return;
+  //     }
+  //
+  //     final durationMs = timers[index].durationInSeconds * 1000;
+  //     if (carry < durationMs) {
+  //       currentIndex.value = index;
+  //       loopCount.value = loops;
+  //       remainingMs.value = durationMs - carry;
+  //       break;
+  //     }
+  //     carry -= durationMs;
+  //   }
+  //
+  //   _lastHapticSecond = -1;
+  //   _deadline = _now().add(Duration(milliseconds: remainingMs.value));
+  //   unawaited(_syncBackgroundAlarms());
+  //   unawaited(_persistSession());
+  // }
+  void advance({int overshootMs = 0, bool playCue = true}) {
     var index = currentIndex.value;
     var carry = overshootMs;
     var loops = loopCount.value;
@@ -450,7 +594,7 @@ class ActivityRunController {
           carry %= cycleMs;
         }
       } else {
-        _complete();
+        _complete(playCue: playCue);
         return;
       }
 
@@ -465,11 +609,31 @@ class ActivityRunController {
     }
 
     _lastHapticSecond = -1;
+    // Gene - Nov, 8, 2026: Reset halfway cue flag when advancing to a new step.
+    _halfwayCuePlayed = remainingMs.value <= currentDurationMs ~/ 2;
     _deadline = _now().add(Duration(milliseconds: remainingMs.value));
     unawaited(_syncBackgroundAlarms());
     unawaited(_persistSession());
   }
 
+  // Gene - Nov, 8, 2026: Restart ticker cleanly in skipToNext when running without calling start() a second time after advance() already synced alarms.
+  // void skipToNext() {
+  //   if (isPreparing.value) {
+  //     _finishPreparation();
+  //     return;
+  //   }
+  //   if (currentIndex.value < timers.length - 1 || loopEnabled.value) {
+  //     final wasRunning = isRunning.value;
+  //     _ticker?.cancel();
+  //     advance();
+  //     if (wasRunning) {
+  //       start();
+  //     } else {
+  //       _deadline = null;
+  //       isRunning.value = false;
+  //     }
+  //   }
+  // }
   void skipToNext() {
     if (isPreparing.value) {
       _finishPreparation();
@@ -478,10 +642,13 @@ class ActivityRunController {
     if (currentIndex.value < timers.length - 1 || loopEnabled.value) {
       final wasRunning = isRunning.value;
       _ticker?.cancel();
+      _ticker = null;
       advance();
-      if (wasRunning) {
-        start();
-      } else {
+      if (wasRunning && !isCompleted.value) {
+        _ticker = Timer.periodic(tickInterval, (_) => _tick());
+        unawaited(WakelockPlus.enable());
+        isRunning.value = true;
+      } else if (!isCompleted.value) {
         _deadline = null;
         isRunning.value = false;
       }
@@ -497,6 +664,8 @@ class ActivityRunController {
     currentIndex.value -= 1;
     remainingMs.value = currentDurationMs;
     _lastHapticSecond = -1;
+    // Gene - Nov, 8, 2026: Reset halfway cue flag when going to previous step.
+    _halfwayCuePlayed = false;
     isRunning.value = false;
     if (wasRunning) {
       start();
@@ -532,10 +701,24 @@ class ActivityRunController {
   // }
 
   // Gene - Nov, 06, 2026: Clear persisted active session on routine completion and reset.
-  void _complete() {
+  // Gene - Nov, 8, 2026: Added playCue flag to _complete so background completion catch-up does not double-play completion audio over the OS notification sound.
+  // void _complete() {
+  //   _ticker?.cancel();
+  //   _ticker = null;
+  //   unawaited(_cuePlayer.playCompletion());
+  //   unawaited(WakelockPlus.disable());
+  //   unawaited(_scheduler.cancelAll());
+  //   isRunning.value = false;
+  //   isCompleted.value = true;
+  //   _logSessionCompletion();
+  //   unawaited(_clearSession());
+  // }
+  void _complete({bool playCue = true}) {
     _ticker?.cancel();
     _ticker = null;
-    unawaited(_cuePlayer.playCompletion());
+    if (playCue) {
+      unawaited(_cuePlayer.playCompletion());
+    }
     unawaited(WakelockPlus.disable());
     unawaited(_scheduler.cancelAll());
     isRunning.value = false;
@@ -557,8 +740,25 @@ class ActivityRunController {
     isCompleted.value = false;
     loopCount.value = 0;
     _lastHapticSecond = -1;
+    // Gene - Nov, 8, 2026: Reset halfway cue flag on reset and add snooze() method to extend or re-arm completed timers.
+    _halfwayCuePlayed = false;
     _deadline = null;
     unawaited(_clearSession());
+  }
+
+  /// Re-arms a completed timer (or extends a running timer) by [duration]
+  /// and schedules the background OS notification for the snoozed deadline.
+  void snooze(Duration duration) {
+    final durationMs = math.max(1000, duration.inMilliseconds);
+    _ticker?.cancel();
+    _ticker = null;
+    isPreparing.value = false;
+    isCompleted.value = false;
+    currentIndex.value = timers.length - 1;
+    remainingMs.value = durationMs;
+    _lastHapticSecond = -1;
+    _halfwayCuePlayed = true;
+    start();
   }
 
   /// The loop toggle is the routine's saved preference, not just a switch
@@ -668,6 +868,74 @@ class ActivityRunController {
   // }
 
   // Gene - Nov, 06, 2026: Included payload with sequence id so background notifications navigate straight to the active routine on tap.
+  // Gene - Nov, 8, 2026: Assigned stable step notification IDs (1..N offset by loopCount) so step 0 never collides with preparation notification ID 0.
+  // List<ScheduledAlarm> pendingAlarms() {
+  //   final alarms = <ScheduledAlarm>[];
+  //   var offsetMs = remainingMsNow;
+  //   if (offsetMs <= 0) {
+  //     return alarms;
+  //   }
+  //   final from = _now();
+  //
+  //   if (isPreparing.value) {
+  //     alarms.add(
+  //       ScheduledAlarm(
+  //         id: 0,
+  //         at: from.add(Duration(milliseconds: offsetMs)),
+  //         title: sequence.name,
+  //         body: 'Get ready — starting ${timers.first.name}.',
+  //         sound: _soundFor(0),
+  //         payload: 'activity:${sequence.id}',
+  //       ),
+  //     );
+  //     for (var i = 0; i < timers.length; i++) {
+  //       offsetMs += timers[i].durationInSeconds * 1000;
+  //       alarms.add(
+  //         ScheduledAlarm(
+  //           id: i + 1,
+  //           at: from.add(Duration(milliseconds: offsetMs)),
+  //           title: sequence.name,
+  //           body: _bodyFor(i),
+  //           sound: _soundFor(i),
+  //           isCompletion: _endsSessionAt(i),
+  //           payload: 'activity:${sequence.id}',
+  //         ),
+  //       );
+  //     }
+  //   } else {
+  //     alarms.add(
+  //       ScheduledAlarm(
+  //         id: currentIndex.value,
+  //         at: from.add(Duration(milliseconds: offsetMs)),
+  //         title: sequence.name,
+  //         body: _bodyFor(currentIndex.value),
+  //         sound: _soundFor(currentIndex.value),
+  //         isCompletion: _endsSessionAt(currentIndex.value),
+  //         payload: 'activity:${sequence.id}',
+  //       ),
+  //     );
+  //     for (var i = currentIndex.value + 1; i < timers.length; i++) {
+  //       offsetMs += timers[i].durationInSeconds * 1000;
+  //       alarms.add(
+  //         ScheduledAlarm(
+  //           id: i + 1,
+  //           at: from.add(Duration(milliseconds: offsetMs)),
+  //           title: sequence.name,
+  //           body: _bodyFor(i),
+  //           sound: _soundFor(i),
+  //           isCompletion: _endsSessionAt(i),
+  //           payload: 'activity:${sequence.id}',
+  //         ),
+  //       );
+  //     }
+  //   }
+  //   return alarms;
+  // }
+  int _alarmIdForStep(int stepIndex) =>
+      ((loopCount.value * timers.length + stepIndex) %
+          (LocalNotificationAlarmScheduler.idSpaceSize - 1)) +
+      1;
+
   List<ScheduledAlarm> pendingAlarms() {
     final alarms = <ScheduledAlarm>[];
     var offsetMs = remainingMsNow;
@@ -696,7 +964,7 @@ class ActivityRunController {
         offsetMs += timers[i].durationInSeconds * 1000;
         alarms.add(
           ScheduledAlarm(
-            id: i + 1,
+            id: _alarmIdForStep(i),
             at: from.add(Duration(milliseconds: offsetMs)),
             title: sequence.name,
             body: _bodyFor(i),
@@ -709,7 +977,7 @@ class ActivityRunController {
     } else {
       alarms.add(
         ScheduledAlarm(
-          id: currentIndex.value,
+          id: _alarmIdForStep(currentIndex.value),
           at: from.add(Duration(milliseconds: offsetMs)),
           title: sequence.name,
           body: _bodyFor(currentIndex.value),
@@ -722,7 +990,7 @@ class ActivityRunController {
         offsetMs += timers[i].durationInSeconds * 1000;
         alarms.add(
           ScheduledAlarm(
-            id: i + 1,
+            id: _alarmIdForStep(i),
             at: from.add(Duration(milliseconds: offsetMs)),
             title: sequence.name,
             body: _bodyFor(i),
@@ -836,10 +1104,14 @@ class ActivityRunController {
         start();
         return;
       }
-      advance(overshootMs: overshootMs - d0);
+      // Gene - Nov, 8, 2026: Catch up elapsed background steps silently on restore so OS notification audio is not duplicated.
+      // advance(overshootMs: overshootMs - d0);
+      advance(overshootMs: overshootMs - d0, playCue: false);
     } else {
       currentIndex.value = initialIndex.clamp(0, timers.length - 1);
-      advance(overshootMs: overshootMs);
+      // Gene - Nov, 8, 2026: Catch up elapsed background steps silently on restore so OS notification audio is not duplicated.
+      // advance(overshootMs: overshootMs);
+      advance(overshootMs: overshootMs, playCue: false);
     }
 
     if (!isCompleted.value) {

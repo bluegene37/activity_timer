@@ -31,6 +31,8 @@ class IntervalSessionService {
   CuePlayer? _lastCuePlayer;
   AlarmScheduler? _lastScheduler;
   DateTime Function()? _lastClock;
+  // Gene - Nov, 8, 2026: Guard against concurrent restoreSessionIfActive calls when notification tap and lifecycle resume fire simultaneously.
+  Future<IntervalRunController?>? _restoreInFlight;
 
   /// True while an interval schedule is still ticking toward alarms —
   /// exactly the window in which the floater should be visible. (Interval
@@ -173,6 +175,7 @@ class IntervalSessionService {
     _lastCuePlayer = null;
     _lastScheduler = null;
     _lastClock = null;
+    _restoreInFlight = null;
     setAfterBuild(active, null);
     DatabaseService().clearActiveIntervalSession();
   }
@@ -181,6 +184,7 @@ class IntervalSessionService {
   /// snapshot (simulating OS process eviction while backgrounded).
   void suspendInMemory() {
     active.value?.onClose();
+    _restoreInFlight = null;
     setAfterBuild(active, null);
   }
 
@@ -193,6 +197,15 @@ class IntervalSessionService {
         'timerJson': current.timer.toJson(),
         'startedAtMs': nowMs,
       });
+    }
+  }
+
+  // Gene - Nov, 8, 2026: Suspend in-app periodic ticker when entering background so it never races with OS notifications.
+  Future<void> onEnterBackground() async {
+    final current = active.value;
+    if (current != null && !current.isCompleted.value) {
+      current.suspendTickerForBackground();
+      await persistActiveSession();
     }
   }
 
@@ -227,12 +240,52 @@ class IntervalSessionService {
     );
   }
 
+  // Gene - Nov, 8, 2026: Deduplicate concurrent restoreSessionIfActive calls via _restoreInFlight so notification tap + app resume never spawn duplicate controllers.
+  // Future<IntervalRunController?> restoreSessionIfActive({
+  //   DatabaseService? databaseService,
+  //   CuePlayer? cuePlayer,
+  //   AlarmScheduler? scheduler,
+  //   DateTime Function()? clock,
+  // }) async {
   Future<IntervalRunController?> restoreSessionIfActive({
     DatabaseService? databaseService,
     CuePlayer? cuePlayer,
     AlarmScheduler? scheduler,
     DateTime Function()? clock,
+  }) {
+    final inFlight = _restoreInFlight;
+    if (inFlight != null) {
+      return inFlight;
+    }
+    final future = _doRestoreSessionIfActive(
+      databaseService: databaseService,
+      cuePlayer: cuePlayer,
+      scheduler: scheduler,
+      clock: clock,
+    );
+    _restoreInFlight = future;
+    return future.whenComplete(() {
+      if (identical(_restoreInFlight, future)) {
+        _restoreInFlight = null;
+      }
+    });
+  }
+
+  Future<IntervalRunController?> _doRestoreSessionIfActive({
+    DatabaseService? databaseService,
+    CuePlayer? cuePlayer,
+    AlarmScheduler? scheduler,
+    DateTime Function()? clock,
   }) async {
+    final existing = active.value;
+    if (existing != null) {
+      existing.syncWithClock();
+      if (existing.isCompleted.value) {
+        clear();
+        return null;
+      }
+      return existing;
+    }
     final db = databaseService ?? DatabaseService();
     final data = await db.getActiveIntervalSession();
     if (data == null) return null;
@@ -264,6 +317,51 @@ class IntervalSessionService {
       clear();
       return null;
     }
+    return controller;
+  }
+
+  // Gene - Nov, 8, 2026: Added snoozeActiveOrRestored() so tapping "Snooze 5m" on an OS notification re-arms the interval/time-alert schedule even if its final alarm just completed.
+  Future<IntervalRunController?> snoozeActiveOrRestored(
+    Duration duration, {
+    DatabaseService? databaseService,
+    CuePlayer? cuePlayer,
+    AlarmScheduler? scheduler,
+    DateTime Function()? clock,
+  }) async {
+    final existing = active.value;
+    if (existing != null) {
+      existing.snooze(duration);
+      return existing;
+    }
+
+    final db = databaseService ?? DatabaseService();
+    final data = await db.getActiveIntervalSession();
+    if (data == null) {
+      return null;
+    }
+
+    final timerId = data['timerId'] as String?;
+    if (timerId == null) {
+      return null;
+    }
+
+    IntervalTimer? timer = await db.getIntervalTimer(timerId);
+    if (timer == null && data['timerJson'] is Map) {
+      timer = IntervalTimer.fromJson(
+        Map<String, dynamic>.from(data['timerJson'] as Map),
+      );
+    }
+    if (timer == null) {
+      return null;
+    }
+
+    final controller = obtain(
+      timer,
+      cuePlayer: cuePlayer ?? _lastCuePlayer,
+      scheduler: scheduler ?? _lastScheduler,
+      clock: clock ?? _lastClock,
+    );
+    controller.snooze(duration);
     return controller;
   }
 }

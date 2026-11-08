@@ -10,6 +10,52 @@ class IntervalTimerAdapter extends TypeAdapter<IntervalTimer> {
   @override
   final typeId = 3;
 
+  // Gene - Nov, 8, 2026: Updated IntervalTimerAdapter to read and write Hive fields 10 (isPointInTime) and 11 (activeDays) with backward-compatible defaults.
+  // @override
+  // IntervalTimer read(BinaryReader reader) {
+  //   final numOfFields = reader.readByte();
+  //   final fields = <int, dynamic>{
+  //     for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+  //   };
+  //   return IntervalTimer(
+  //     id: fields[0] as String?,
+  //     name: fields[1] as String,
+  //     startTime: fields[2] as DateTime,
+  //     endTime: fields[3] as DateTime,
+  //     intervalValue: (fields[4] as num).toInt(),
+  //     intervalType: fields[5] as IntervalType,
+  //     isActive: fields[6] == null ? false : fields[6] as bool,
+  //     createdAt: fields[7] as DateTime?,
+  //     updatedAt: fields[8] as DateTime?,
+  //     alarmSoundName: fields[9] as String?,
+  //   );
+  // }
+  //
+  // @override
+  // void write(BinaryWriter writer, IntervalTimer obj) {
+  //   writer
+  //     ..writeByte(10)
+  //     ..writeByte(0)
+  //     ..write(obj.id)
+  //     ..writeByte(1)
+  //     ..write(obj.name)
+  //     ..writeByte(2)
+  //     ..write(obj.startTime)
+  //     ..writeByte(3)
+  //     ..write(obj.endTime)
+  //     ..writeByte(4)
+  //     ..write(obj.intervalValue)
+  //     ..writeByte(5)
+  //     ..write(obj.intervalType)
+  //     ..writeByte(6)
+  //     ..write(obj.isActive)
+  //     ..writeByte(7)
+  //     ..write(obj.createdAt)
+  //     ..writeByte(8)
+  //     ..write(obj.updatedAt)
+  //     ..writeByte(9)
+  //     ..write(obj.alarmSoundName);
+  // }
   @override
   IntervalTimer read(BinaryReader reader) {
     final numOfFields = reader.readByte();
@@ -27,13 +73,16 @@ class IntervalTimerAdapter extends TypeAdapter<IntervalTimer> {
       createdAt: fields[7] as DateTime?,
       updatedAt: fields[8] as DateTime?,
       alarmSoundName: fields[9] as String?,
+      isPointInTime: fields[10] == null ? false : fields[10] as bool,
+      activeDays:
+          (fields[11] as List?)?.map((e) => (e as num).toInt()).toList(),
     );
   }
 
   @override
   void write(BinaryWriter writer, IntervalTimer obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -53,7 +102,11 @@ class IntervalTimerAdapter extends TypeAdapter<IntervalTimer> {
       ..writeByte(8)
       ..write(obj.updatedAt)
       ..writeByte(9)
-      ..write(obj.alarmSoundName);
+      ..write(obj.alarmSoundName)
+      ..writeByte(10)
+      ..write(obj.isPointInTime)
+      ..writeByte(11)
+      ..write(obj.activeDays);
   }
 
   @override

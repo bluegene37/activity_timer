@@ -24,7 +24,31 @@ abstract interface class CuePlayer {
   Future<void> dispose();
 }
 
-class AudioCuePlayer implements CuePlayer {
+// Gene - Nov, 8, 2026: Added PromptCuePlayer interface and CuePlayerPrompts extension for 3-2-1 countdown ticks and 50% halfway warning cues without breaking existing CuePlayer test doubles.
+abstract interface class PromptCuePlayer {
+  /// Short low-volume tick played on the final 3 seconds (3-2-1).
+  Future<void> playCountdownTick();
+
+  /// Gentle midpoint chime played at 50% of a step's duration.
+  Future<void> playHalfwayWarning();
+}
+
+extension CuePlayerPrompts on CuePlayer {
+  Future<void> playCountdownTick() async {
+    if (this is PromptCuePlayer) {
+      await (this as PromptCuePlayer).playCountdownTick();
+    }
+  }
+
+  Future<void> playHalfwayWarning() async {
+    if (this is PromptCuePlayer) {
+      await (this as PromptCuePlayer).playHalfwayWarning();
+    }
+  }
+}
+
+// class AudioCuePlayer implements CuePlayer {
+class AudioCuePlayer implements CuePlayer, PromptCuePlayer {
   AudioCuePlayer() {
     unawaited(_configure());
   }
@@ -105,6 +129,36 @@ class AudioCuePlayer implements CuePlayer {
   Future<void> playStart() async {
     await _play(AlarmSound.beep.fileName);
     unawaited(_buzz(1));
+  }
+
+  // Gene - Nov, 8, 2026: Implemented playCountdownTick and playHalfwayWarning on AudioCuePlayer.
+  @override
+  Future<void> playCountdownTick() async {
+    if (_settings.soundEnabled && _settings.countdownBeepsEnabled) {
+      try {
+        await _player.stop();
+        await _player.setVolume(0.45);
+        await _player.setSource(AssetSource('sounds/${AlarmSound.beep.fileName}'));
+        await _player.resume();
+      } catch (_) {}
+    }
+  }
+
+  @override
+  Future<void> playHalfwayWarning() async {
+    if (_settings.soundEnabled && _settings.halfwayWarningEnabled) {
+      try {
+        await _player.stop();
+        await _player.setVolume(0.65);
+        await _player.setSource(
+          AssetSource('sounds/${AlarmSound.chime.fileName}'),
+        );
+        await _player.resume();
+      } catch (_) {}
+    }
+    if (_settings.vibrationEnabled && _settings.halfwayWarningEnabled) {
+      unawaited(HapticFeedback.mediumImpact());
+    }
   }
 
   @override

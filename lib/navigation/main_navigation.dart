@@ -51,14 +51,32 @@ class _MainNavigationState extends State<MainNavigation>
     super.dispose();
   }
 
+  // Gene - Nov, 8, 2026: Suspend in-app periodic tickers when entering hidden/paused background states so Dart timers never race and cancel firing OS notifications; persist only on inactive so on-screen countdowns keep ticking when pulling down the notification shade.
+  // @override
+  // void didChangeAppLifecycleState(AppLifecycleState state) {
+  //   if (state == AppLifecycleState.paused ||
+  //       state == AppLifecycleState.inactive ||
+  //       state == AppLifecycleState.hidden) {
+  //     unawaited(ActivitySessionService().persistActiveSession());
+  //     unawaited(IntervalSessionService().persistActiveSession());
+  //     unawaited(BrewSessionService().persistActiveSession());
+  //   } else if (state == AppLifecycleState.resumed) {
+  //     unawaited(ActivitySessionService().syncOrRestore());
+  //     unawaited(IntervalSessionService().syncOrRestore());
+  //     unawaited(BrewSessionService().syncOrRestore());
+  //   }
+  // }
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.hidden) {
+    if (state == AppLifecycleState.inactive) {
       unawaited(ActivitySessionService().persistActiveSession());
       unawaited(IntervalSessionService().persistActiveSession());
       unawaited(BrewSessionService().persistActiveSession());
+    } else if (state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      unawaited(ActivitySessionService().onEnterBackground());
+      unawaited(IntervalSessionService().onEnterBackground());
+      unawaited(BrewSessionService().onEnterBackground());
     } else if (state == AppLifecycleState.resumed) {
       unawaited(ActivitySessionService().syncOrRestore());
       unawaited(IntervalSessionService().syncOrRestore());

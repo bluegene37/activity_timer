@@ -573,4 +573,69 @@ void main() {
       await settle(tester);
     },
   );
+
+  // Gene - Nov, 8, 2026: Verify that while the app is hidden in the background and periodic timer intervals pass across a step deadline, the in-app ticker is suspended so it never races and cancels/silences the firing OS notification sound.
+  testWidgets(
+    'Background ticker suspension: while app is hidden in background, crossing a step deadline never cancels the firing OS notification sound, and resuming restores live ticking',
+    (tester) async {
+      await pumpApp(tester);
+
+      final scheduler = _RecordingAlarmScheduler();
+      final routine = buildActivityRoutine();
+
+      final session = ActivitySessionService();
+      session.obtain(
+        routine,
+        cuePlayer: _SilentCuePlayer(),
+        scheduler: scheduler,
+        clock: () => currentTime,
+      );
+      await settle(tester);
+
+      final batchesBeforeBackground = scheduler.scheduledBatches.length;
+      final cancelsBeforeBackground = scheduler.cancelCount;
+
+      // Verify every scheduled notification has a valid sound attached.
+      expect(scheduler.latestScheduled, hasLength(2));
+      for (final alarm in scheduler.latestScheduled) {
+        expect(alarm.sound, isNotNull);
+      }
+
+      // Hide app in the background (without evicting memory, simulating the
+      // Dart isolate staying alive while the app is minimized).
+      await hideAppInBackground(tester);
+
+      // Advance clock past Step 1's 30s deadline and pump several 100ms
+      // intervals while still in the background.
+      currentTime = currentTime.add(const Duration(seconds: 31));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Because the periodic ticker was suspended on entering background,
+      // the controller must NOT have called schedule() or cancelAll() while
+      // the OS notification toast is firing its sound!
+      expect(scheduler.scheduledBatches.length, equals(batchesBeforeBackground));
+      expect(scheduler.cancelCount, equals(cancelsBeforeBackground));
+
+      final appeared = scheduler.appearedNotificationsAt(currentTime);
+      expect(appeared, isNotEmpty);
+      expect(appeared.first.sound, isNotNull);
+
+      // Now user taps the notification toast to open the app.
+      await tapNotificationAndOpenApp(tester, appeared.first);
+
+      // Floater is visible on Step 2 (Cobra Stretch, 0:19 remaining) and
+      // live ticking has resumed.
+      expect(find.byKey(const Key('activity-floater')), findsOneWidget);
+      expect(find.text('Morning Mobility · Cobra Stretch'), findsOneWidget);
+      expect(find.text('0:19'), findsOneWidget);
+
+      // Advance 2 more seconds while in foreground and verify live ticker ticks.
+      currentTime = currentTime.add(const Duration(seconds: 2));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('0:17'), findsOneWidget);
+
+      session.clear();
+      await settle(tester);
+    },
+  );
 }

@@ -308,8 +308,48 @@ class IntervalTimerListScreen extends StatelessWidget {
                                       ),
                                     ),
                                   ),
+                                  // Gene - Nov, 8, 2026: Added armed CupertinoSwitch on each IntervalTimer card so schedules and time alerts can be armed/disarmed in one tap.
+                                  // Row(
+                                  //   children: [
+                                  //     IconButton(
+                                  //       icon: Icon(
+                                  //         CupertinoIcons.pencil,
+                                  //         size: 18,
+                                  //         color: colorScheme.onSurfaceVariant,
+                                  //       ),
+                                  //       constraints: const BoxConstraints(),
+                                  //       padding: EdgeInsets.zero,
+                                  //       onPressed:
+                                  //           () => _editIntervalTimer(timer),
+                                  //     ),
+                                  //     const SizedBox(width: 14),
+                                  //     IconButton( ... ),
+                                  //   ],
+                                  // ),
                                   Row(
                                     children: [
+                                      Transform.scale(
+                                        scale: 0.82,
+                                        child: CupertinoSwitch(
+                                          key: Key(
+                                            'interval-armed-switch-${timer.id}',
+                                          ),
+                                          value: timer.isActive,
+                                          activeTrackColor: colorScheme.primary,
+                                          onChanged: (val) {
+                                            unawaited(
+                                              HapticFeedback.selectionClick(),
+                                            );
+                                            unawaited(
+                                              controller.toggleTimerActive(
+                                                timer,
+                                                val,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
                                       IconButton(
                                         icon: Icon(
                                           CupertinoIcons.pencil,
@@ -418,8 +458,19 @@ class IntervalTimerListScreen extends StatelessWidget {
                                           color: colorScheme.primary,
                                         ),
                                         const SizedBox(width: 4),
+                                        // Gene - Nov, 8, 2026: Show single clock time ("At h:mm a") for point-in-time alerts and start-end range for periodic intervals, plus recurrence badge.
+                                        // Text(
+                                        //   '${timeFormat.format(timer.startTime)} - ${timeFormat.format(timer.endTime)}',
+                                        //   style: TextStyle(
+                                        //     fontSize: 12,
+                                        //     color: colorScheme.primary,
+                                        //     fontWeight: FontWeight.w700,
+                                        //   ),
+                                        // ),
                                         Text(
-                                          '${timeFormat.format(timer.startTime)} - ${timeFormat.format(timer.endTime)}',
+                                          timer.isPointInTime
+                                              ? 'At ${timeFormat.format(timer.startTime)}'
+                                              : '${timeFormat.format(timer.startTime)} - ${timeFormat.format(timer.endTime)}',
                                           style: TextStyle(
                                             fontSize: 12,
                                             color: colorScheme.primary,
@@ -483,13 +534,43 @@ class IntervalTimerListScreen extends StatelessWidget {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Icon(
+                                          CupertinoIcons.calendar,
+                                          size: 13,
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          timer.recurrenceLabel,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: colorScheme.onSurfaceVariant,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 9,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          colorScheme.surfaceContainerHighest,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
                                           CupertinoIcons.bell_fill,
                                           size: 13,
                                           color: colorScheme.onSurfaceVariant,
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          '${timer.totalAlarms} alarms',
+                                          '${timer.totalAlarms} ${timer.totalAlarms == 1 ? 'alarm' : 'alarms'}',
                                           style: TextStyle(
                                             fontSize: 12,
                                             color: colorScheme.onSurfaceVariant,

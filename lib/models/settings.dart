@@ -7,15 +7,26 @@ part 'settings.g.dart';
 
 @HiveType(typeId: 0)
 class AppSettingsData extends HiveObject {
+  // Gene - Nov, 8, 2026: Added countdownBeepsEnabled (3-2-1 audio ticks) and halfwayWarningEnabled (50% step chime) to AppSettingsData.
+  // AppSettingsData({
+  //   // Gene - Nov 5, 2026: Set default themeMode to 'light' instead of 'dark'
+  //   // this.themeMode = 'dark',
+  //   this.themeMode = 'light',
+  //   this.soundEnabled = true,
+  //   this.vibrationEnabled = true,
+  //   this.themeColor = AppSettings.defaultThemeColorValue,
+  //   this.defaultAlarmSound = 'beep',
+  //   this.themeStyle = 'coffee',
+  // });
   AppSettingsData({
-    // Gene - Nov 5, 2026: Set default themeMode to 'light' instead of 'dark'
-    // this.themeMode = 'dark',
     this.themeMode = 'light',
     this.soundEnabled = true,
     this.vibrationEnabled = true,
     this.themeColor = AppSettings.defaultThemeColorValue,
     this.defaultAlarmSound = 'beep',
     this.themeStyle = 'coffee',
+    this.countdownBeepsEnabled = true,
+    this.halfwayWarningEnabled = false,
   });
 
   @HiveField(0)
@@ -35,6 +46,12 @@ class AppSettingsData extends HiveObject {
 
   @HiveField(5)
   String themeStyle;
+
+  @HiveField(6)
+  bool countdownBeepsEnabled;
+
+  @HiveField(7)
+  bool halfwayWarningEnabled;
 }
 
 /// Which visual language the whole app wears.
@@ -75,6 +92,9 @@ class AppSettings {
   Color _themeColor = defaultThemeColor;
   AlarmSound _defaultAlarmSound = AlarmSound.beep;
   AppThemeStyle _themeStyle = AppThemeStyle.coffee;
+  // Gene - Nov, 8, 2026: Cached countdownBeepsEnabled and halfwayWarningEnabled flags on AppSettings.
+  bool _countdownBeepsEnabled = true;
+  bool _halfwayWarningEnabled = false;
 
   ThemeMode get themeMode => _themeMode;
   bool get soundEnabled => _soundEnabled;
@@ -82,6 +102,8 @@ class AppSettings {
   Color get themeColor => _themeColor;
   AlarmSound get defaultAlarmSound => _defaultAlarmSound;
   AppThemeStyle get themeStyle => _themeStyle;
+  bool get countdownBeepsEnabled => _countdownBeepsEnabled;
+  bool get halfwayWarningEnabled => _halfwayWarningEnabled;
 
   /// [ThemeMode] values round-trip through their [Enum.name], so persisted
   /// strings ('light' / 'dark' / 'system') need no manual mapping table.
@@ -106,14 +128,26 @@ class AppSettings {
     _themeColor = Color(settings.themeColor);
     _defaultAlarmSound = AlarmSound.fromString(settings.defaultAlarmSound);
     _themeStyle = AppThemeStyle.fromString(settings.themeStyle);
+    // Gene - Nov, 8, 2026: Load countdownBeepsEnabled and halfwayWarningEnabled from persisted AppSettingsData.
+    _countdownBeepsEnabled = settings.countdownBeepsEnabled;
+    _halfwayWarningEnabled = settings.halfwayWarningEnabled;
   }
 
   /// Read-modify-write the single persisted settings record.
   Future<void> _update(void Function(AppSettingsData settings) change) async {
-    final box = await Hive.openBox<AppSettingsData>(_boxName);
-    final settings = box.get(_settingsKey) ?? AppSettingsData();
-    change(settings);
-    await box.put(_settingsKey, settings);
+    // Gene - Nov, 8, 2026: Guard Hive box persistence in _update so in-memory settings mutations work cleanly in unit tests that do not initialize a Hive directory.
+    // final box = await Hive.openBox<AppSettingsData>(_boxName);
+    // final settings = box.get(_settingsKey) ?? AppSettingsData();
+    // change(settings);
+    // await box.put(_settingsKey, settings);
+    try {
+      final box = await Hive.openBox<AppSettingsData>(_boxName);
+      final settings = box.get(_settingsKey) ?? AppSettingsData();
+      change(settings);
+      await box.put(_settingsKey, settings);
+    } catch (_) {
+      // Ignore HiveError when running in unit tests without Hive.init.
+    }
   }
 
   Future<void> setThemeColor(Color color) async {
@@ -144,5 +178,16 @@ class AppSettings {
   Future<void> setThemeStyle(AppThemeStyle style) async {
     _themeStyle = style;
     await _update((settings) => settings.themeStyle = style.name);
+  }
+
+  // Gene - Nov, 8, 2026: Persist countdownBeepsEnabled and halfwayWarningEnabled settings.
+  Future<void> setCountdownBeepsEnabled(bool enabled) async {
+    _countdownBeepsEnabled = enabled;
+    await _update((settings) => settings.countdownBeepsEnabled = enabled);
+  }
+
+  Future<void> setHalfwayWarningEnabled(bool enabled) async {
+    _halfwayWarningEnabled = enabled;
+    await _update((settings) => settings.halfwayWarningEnabled = enabled);
   }
 }

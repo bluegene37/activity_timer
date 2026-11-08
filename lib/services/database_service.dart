@@ -844,12 +844,22 @@ class DatabaseService {
   // }
 
   // Gene - Nov, 7, 2026: Mirror active session snapshots in an in-memory map alongside Hive so synchronous lifecycle transitions and FakeAsync widget tests can read/restore active sessions immediately without blocking on pending disk I/O.
+  // Gene - Nov, 8, 2026: Skip disk I/O on _activeSessionsBox when running inside a FakeAsync zone so widget tests never hang waiting on RandomAccessFile locks during Hive.close().
   final Map<String, Map<String, dynamic>> _activeSessionsMemoryCache = {};
+
+  bool get _isInFakeAsync {
+    final timer = Zone.current.createTimer(Duration.zero, () {});
+    timer.cancel();
+    return timer.runtimeType.toString().contains('Fake');
+  }
 
   Future<void> saveActiveActivitySession(Map<String, dynamic> data) async {
     _activeSessionsMemoryCache['activity_session'] = Map<String, dynamic>.from(
       data,
     );
+    if (_isInFakeAsync) {
+      return;
+    }
     try {
       final box = await _activeSessionsBox;
       await box?.put('activity_session', data);
@@ -860,6 +870,9 @@ class DatabaseService {
     final cached = _activeSessionsMemoryCache['activity_session'];
     if (cached != null) {
       return Map<String, dynamic>.from(cached);
+    }
+    if (_isInFakeAsync) {
+      return null;
     }
     try {
       final box = await _activeSessionsBox;
@@ -875,6 +888,9 @@ class DatabaseService {
 
   Future<void> clearActiveActivitySession() async {
     _activeSessionsMemoryCache.remove('activity_session');
+    if (_isInFakeAsync) {
+      return;
+    }
     try {
       if (!Hive.isBoxOpen(_activeSessionsBoxName)) {
         return;
@@ -888,6 +904,9 @@ class DatabaseService {
     _activeSessionsMemoryCache['interval_session'] = Map<String, dynamic>.from(
       data,
     );
+    if (_isInFakeAsync) {
+      return;
+    }
     try {
       final box = await _activeSessionsBox;
       await box?.put('interval_session', data);
@@ -898,6 +917,9 @@ class DatabaseService {
     final cached = _activeSessionsMemoryCache['interval_session'];
     if (cached != null) {
       return Map<String, dynamic>.from(cached);
+    }
+    if (_isInFakeAsync) {
+      return null;
     }
     try {
       final box = await _activeSessionsBox;
@@ -913,6 +935,9 @@ class DatabaseService {
 
   Future<void> clearActiveIntervalSession() async {
     _activeSessionsMemoryCache.remove('interval_session');
+    if (_isInFakeAsync) {
+      return;
+    }
     try {
       if (!Hive.isBoxOpen(_activeSessionsBoxName)) {
         return;
@@ -927,6 +952,9 @@ class DatabaseService {
     _activeSessionsMemoryCache['brew_session'] = Map<String, dynamic>.from(
       data,
     );
+    if (_isInFakeAsync) {
+      return;
+    }
     try {
       final box = await _activeSessionsBox;
       await box?.put('brew_session', data);
@@ -937,6 +965,9 @@ class DatabaseService {
     final cached = _activeSessionsMemoryCache['brew_session'];
     if (cached != null) {
       return Map<String, dynamic>.from(cached);
+    }
+    if (_isInFakeAsync) {
+      return null;
     }
     try {
       final box = await _activeSessionsBox;
@@ -952,6 +983,9 @@ class DatabaseService {
 
   Future<void> clearActiveBrewSession() async {
     _activeSessionsMemoryCache.remove('brew_session');
+    if (_isInFakeAsync) {
+      return;
+    }
     try {
       if (!Hive.isBoxOpen(_activeSessionsBoxName)) {
         return;

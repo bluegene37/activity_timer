@@ -123,14 +123,107 @@ class IntervalRunController {
     return alarms;
   }
 
+  // Gene - Nov, 8, 2026: Suspend the in-app periodic ticker when backgrounded so it never races with OS notifications, and resume it cleanly in syncWithClock without re-playing already-fired cues.
+  // void syncWithClock() {
+  //   if (isRunning.value && !isCompleted.value) {
+  //     _tick();
+  //   } else if (!isCompleted.value) {
+  //     currentTime.value = _now();
+  //   }
+  // }
+  void suspendTickerForBackground() {
+    _ticker?.cancel();
+    _ticker = null;
+  }
+
   void syncWithClock() {
     if (isRunning.value && !isCompleted.value) {
-      _tick();
+      _tick(playCue: false);
+      if (isRunning.value && !isCompleted.value && _ticker == null) {
+        _startTicker();
+      }
     } else if (!isCompleted.value) {
       currentTime.value = _now();
     }
   }
 
+  // Gene - Nov, 8, 2026: Updated _initialize to support point-in-time clock alerts (isPointInTime) and advance to the next matching weekday in activeDays.
+  // void _initialize() {
+  //   final now = _now();
+  //   currentTime.value = now;
+  //
+  //   // Normalize start and end times to the current day.
+  //   DateTime normalizedStart = DateTime(
+  //     now.year,
+  //     now.month,
+  //     now.day,
+  //     timer.startTime.hour,
+  //     timer.startTime.minute,
+  //     timer.startTime.second,
+  //   );
+  //
+  //   DateTime normalizedEnd = DateTime(
+  //     now.year,
+  //     now.month,
+  //     now.day,
+  //     timer.endTime.hour,
+  //     timer.endTime.minute,
+  //     timer.endTime.second,
+  //   );
+  //
+  //   // A range whose end precedes its start crosses midnight: push the end
+  //   // to the next day.
+  //   if (normalizedEnd.isBefore(normalizedStart)) {
+  //     normalizedEnd = normalizedEnd.add(const Duration(days: 1));
+  //   }
+  //
+  //   // If the entire window is in the past, shift it to the next day.
+  //   if (now.isAfter(normalizedEnd)) {
+  //     normalizedStart = normalizedStart.add(const Duration(days: 1));
+  //     normalizedEnd = normalizedEnd.add(const Duration(days: 1));
+  //   }
+  //
+  //   // A temporary timer model with normalized dates computes the schedule.
+  //   final tempTimer = IntervalTimer(
+  //     id: timer.id,
+  //     name: timer.name,
+  //     startTime: normalizedStart,
+  //     endTime: normalizedEnd,
+  //     intervalValue: timer.intervalValue,
+  //     intervalType: timer.intervalType,
+  //   );
+  //
+  //   allAlarmTimes = tempTimer.getAllAlarmTimes();
+  //
+  //   if (now.isBefore(normalizedStart)) {
+  //     // Before the window opens the first alarm is the start itself.
+  //     nextAlarmTime.value = normalizedStart;
+  //     currentAlarmIndex.value = 0;
+  //   } else if (now.isAfter(normalizedEnd)) {
+  //     // Unreachable given the normalization above, but kept for safety.
+  //     nextAlarmTime.value = normalizedEnd;
+  //     currentAlarmIndex.value = allAlarmTimes.length - 1;
+  //     isCompleted.value = true;
+  //   } else {
+  //     nextAlarmTime.value = tempTimer.getNextAlarmTime(now);
+  //     currentAlarmIndex.value = allAlarmTimes.indexWhere(
+  //       (time) => time.isAtSameMomentAs(nextAlarmTime.value),
+  //     );
+  //
+  //     if (currentAlarmIndex.value == -1) {
+  //       // No exact match: the closest future alarm, or done.
+  //       currentAlarmIndex.value = allAlarmTimes.indexWhere(
+  //         (time) => time.isAfter(now),
+  //       );
+  //       if (currentAlarmIndex.value == -1) {
+  //         currentAlarmIndex.value = allAlarmTimes.length - 1;
+  //         isCompleted.value = true;
+  //       } else {
+  //         nextAlarmTime.value = allAlarmTimes[currentAlarmIndex.value];
+  //       }
+  //     }
+  //   }
+  // }
   void _initialize() {
     final now = _now();
     currentTime.value = now;
@@ -145,18 +238,21 @@ class IntervalRunController {
       timer.startTime.second,
     );
 
-    DateTime normalizedEnd = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      timer.endTime.hour,
-      timer.endTime.minute,
-      timer.endTime.second,
-    );
+    DateTime normalizedEnd =
+        timer.isPointInTime
+            ? normalizedStart
+            : DateTime(
+              now.year,
+              now.month,
+              now.day,
+              timer.endTime.hour,
+              timer.endTime.minute,
+              timer.endTime.second,
+            );
 
     // A range whose end precedes its start crosses midnight: push the end
     // to the next day.
-    if (normalizedEnd.isBefore(normalizedStart)) {
+    if (!timer.isPointInTime && normalizedEnd.isBefore(normalizedStart)) {
       normalizedEnd = normalizedEnd.add(const Duration(days: 1));
     }
 
@@ -164,6 +260,14 @@ class IntervalRunController {
     if (now.isAfter(normalizedEnd)) {
       normalizedStart = normalizedStart.add(const Duration(days: 1));
       normalizedEnd = normalizedEnd.add(const Duration(days: 1));
+    }
+
+    // Advance up to 7 days if normalizedStart's weekday is excluded by activeDays.
+    var daysChecked = 0;
+    while (daysChecked < 7 && !timer.matchesWeekday(normalizedStart.weekday)) {
+      normalizedStart = normalizedStart.add(const Duration(days: 1));
+      normalizedEnd = normalizedEnd.add(const Duration(days: 1));
+      daysChecked++;
     }
 
     // A temporary timer model with normalized dates computes the schedule.
@@ -174,6 +278,8 @@ class IntervalRunController {
       endTime: normalizedEnd,
       intervalValue: timer.intervalValue,
       intervalType: timer.intervalType,
+      isPointInTime: timer.isPointInTime,
+      activeDays: timer.activeDays,
     );
 
     allAlarmTimes = tempTimer.getAllAlarmTimes();
@@ -214,7 +320,27 @@ class IntervalRunController {
     _ticker = Timer.periodic(tickInterval, (_) => _tick());
   }
 
-  void _tick() {
+  // Gene - Nov, 8, 2026: Added playCue flag to _tick so background boundary catch-up does not double-play cues over OS notification sounds.
+  // void _tick() {
+  //   currentTime.value = _now();
+  //   if (isCompleted.value || currentTime.value.isBefore(nextAlarmTime.value)) {
+  //     return;
+  //   }
+  //   // Advance past every alarm that already elapsed (several may have passed
+  //   // at once if the app was backgrounded), sounding only once — the
+  //   // dedicated completion alarm when the schedule just ended, a step cue
+  //   // otherwise.
+  //   while (!isCompleted.value &&
+  //       !currentTime.value.isBefore(nextAlarmTime.value)) {
+  //     _advance();
+  //   }
+  //   if (isCompleted.value) {
+  //     unawaited(_cuePlayer.playCompletion());
+  //   } else {
+  //     unawaited(_cuePlayer.playAlarm(timer.alarmSound));
+  //   }
+  // }
+  void _tick({bool playCue = true}) {
     currentTime.value = _now();
     if (isCompleted.value || currentTime.value.isBefore(nextAlarmTime.value)) {
       return;
@@ -226,6 +352,9 @@ class IntervalRunController {
     while (!isCompleted.value &&
         !currentTime.value.isBefore(nextAlarmTime.value)) {
       _advance();
+    }
+    if (!playCue) {
+      return;
     }
     if (isCompleted.value) {
       unawaited(_cuePlayer.playCompletion());
@@ -277,6 +406,27 @@ class IntervalRunController {
     isCompleted.value = false;
     isRunning.value = true;
     _initialize();
+    _startTicker();
+    unawaited(_syncBackgroundAlarms());
+  }
+
+  // Gene - Nov, 8, 2026: Added snooze() to schedule an immediate follow-up alarm after [duration] (both mid-schedule and after completion) and re-sync OS notifications.
+  void snooze(Duration duration) {
+    final now = _now();
+    final snoozeTime = now.add(duration);
+    currentTime.value = now;
+
+    final updated = List<DateTime>.from(allAlarmTimes)..add(snoozeTime);
+    updated.sort();
+    allAlarmTimes = updated;
+
+    final idx = allAlarmTimes.indexWhere(
+      (t) => t.isAtSameMomentAs(snoozeTime),
+    );
+    currentAlarmIndex.value = idx >= 0 ? idx : allAlarmTimes.length - 1;
+    nextAlarmTime.value = snoozeTime;
+    isCompleted.value = false;
+    isRunning.value = true;
     _startTicker();
     unawaited(_syncBackgroundAlarms());
   }

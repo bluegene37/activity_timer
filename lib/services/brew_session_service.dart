@@ -28,6 +28,8 @@ class BrewSessionService {
   CuePlayer? _lastCuePlayer;
   AlarmScheduler? _lastScheduler;
   DateTime Function()? _lastClock;
+  // Gene - Nov, 8, 2026: Guard against concurrent restoreSessionIfActive calls when notification tap and lifecycle resume fire simultaneously.
+  Future<BrewRunController?>? _restoreInFlight;
 
   /// True while a brew has been started and has not finished — exactly the
   /// window in which the floater should be visible.
@@ -103,6 +105,7 @@ class BrewSessionService {
     _lastCuePlayer = null;
     _lastScheduler = null;
     _lastClock = null;
+    _restoreInFlight = null;
     setAfterBuild(active, null);
     DatabaseService().clearActiveBrewSession();
   }
@@ -111,12 +114,22 @@ class BrewSessionService {
   /// snapshot (simulating OS process eviction while backgrounded).
   void suspendInMemory() {
     active.value?.onClose();
+    _restoreInFlight = null;
     setAfterBuild(active, null);
   }
 
   Future<void> persistActiveSession() async {
     final current = active.value;
     if (current != null && hasBrewInProgress) {
+      await current.persistSession();
+    }
+  }
+
+  // Gene - Nov, 8, 2026: Suspend in-app periodic ticker when entering background so it never races and cancels firing OS notifications.
+  Future<void> onEnterBackground() async {
+    final current = active.value;
+    if (current != null && hasBrewInProgress) {
+      current.suspendTickerForBackground();
       await current.persistSession();
     }
   }
@@ -152,12 +165,52 @@ class BrewSessionService {
     );
   }
 
+  // Gene - Nov, 8, 2026: Deduplicate concurrent restoreSessionIfActive calls via _restoreInFlight so notification tap + app resume never spawn duplicate controllers.
+  // Future<BrewRunController?> restoreSessionIfActive({
+  //   DatabaseService? databaseService,
+  //   CuePlayer? cuePlayer,
+  //   AlarmScheduler? scheduler,
+  //   DateTime Function()? clock,
+  // }) async {
   Future<BrewRunController?> restoreSessionIfActive({
     DatabaseService? databaseService,
     CuePlayer? cuePlayer,
     AlarmScheduler? scheduler,
     DateTime Function()? clock,
+  }) {
+    final inFlight = _restoreInFlight;
+    if (inFlight != null) {
+      return inFlight;
+    }
+    final future = _doRestoreSessionIfActive(
+      databaseService: databaseService,
+      cuePlayer: cuePlayer,
+      scheduler: scheduler,
+      clock: clock,
+    );
+    _restoreInFlight = future;
+    return future.whenComplete(() {
+      if (identical(_restoreInFlight, future)) {
+        _restoreInFlight = null;
+      }
+    });
+  }
+
+  Future<BrewRunController?> _doRestoreSessionIfActive({
+    DatabaseService? databaseService,
+    CuePlayer? cuePlayer,
+    AlarmScheduler? scheduler,
+    DateTime Function()? clock,
   }) async {
+    final existing = active.value;
+    if (existing != null) {
+      existing.syncWithClock();
+      if (existing.isFinished.value) {
+        clear();
+        return null;
+      }
+      return existing;
+    }
     final db = databaseService ?? DatabaseService();
     final data = await db.getActiveBrewSession();
     if (data == null) return null;

@@ -38,6 +38,15 @@ class SettingsController {
     await _appController.setVibrationEnabled(enabled);
   }
 
+  // Gene - Nov, 8, 2026: Added toggle methods for 3-2-1 countdown beeps and 50% halfway warning cue.
+  Future<void> toggleCountdownBeeps(bool enabled) async {
+    await _appController.setCountdownBeepsEnabled(enabled);
+  }
+
+  Future<void> toggleHalfwayWarning(bool enabled) async {
+    await _appController.setHalfwayWarningEnabled(enabled);
+  }
+
   Future<void> selectDefaultAlarmSound() async {
     final choice = await UiMessenger().showDialogBuilder<AlarmSoundChoice>(
       (dialogContext) => AlarmSoundPickerDialog(

@@ -17,6 +17,9 @@ class AppController {
   final vibrationEnabled = signal(true);
   final defaultAlarmSound = signal(AlarmSound.beep);
   final themeStyle = signal(AppThemeStyle.coffee);
+  // Gene - Nov, 8, 2026: Added reactive signals for 3-2-1 countdown beeps and 50% halfway warning cue.
+  final countdownBeepsEnabled = signal(true);
+  final halfwayWarningEnabled = signal(false);
 
   void onInit() {
     _loadSettings();
@@ -32,6 +35,8 @@ class AppController {
     vibrationEnabled.value = _settings.vibrationEnabled;
     defaultAlarmSound.value = _settings.defaultAlarmSound;
     themeStyle.value = _settings.themeStyle;
+    countdownBeepsEnabled.value = _settings.countdownBeepsEnabled;
+    halfwayWarningEnabled.value = _settings.halfwayWarningEnabled;
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
@@ -62,5 +67,16 @@ class AppController {
   Future<void> setThemeStyle(AppThemeStyle style) async {
     themeStyle.value = style;
     await _settings.setThemeStyle(style);
+  }
+
+  // Gene - Nov, 8, 2026: Added setters for countdownBeepsEnabled and halfwayWarningEnabled.
+  Future<void> setCountdownBeepsEnabled(bool enabled) async {
+    countdownBeepsEnabled.value = enabled;
+    await _settings.setCountdownBeepsEnabled(enabled);
+  }
+
+  Future<void> setHalfwayWarningEnabled(bool enabled) async {
+    halfwayWarningEnabled.value = enabled;
+    await _settings.setHalfwayWarningEnabled(enabled);
   }
 }
