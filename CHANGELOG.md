@@ -18,7 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **3-2-1 Countdown Beeps & 50% Halfway Warning Cue**:
   - Configurable final 3-second countdown ticks and 50% halfway warning audio cue in Settings.
 
+### Changed
+- **Android Build Toolchain (Flutter 3.50.0 Compatibility)**:
+  - Upgraded Gradle wrapper to `9.5.0`, Android Gradle Plugin to `9.3.1`, Kotlin Gradle Plugin to `2.4.20`, and JVM compilation target to Java 17.
+
 ### Fixed
+- **QA Responsiveness, Accessibility, Validation & Interval Session Sync**:
+  - Resolved narrow-screen and large accessibility text-scale layout overflows across navigation tabs, floating session pills, run screens, edit screens, and duration dialogs.
+  - Synchronized `IntervalTimer.isActive` state with active and restored background interval sessions and tightened timer/brew form validation and semantics labels.
 - **Notification Sound & Multi-Floater Restoration**:
   - Added Android R8/ProGuard `keep.xml` rules for raw alarm sounds, upgraded notification channel importance/audio attributes, and suppressed duplicate in-app completion cues when resuming from a fired background notification.
   - Persisted and restored running Interval and Coffee Brew sessions across cold launches alongside Activity routines.

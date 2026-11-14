@@ -7,7 +7,8 @@ import '../controllers/interval_run_controller.dart';
 import '../controllers/interval_timer_controller.dart';
 // Gene - Nov, 14, 2026: Fix locator import path to sibling services/locator.dart.
 // import '../di/service_locator.dart';
-import 'locator.dart';
+// Gene - Nov, 14, 2026: Moved locator.dart import below parent relative imports to satisfy directives_ordering lint for release CI
+// import 'locator.dart';
 import '../models/interval_timer.dart';
 import '../utils/signal_scheduling.dart';
 // Gene - Nov, 7, 2026: Added AlarmScheduler import for dependency injection and background restoration.
@@ -15,6 +16,8 @@ import 'alarm_scheduler.dart';
 import 'cue_player.dart';
 // Gene - Nov, 06, 2026: Added DatabaseService import for interval session persistence.
 import 'database_service.dart';
+// Gene - Nov, 14, 2026: Ordered sibling locator.dart import alphabetically after database_service.dart
+import 'locator.dart';
 
 /// Owns the one running interval session, decoupled from any screen.
 ///

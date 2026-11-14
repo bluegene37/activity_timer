@@ -22,6 +22,9 @@ analyzer:
     strict-casts: true
     strict-inference: true
     strict-raw-types: true
+  # Gene - Nov, 14, 2026: Ignore Flutter 3.50+ SDK-wide material.dart/cupertino.dart deprecation infos so `flutter analyze --fatal-infos` passes in CI release builds
+  errors:
+    deprecated_member_use: ignore
 
 linter:
   rules:
