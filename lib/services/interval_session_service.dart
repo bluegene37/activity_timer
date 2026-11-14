@@ -1,6 +1,13 @@
+// Gene - Nov, 14, 2026: Added dart:async, service_locator, and IntervalTimerController imports to keep IntervalTimer.isActive and active sessions synchronized.
+import 'dart:async';
+
 import 'package:signals/signals.dart';
 
 import '../controllers/interval_run_controller.dart';
+import '../controllers/interval_timer_controller.dart';
+// Gene - Nov, 14, 2026: Fix locator import path to sibling services/locator.dart.
+// import '../di/service_locator.dart';
+import 'locator.dart';
 import '../models/interval_timer.dart';
 import '../utils/signal_scheduling.dart';
 // Gene - Nov, 7, 2026: Added AlarmScheduler import for dependency injection and background restoration.
@@ -170,7 +177,85 @@ class IntervalSessionService {
 
   /// Ends the session: cancels the ticker, releases the wakelock, disposes
   /// the cue player.
+  // Gene - Nov, 14, 2026: Synchronize IntervalTimer.isActive in Hive and any registered IntervalTimerController, disarm on clear(), and refresh running/armed sessions after edits.
+  // void clear() {
+  //   active.value?.onClose();
+  //   _lastCuePlayer = null;
+  //   _lastScheduler = null;
+  //   _lastClock = null;
+  //   _restoreInFlight = null;
+  //   setAfterBuild(active, null);
+  //   DatabaseService().clearActiveIntervalSession();
+  // }
+  void syncArmedFlag(String timerId, {required bool isActive}) {
+    unawaited(
+      DatabaseService().setIntervalTimerArmedIfOpen(
+        timerId,
+        isActive: isActive,
+      ),
+    );
+    if (locator.isRegistered<IntervalTimerController>()) {
+      final ctrl = locator<IntervalTimerController>();
+      var changed = false;
+      for (final item in ctrl.intervalTimers) {
+        if (item.id == timerId && item.isActive != isActive) {
+          item.isActive = isActive;
+          changed = true;
+        }
+      }
+      if (changed) {
+        // Gene - Nov, 14, 2026: Provide explicit type argument to List.of for analyzer strict inference.
+        // setAfterBuild(ctrl.intervalTimers, List.of(ctrl.intervalTimers));
+        setAfterBuild(
+          ctrl.intervalTimers,
+          List<IntervalTimer>.of(ctrl.intervalTimers),
+        );
+      }
+    }
+  }
+
+  IntervalRunController? refreshIfActive(IntervalTimer updatedTimer) {
+    final current = active.value;
+    if (current == null && !updatedTimer.isActive) {
+      return null;
+    }
+    if (current != null &&
+        current.timer.id != updatedTimer.id &&
+        !updatedTimer.isActive) {
+      return current;
+    }
+    final cuePlayer = _lastCuePlayer;
+    final scheduler = _lastScheduler;
+    final clock = _lastClock;
+    current?.onClose();
+    _restoreInFlight = null;
+    if (!updatedTimer.isActive) {
+      setAfterBuild(active, null);
+      unawaited(DatabaseService().clearActiveIntervalSession());
+      return null;
+    }
+    final next = IntervalRunController(
+      timer: updatedTimer,
+      cuePlayer: cuePlayer,
+      scheduler: scheduler,
+      clock: clock,
+    );
+    next.onInit();
+    setAfterBuild(active, next);
+    final nowMs = (clock ?? DateTime.now)().millisecondsSinceEpoch;
+    unawaited(
+      DatabaseService().saveActiveIntervalSession({
+        'timerId': updatedTimer.id,
+        'timerJson': updatedTimer.toJson(),
+        'startedAtMs': nowMs,
+      }),
+    );
+    return next;
+  }
+
   void clear() {
+    final endedTimerId = active.value?.timer.id;
+    active.value?.timer.isActive = false;
     active.value?.onClose();
     _lastCuePlayer = null;
     _lastScheduler = null;
@@ -178,6 +263,9 @@ class IntervalSessionService {
     _restoreInFlight = null;
     setAfterBuild(active, null);
     DatabaseService().clearActiveIntervalSession();
+    if (endedTimerId != null) {
+      syncArmedFlag(endedTimerId, isActive: false);
+    }
   }
 
   /// Drops the in-memory controller while preserving the persisted Hive

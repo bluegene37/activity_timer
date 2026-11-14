@@ -80,113 +80,277 @@ class _BrewRunScreenState extends State<BrewRunScreen> {
           ),
           title: Text(widget.recipe.name),
         ),
+        // Gene - Nov, 14, 2026: Wrap SignalBuilder inside LayoutBuilder so all controller signals are read synchronously inside SignalBuilder's tracking scope (original body preserved commented below).
         body: SafeArea(
-          child: SignalBuilder(
-            builder: (_) {
-              if (_controller.isFinished.value) {
-                return Center(
-                  child: Text(
-                    'Brew complete',
-                    style: TextStyle(fontSize: 28, color: palette.ink),
-                  ),
-                );
-              }
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxHeight < 540;
+              final verticalPad = compact ? 12.0 : 16.0;
+              final minBodyHeight =
+                  (constraints.maxHeight - (verticalPad * 2)).clamp(
+                    0.0,
+                    double.infinity,
+                  );
 
-              final target = _controller.currentTarget;
-              final added = _controller.currentAdded;
-              final rate = _controller.currentRate;
-              final next = _controller.nextStepLabel;
+              return SignalBuilder(
+                builder: (_) {
+                  if (_controller.isFinished.value) {
+                    return Center(
+                      child: Text(
+                        'Brew complete',
+                        style: TextStyle(fontSize: 28, color: palette.ink),
+                      ),
+                    );
+                  }
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 16,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _controller.currentStep.name,
-                      style: TextStyle(fontSize: 20, color: palette.inkSoft),
+                  final target = _controller.currentTarget;
+                  final added = _controller.currentAdded;
+                  final rate = _controller.currentRate;
+                  final next = _controller.nextStepLabel;
+
+              // Gene - Nov, 14, 2026: Make BrewRunScreen responsive and scrollable with Semantics(liveRegion: true) on step/phase transitions so compact/landscape viewports never overflow.
+              // return Padding(
+              //   padding: const EdgeInsets.symmetric(
+              //     horizontal: 24,
+              //     vertical: 16,
+              //   ),
+              //   child: Column(
+              //     crossAxisAlignment: CrossAxisAlignment.start,
+              //     children: [
+              //       Text(
+              //         _controller.currentStep.name,
+              //         style: TextStyle(fontSize: 20, color: palette.inkSoft),
+              //       ),
+              //       const SizedBox(height: 8),
+              //       Text(
+              //         target == null
+              //             ? _controller.currentStep.kind.displayName
+              //             : 'pour to ${target}g',
+              //         style: TextStyle(
+              //           fontSize: 48,
+              //           height: 1.1,
+              //           letterSpacing: -1.9,
+              //           color: palette.ink,
+              //         ),
+              //       ),
+              //       const SizedBox(height: 8),
+              //       if (added != null)
+              //         Text(
+              //           rate == null
+              //               ? '+${added}g'
+              //               : '+${added}g · ≈${rate.toStringAsFixed(1)} g/s',
+              //           style: TextStyle(fontSize: 16, color: palette.inkSoft),
+              //         ),
+              //       if (_controller.currentStep.description != null) ...[
+              //         const SizedBox(height: 12),
+              //         Text(
+              //           _controller.currentStep.description!,
+              //           style: TextStyle(fontSize: 15, color: palette.inkSoft),
+              //         ),
+              //       ],
+              //       const SizedBox(height: 24),
+              //       if (_controller.currentStep.isPour)
+              //         Text(
+              //           _controller.isPouring ? 'POUR' : 'WAIT',
+              //           style: TextStyle(
+              //             fontSize: 32,
+              //             letterSpacing: 4,
+              //             color:
+              //                 _controller.isPouring
+              //                     ? palette.lead
+              //                     : palette.inkSoft,
+              //           ),
+              //         ),
+              //       const Spacer(),
+              //       Text(
+              //         _clock(_controller.stepRemaining),
+              //         style: TextStyle(fontSize: 64, color: palette.ink),
+              //       ),
+              //       Text(
+              //         'total ${_clock(_controller.totalElapsed)}',
+              //         style: TextStyle(fontSize: 14, color: palette.inkSoft),
+              //       ),
+              //       const SizedBox(height: 16),
+              //       if (next != null)
+              //         Text(
+              //           'next: $next',
+              //           style: TextStyle(fontSize: 15, color: palette.inkSoft),
+              //         ),
+              //       const SizedBox(height: 16),
+              //       Row(
+              //         children: [
+              //           Expanded(
+              //             child: ElevatedButton(
+              //               onPressed:
+              //                   _controller.isRunning.value
+              //                       ? _controller.pause
+              //                       : _controller.start,
+              //               child: Text(
+              //                 _controller.isRunning.value ? 'Pause' : 'Start',
+              //               ),
+              //             ),
+              //           ),
+              //           const SizedBox(width: 12),
+              //           OutlinedButton(
+              //             onPressed: _controller.reset,
+              //             child: const Text('Reset'),
+              //           ),
+              //         ],
+              //       ),
+              //     ],
+              //   ),
+              // );
+              // Gene - Nov, 14, 2026: Moved LayoutBuilder outside SignalBuilder above; return SingleChildScrollView directly inside SignalBuilder.
+              // return LayoutBuilder(
+              //   builder: (context, constraints) {
+              //     final compact = constraints.maxHeight < 540;
+              //     final verticalPad = compact ? 12.0 : 16.0;
+              //     final minBodyHeight =
+              //         (constraints.maxHeight - (verticalPad * 2)).clamp(
+              //           0.0,
+              //           double.infinity,
+              //         );
+              //
+              //     return SingleChildScrollView(
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: verticalPad,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      target == null
-                          ? _controller.currentStep.kind.displayName
-                          : 'pour to ${target}g',
-                      style: TextStyle(
-                        fontSize: 48,
-                        height: 1.1,
-                        letterSpacing: -1.9,
-                        color: palette.ink,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (added != null)
-                      Text(
-                        rate == null
-                            ? '+${added}g'
-                            : '+${added}g · ≈${rate.toStringAsFixed(1)} g/s',
-                        style: TextStyle(fontSize: 16, color: palette.inkSoft),
-                      ),
-                    if (_controller.currentStep.description != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        _controller.currentStep.description!,
-                        style: TextStyle(fontSize: 15, color: palette.inkSoft),
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    if (_controller.currentStep.isPour)
-                      Text(
-                        _controller.isPouring ? 'POUR' : 'WAIT',
-                        style: TextStyle(
-                          fontSize: 32,
-                          letterSpacing: 4,
-                          color:
-                              _controller.isPouring
-                                  ? palette.lead
-                                  : palette.inkSoft,
-                        ),
-                      ),
-                    const Spacer(),
-                    Text(
-                      _clock(_controller.stepRemaining),
-                      style: TextStyle(fontSize: 64, color: palette.ink),
-                    ),
-                    Text(
-                      'total ${_clock(_controller.totalElapsed)}',
-                      style: TextStyle(fontSize: 14, color: palette.inkSoft),
-                    ),
-                    const SizedBox(height: 16),
-                    if (next != null)
-                      Text(
-                        'next: $next',
-                        style: TextStyle(fontSize: 15, color: palette.inkSoft),
-                      ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed:
-                                _controller.isRunning.value
-                                    ? _controller.pause
-                                    : _controller.start,
-                            child: Text(
-                              _controller.isRunning.value ? 'Pause' : 'Start',
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: minBodyHeight),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Semantics(
+                            liveRegion: true,
+                            container: true,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _controller.currentStep.name,
+                                  style: TextStyle(
+                                    fontSize: compact ? 18 : 20,
+                                    color: palette.inkSoft,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    target == null
+                                        ? _controller.currentStep.kind.displayName
+                                        : 'pour to ${target}g',
+                                    style: TextStyle(
+                                      fontSize: compact ? 34 : 48,
+                                      height: 1.1,
+                                      letterSpacing: -1.9,
+                                      color: palette.ink,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                if (added != null)
+                                  Text(
+                                    rate == null
+                                        ? '+${added}g'
+                                        : '+${added}g · ≈${rate.toStringAsFixed(1)} g/s',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: palette.inkSoft,
+                                    ),
+                                  ),
+                                if (_controller.currentStep.description != null) ...[
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _controller.currentStep.description!,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: palette.inkSoft,
+                                    ),
+                                  ),
+                                ],
+                                SizedBox(height: compact ? 14 : 24),
+                                if (_controller.currentStep.isPour)
+                                  Text(
+                                    _controller.isPouring ? 'POUR' : 'WAIT',
+                                    style: TextStyle(
+                                      fontSize: compact ? 24 : 32,
+                                      letterSpacing: 4,
+                                      color:
+                                          _controller.isPouring
+                                              ? palette.lead
+                                              : palette.inkSoft,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        OutlinedButton(
-                          onPressed: _controller.reset,
-                          child: const Text('Reset'),
-                        ),
-                      ],
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 16),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  _clock(_controller.stepRemaining),
+                                  style: TextStyle(
+                                    fontSize: compact ? 48 : 64,
+                                    color: palette.ink,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                'total ${_clock(_controller.totalElapsed)}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: palette.inkSoft,
+                                ),
+                              ),
+                              SizedBox(height: compact ? 12 : 16),
+                              if (next != null) ...[
+                                Text(
+                                  'next: $next',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: palette.inkSoft,
+                                  ),
+                                ),
+                                SizedBox(height: compact ? 12 : 16),
+                              ],
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed:
+                                          _controller.isRunning.value
+                                              ? _controller.pause
+                                              : _controller.start,
+                                      child: Text(
+                                        _controller.isRunning.value
+                                            ? 'Pause'
+                                            : 'Start',
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  OutlinedButton(
+                                    onPressed: _controller.reset,
+                                    child: const Text('Reset'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
+                  );
+                },
               );
             },
           ),

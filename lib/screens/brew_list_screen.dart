@@ -11,6 +11,8 @@ import '../routes/app_routes.dart';
 import '../services/database_service.dart';
 import '../services/locator.dart';
 import '../services/ui_messenger.dart';
+// Gene - Nov, 14, 2026: Import AppTheme for contrast-safe foreground color on accent fills.
+import '../theme/app_theme.dart';
 import '../theme/brew_theme.dart';
 
 class BrewListScreen extends StatelessWidget {
@@ -129,7 +131,9 @@ class BrewListScreen extends StatelessWidget {
           child: SignalBuilder(
             builder:
                 (_) => ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+                  // Gene - Nov, 14, 2026: Increase bottom padding to clear stacked active timer floaters.
+                  // padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
                   children: [
                     // Top Header
                     Row(
@@ -158,9 +162,15 @@ class BrewListScreen extends StatelessWidget {
                               ),
                             ],
                           ),
-                          child: const Icon(
+                          // Gene - Nov, 14, 2026: Use luminance-aware foreground color on primary fill for WCAG contrast.
+                          // child: const Icon(
+                          //   Icons.coffee,
+                          //   color: Colors.white,
+                          //   size: 26,
+                          // ),
+                          child: Icon(
                             Icons.coffee,
-                            color: Colors.white,
+                            color: AppTheme.onColor(colorScheme.primary),
                             size: 26,
                           ),
                         ),
@@ -224,23 +234,56 @@ class BrewListScreen extends StatelessWidget {
                                         ),
                                       ),
                                     ),
+                                    // Gene - Nov, 14, 2026: Add semantic tooltips and explicit 44x44 minimum tap targets on brew action buttons.
+                                    // IconButton(
+                                    //   icon: const Icon(
+                                    //     CupertinoIcons.pencil,
+                                    //     size: 18,
+                                    //   ),
+                                    //   color: palette.inkSoft,
+                                    //   onPressed:
+                                    //       () => unawaited(
+                                    //         controller.editBrew(recipe),
+                                    //       ),
+                                    // ),
+                                    // IconButton(
+                                    //   icon: const Icon(
+                                    //     CupertinoIcons.trash,
+                                    //     size: 18,
+                                    //   ),
+                                    //   color: palette.inkSoft,
+                                    //   onPressed:
+                                    //       () => unawaited(
+                                    //         _confirmDelete(controller, recipe),
+                                    //       ),
+                                    // ),
                                     IconButton(
+                                      tooltip: 'Edit ${recipe.name}',
                                       icon: const Icon(
                                         CupertinoIcons.pencil,
                                         size: 18,
                                       ),
                                       color: palette.inkSoft,
+                                      constraints: const BoxConstraints(
+                                        minWidth: 44,
+                                        minHeight: 44,
+                                      ),
                                       onPressed:
                                           () => unawaited(
                                             controller.editBrew(recipe),
                                           ),
                                     ),
                                     IconButton(
+                                      tooltip: 'Delete ${recipe.name}',
                                       icon: const Icon(
                                         CupertinoIcons.trash,
                                         size: 18,
                                       ),
                                       color: palette.inkSoft,
+                                      constraints: const BoxConstraints(
+                                        minWidth: 44,
+                                        minHeight: 44,
+                                      ),
                                       onPressed:
                                           () => unawaited(
                                             _confirmDelete(controller, recipe),

@@ -27,6 +27,8 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
   late int _seconds;
   late IntervalPhase _phase;
   AlarmSound? _selectedAlarmSound;
+  // Gene - Nov, 14, 2026: Track inline name validation error so cleared/blank timer names show clear feedback instead of silently overwriting.
+  String? _nameError;
 
   @override
   void initState() {
@@ -72,6 +74,141 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
         int minutes = _minutes;
         int seconds = _seconds;
 
+        // Gene - Nov, 14, 2026: Replace fixed height 250 with scrollable Responsive Column and isExpanded dropdowns so SetDurationDialog never overflows on 320pt or 1.5x/2.0x text scales.
+        // return AlertDialog(
+        //   shape: RoundedRectangleBorder(
+        //     borderRadius: BorderRadius.circular(18),
+        //   ),
+        //   title: const Text('Set Duration'),
+        //   content: StatefulBuilder(
+        //     builder: (BuildContext context, StateSetter setState) {
+        //       return SizedBox(
+        //         height: 250,
+        //         child: Column(
+        //           children: [
+        //             Row(
+        //               children: [
+        //                 Expanded(
+        //                   child: Column(
+        //                     crossAxisAlignment: CrossAxisAlignment.center,
+        //                     children: [
+        //                       const Text('Hours'),
+        //                       const SizedBox(height: 8),
+        //                       DropdownButtonFormField<int>(
+        //                         initialValue: hours,
+        //                         decoration: InputDecoration(
+        //                           border: OutlineInputBorder(
+        //                             borderRadius: BorderRadius.circular(10),
+        //                           ),
+        //                           contentPadding: const EdgeInsets.symmetric(
+        //                             horizontal: 10,
+        //                             vertical: 8,
+        //                           ),
+        //                         ),
+        //                         items:
+        //                             List.generate(24, (index) => index)
+        //                                 .map(
+        //                                   (hour) => DropdownMenuItem<int>(
+        //                                     value: hour,
+        //                                     child: Text(hour.toString()),
+        //                                   ),
+        //                                 )
+        //                                 .toList(),
+        //                         onChanged: (value) {
+        //                           if (value != null) {
+        //                             setState(() => hours = value);
+        //                           }
+        //                         },
+        //                       ),
+        //                     ],
+        //                   ),
+        //                 ),
+        //                 const SizedBox(width: 8),
+        //                 Expanded(
+        //                   child: Column(
+        //                     crossAxisAlignment: CrossAxisAlignment.center,
+        //                     children: [
+        //                       const Text('Minutes'),
+        //                       const SizedBox(height: 8),
+        //                       DropdownButtonFormField<int>(
+        //                         initialValue: minutes,
+        //                         decoration: InputDecoration(
+        //                           border: OutlineInputBorder(
+        //                             borderRadius: BorderRadius.circular(10),
+        //                           ),
+        //                           contentPadding: const EdgeInsets.symmetric(
+        //                             horizontal: 10,
+        //                             vertical: 8,
+        //                           ),
+        //                         ),
+        //                         items:
+        //                             List.generate(60, (index) => index)
+        //                                 .map(
+        //                                   (minute) => DropdownMenuItem<int>(
+        //                                     value: minute,
+        //                                     child: Text(minute.toString()),
+        //                                   ),
+        //                                 )
+        //                                 .toList(),
+        //                         onChanged: (value) {
+        //                           if (value != null) {
+        //                             setState(() => minutes = value);
+        //                           }
+        //                         },
+        //                       ),
+        //                     ],
+        //                   ),
+        //                 ),
+        //                 const SizedBox(width: 8),
+        //                 Expanded(
+        //                   child: Column(
+        //                     crossAxisAlignment: CrossAxisAlignment.center,
+        //                     children: [
+        //                       const Text('Seconds'),
+        //                       const SizedBox(height: 8),
+        //                       DropdownButtonFormField<int>(
+        //                         initialValue: seconds,
+        //                         decoration: InputDecoration(
+        //                           border: OutlineInputBorder(
+        //                             borderRadius: BorderRadius.circular(10),
+        //                           ),
+        //                           contentPadding: const EdgeInsets.symmetric(
+        //                             horizontal: 10,
+        //                             vertical: 8,
+        //                           ),
+        //                         ),
+        //                         items:
+        //                             List.generate(60, (index) => index)
+        //                                 .map(
+        //                                   (second) => DropdownMenuItem<int>(
+        //                                     value: second,
+        //                                     child: Text(second.toString()),
+        //                                   ),
+        //                                 )
+        //                                 .toList(),
+        //                         onChanged: (value) {
+        //                           if (value != null) {
+        //                             setState(() => seconds = value);
+        //                           }
+        //                         },
+        //                       ),
+        //                     ],
+        //                   ),
+        //                 ),
+        //               ],
+        //             ),
+        //             const SizedBox(height: 16),
+        //             Text(
+        //               'Total: ${_formatTimeValue(hours)}:${_formatTimeValue(minutes)}:${_formatTimeValue(seconds)}',
+        //               style: Theme.of(context).textTheme.titleMedium?.copyWith(
+        //                 fontWeight: FontWeight.w700,
+        //               ),
+        //             ),
+        //           ],
+        //         ),
+        //       );
+        //     },
+        //   ),
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
@@ -79,9 +216,9 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
           title: const Text('Set Duration'),
           content: StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
-              return SizedBox(
-                height: 250,
+              return SingleChildScrollView(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
                       children: [
@@ -89,16 +226,21 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              const Text('Hours'),
+                              const Text(
+                                'Hours',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<int>(
                                 initialValue: hours,
+                                isExpanded: true,
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
+                                    horizontal: 8,
                                     vertical: 8,
                                   ),
                                 ),
@@ -107,7 +249,11 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                                         .map(
                                           (hour) => DropdownMenuItem<int>(
                                             value: hour,
-                                            child: Text(hour.toString()),
+                                            child: Text(
+                                              hour.toString(),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
                                           ),
                                         )
                                         .toList(),
@@ -125,16 +271,21 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              const Text('Minutes'),
+                              const Text(
+                                'Minutes',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<int>(
                                 initialValue: minutes,
+                                isExpanded: true,
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
+                                    horizontal: 8,
                                     vertical: 8,
                                   ),
                                 ),
@@ -143,7 +294,11 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                                         .map(
                                           (minute) => DropdownMenuItem<int>(
                                             value: minute,
-                                            child: Text(minute.toString()),
+                                            child: Text(
+                                              minute.toString(),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
                                           ),
                                         )
                                         .toList(),
@@ -161,16 +316,21 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              const Text('Seconds'),
+                              const Text(
+                                'Seconds',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<int>(
                                 initialValue: seconds,
+                                isExpanded: true,
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
+                                    horizontal: 8,
                                     vertical: 8,
                                   ),
                                 ),
@@ -179,7 +339,11 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                                         .map(
                                           (second) => DropdownMenuItem<int>(
                                             value: second,
-                                            child: Text(second.toString()),
+                                            child: Text(
+                                              second.toString(),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
                                           ),
                                         )
                                         .toList(),
@@ -247,7 +411,41 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
     return value.toString().padLeft(2, '0');
   }
 
+  // Gene - Nov, 14, 2026: Reject blank/whitespace Timer Name on Save and surface inline validation feedback instead of silently reverting to 'Timer'.
+  // void _saveTimer() {
+  //   final totalSeconds = (_hours * 3600) + (_minutes * 60) + _seconds;
+  //   if (totalSeconds <= 0) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(
+  //         content: Text('Timer duration must be greater than 0 seconds'),
+  //       ),
+  //     );
+  //     return;
+  //   }
+  //
+  //   final updatedTimer = widget.timer.copyWith(
+  //     name: _nameController.text.isNotEmpty ? _nameController.text : 'Timer',
+  //     durationInSeconds: totalSeconds,
+  //     description:
+  //         _descriptionController.text.isEmpty
+  //             ? null
+  //             : _descriptionController.text,
+  //     alarmSoundName: _selectedAlarmSound?.name,
+  //     phase: _phase,
+  //   );
+  //
+  //   Navigator.pop(context, updatedTimer);
+  // }
   void _saveTimer() {
+    final trimmedName = _nameController.text.trim();
+    if (trimmedName.isEmpty) {
+      setState(() => _nameError = 'Please enter a timer name');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a timer name')),
+      );
+      return;
+    }
+
     final totalSeconds = (_hours * 3600) + (_minutes * 60) + _seconds;
     if (totalSeconds <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -258,13 +456,11 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
       return;
     }
 
+    final trimmedDesc = _descriptionController.text.trim();
     final updatedTimer = widget.timer.copyWith(
-      name: _nameController.text.isNotEmpty ? _nameController.text : 'Timer',
+      name: trimmedName,
       durationInSeconds: totalSeconds,
-      description:
-          _descriptionController.text.isEmpty
-              ? null
-              : _descriptionController.text,
+      description: trimmedDesc.isEmpty ? null : trimmedDesc,
       alarmSoundName: _selectedAlarmSound?.name,
       phase: _phase,
     );
@@ -282,7 +478,17 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        // Gene - Nov, 14, 2026: Added Back tooltip for WCAG labeledTapTargetGuideline compliance.
+        // leading: IconButton(
+        //   icon: Icon(
+        //     CupertinoIcons.chevron_back,
+        //     color: colorScheme.onSurface,
+        //     size: 22,
+        //   ),
+        //   onPressed: () => Navigator.pop(context),
+        // ),
         leading: IconButton(
+          tooltip: 'Back',
           icon: Icon(
             CupertinoIcons.chevron_back,
             color: colorScheme.onSurface,
@@ -355,8 +561,58 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                               setState(() => _phase = phase);
                             },
                             borderRadius: BorderRadius.circular(10),
+                            // Gene - Nov, 14, 2026: Pad and scale phase chips cleanly to eliminate horizontal overflow and guarantee AA contrast on light surfaces.
+                            // child: Container(
+                            //   padding: const EdgeInsets.symmetric(vertical: 10),
+                            //   decoration: BoxDecoration(
+                            //     color:
+                            //         isSelected
+                            //             ? phase.defaultColor.withValues(
+                            //               alpha: 0.18,
+                            //             )
+                            //             : Colors.transparent,
+                            //     borderRadius: BorderRadius.circular(10),
+                            //     border:
+                            //         isSelected
+                            //             ? Border.all(
+                            //               color: phase.defaultColor,
+                            //               width: 1.2,
+                            //             )
+                            //             : null,
+                            //   ),
+                            //   child: Column(
+                            //     children: [
+                            //       Icon(
+                            //         phase.icon,
+                            //         size: 18,
+                            //         color:
+                            //             isSelected
+                            //                 ? phase.defaultColor
+                            //                 : colorScheme.onSurfaceVariant,
+                            //       ),
+                            //       const SizedBox(height: 4),
+                            //       Text(
+                            //         phase.displayName,
+                            //         style: TextStyle(
+                            //           fontSize: 11,
+                            //           fontWeight:
+                            //               isSelected
+                            //                   ? FontWeight.w700
+                            //                   : FontWeight.normal,
+                            //           color:
+                            //               isSelected
+                            //                   ? phase.defaultColor
+                            //                   : colorScheme.onSurfaceVariant,
+                            //         ),
+                            //       ),
+                            //     ],
+                            //   ),
+                            // ),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 2,
+                                vertical: 10,
+                              ),
                               decoration: BoxDecoration(
                                 color:
                                     isSelected
@@ -373,32 +629,47 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                                         )
                                         : null,
                               ),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    phase.icon,
-                                    size: 18,
-                                    color:
-                                        isSelected
-                                            ? phase.defaultColor
-                                            : colorScheme.onSurfaceVariant,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    phase.displayName,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight:
-                                          isSelected
-                                              ? FontWeight.w700
-                                              : FontWeight.normal,
-                                      color:
-                                          isSelected
-                                              ? phase.defaultColor
-                                              : colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ],
+                              child: Builder(
+                                builder: (context) {
+                                  final accentFg = AppTheme.readableAccent(
+                                    phase.defaultColor,
+                                    isDark: isDark,
+                                  );
+                                  return Column(
+                                    children: [
+                                      Icon(
+                                        phase.icon,
+                                        size: 18,
+                                        color:
+                                            isSelected
+                                                ? accentFg
+                                                : colorScheme.onSurfaceVariant,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          phase.displayName,
+                                          maxLines: 1,
+                                          softWrap: false,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight:
+                                                isSelected
+                                                    ? FontWeight.w700
+                                                    : FontWeight.normal,
+                                            color:
+                                                isSelected
+                                                    ? accentFg
+                                                    : colorScheme
+                                                        .onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
                             ),
                           ),
@@ -415,17 +686,48 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                 ),
               ),
               const SizedBox(height: 8),
+              // Gene - Nov, 14, 2026: Clear inline name error on typing and display inline validation error text below Timer Name field.
+              // DecoratedBox(
+              //   decoration: BoxDecoration(
+              //     color: AppTheme.cardBackground(isDark: isDark),
+              //     borderRadius: BorderRadius.circular(12),
+              //     border: Border.all(
+              //       color: AppTheme.separator(isDark: isDark),
+              //       width: 0.8,
+              //     ),
+              //   ),
+              //   child: TextField(
+              //     controller: _nameController,
+              //     decoration: const InputDecoration(
+              //       hintText: 'e.g. Sprint, Rest, Work Block',
+              //       filled: false,
+              //       border: InputBorder.none,
+              //       contentPadding: EdgeInsets.symmetric(
+              //         horizontal: 14,
+              //         vertical: 14,
+              //       ),
+              //     ),
+              //   ),
+              // ),
               DecoratedBox(
                 decoration: BoxDecoration(
                   color: AppTheme.cardBackground(isDark: isDark),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: AppTheme.separator(isDark: isDark),
-                    width: 0.8,
+                    color:
+                        _nameError != null
+                            ? colorScheme.error
+                            : AppTheme.separator(isDark: isDark),
+                    width: _nameError != null ? 1.2 : 0.8,
                   ),
                 ),
                 child: TextField(
                   controller: _nameController,
+                  onChanged: (value) {
+                    if (_nameError != null && value.trim().isNotEmpty) {
+                      setState(() => _nameError = null);
+                    }
+                  },
                   decoration: const InputDecoration(
                     hintText: 'e.g. Sprint, Rest, Work Block',
                     filled: false,
@@ -437,6 +739,16 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                   ),
                 ),
               ),
+              if (_nameError != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  _nameError!,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
               const SizedBox(height: 22),
 
               Text(
@@ -465,15 +777,37 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                       width: 0.8,
                     ),
                   ),
+                  // Gene - Nov, 14, 2026: Wrap duration text in Expanded so wide text scales never overflow horizontally.
+                  // child: Row(
+                  //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  //   children: [
+                  //     Text(
+                  //       _formatDuration(),
+                  //       style: textTheme.titleMedium?.copyWith(
+                  //         fontWeight: FontWeight.w700,
+                  //       ),
+                  //     ),
+                  //     Icon(
+                  //       CupertinoIcons.clock,
+                  //       color: colorScheme.primary,
+                  //       size: 20,
+                  //     ),
+                  //   ],
+                  // ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        _formatDuration(),
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
+                      Expanded(
+                        child: Text(
+                          _formatDuration(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Icon(
                         CupertinoIcons.clock,
                         color: colorScheme.primary,
@@ -550,17 +884,41 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
                       width: 0.8,
                     ),
                   ),
+                  // Gene - Nov, 14, 2026: Wrap alarm sound label in Expanded so wide text scales never overflow horizontally.
+                  // child: Row(
+                  //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  //   children: [
+                  //     Text(
+                  //       _selectedAlarmSound != null
+                  //           ? _selectedAlarmSound!.displayName
+                  //           : 'Default App Sound',
+                  //       style: textTheme.titleMedium?.copyWith(
+                  //         fontWeight: FontWeight.w600,
+                  //       ),
+                  //     ),
+                  //     Icon(
+                  //       CupertinoIcons.music_note,
+                  //       color: colorScheme.primary,
+                  //       size: 20,
+                  //     ),
+                  //   ],
+                  // ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        _selectedAlarmSound != null
-                            ? _selectedAlarmSound!.displayName
-                            : 'Default App Sound',
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
+                      Expanded(
+                        child: Text(
+                          _selectedAlarmSound != null
+                              ? _selectedAlarmSound!.displayName
+                              : 'Default App Sound',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Icon(
                         CupertinoIcons.music_note,
                         color: colorScheme.primary,

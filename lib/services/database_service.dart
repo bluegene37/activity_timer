@@ -204,6 +204,25 @@ class DatabaseService {
   Future<void> deleteIntervalTimer(String id) async =>
       (await _intervalTimers).delete(id);
 
+  // Gene - Nov, 14, 2026: Safely synchronize an interval timer's armed flag when the Hive box is already open without blocking FakeAsync tests.
+  Future<void> setIntervalTimerArmedIfOpen(
+    String id, {
+    required bool isActive,
+  }) async {
+    if (!Hive.isBoxOpen(_intervalTimersBoxName)) {
+      return;
+    }
+    try {
+      final box = Hive.box<IntervalTimer>(_intervalTimersBoxName);
+      final timer = box.values.where((t) => t.id == id).firstOrNull;
+      if (timer == null) return;
+      timer.isActive = isActive;
+      timer.updatedAt = DateTime.now();
+      if (_isInFakeAsync) return;
+      await box.put(timer.id, timer);
+    } catch (_) {}
+  }
+
   // BREW RECIPE METHODS
 
   Future<List<BrewRecipe>> getAllBrewRecipes() async =>

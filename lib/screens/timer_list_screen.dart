@@ -44,7 +44,17 @@ class _TimerListScreenState extends State<TimerListScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        // Gene - Nov, 14, 2026: Add Back tooltip on navigation button for screen reader clarity.
+        // leading: IconButton(
+        //   icon: Icon(
+        //     CupertinoIcons.chevron_back,
+        //     color: colorScheme.onSurface,
+        //     size: 22,
+        //   ),
+        //   onPressed: () => Navigator.pop(context),
+        // ),
         leading: IconButton(
+          tooltip: 'Back',
           icon: Icon(
             CupertinoIcons.chevron_back,
             color: colorScheme.onSurface,
@@ -179,43 +189,94 @@ class _TimerListScreenState extends State<TimerListScreen> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
                                 ),
-                                child: SignalBuilder(
-                                  builder:
-                                      (_) => Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 5,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color:
-                                              colorScheme
-                                                  .surfaceContainerHighest,
-                                          borderRadius: BorderRadius.circular(
-                                            AppTheme.pillRadius,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              CupertinoIcons.hourglass,
-                                              size: 12,
+                                // Gene - Nov, 14, 2026: Enforce >= 44x44 tap target box around Prep countdown trigger.
+                                // child: SignalBuilder(
+                                //   builder:
+                                //       (_) => Container(
+                                //         padding: const EdgeInsets.symmetric(
+                                //           horizontal: 10,
+                                //           vertical: 5,
+                                //         ),
+                                //         decoration: BoxDecoration(
+                                //           color:
+                                //               colorScheme
+                                //                   .surfaceContainerHighest,
+                                //           borderRadius: BorderRadius.circular(
+                                //             AppTheme.pillRadius,
+                                //           ),
+                                //         ),
+                                //         child: Row(
+                                //           children: [
+                                //             Icon(
+                                //               CupertinoIcons.hourglass,
+                                //               size: 12,
+                                //               color:
+                                //                   colorScheme.onSurfaceVariant,
+                                //             ),
+                                //             const SizedBox(width: 4),
+                                //             Text(
+                                //               'Prep: ${controller.sequence.value.preparationSeconds}s',
+                                //               style: TextStyle(
+                                //                 fontSize: 11,
+                                //                 color:
+                                //                     colorScheme
+                                //                         .onSurfaceVariant,
+                                //                 fontWeight: FontWeight.w700,
+                                //               ),
+                                //             ),
+                                //           ],
+                                //         ),
+                                //       ),
+                                // ),
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    minWidth: 44,
+                                    minHeight: 44,
+                                  ),
+                                  child: Center(
+                                    widthFactor: 1.0,
+                                    child: SignalBuilder(
+                                      builder:
+                                          (_) => Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 5,
+                                            ),
+                                            decoration: BoxDecoration(
                                               color:
-                                                  colorScheme.onSurfaceVariant,
+                                                  colorScheme
+                                                      .surfaceContainerHighest,
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                    AppTheme.pillRadius,
+                                                  ),
                                             ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              'Prep: ${controller.sequence.value.preparationSeconds}s',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color:
-                                                    colorScheme
-                                                        .onSurfaceVariant,
-                                                fontWeight: FontWeight.w700,
-                                              ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  CupertinoIcons.hourglass,
+                                                  size: 12,
+                                                  color:
+                                                      colorScheme
+                                                          .onSurfaceVariant,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  'Prep: ${controller.sequence.value.preparationSeconds}s',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color:
+                                                        colorScheme
+                                                            .onSurfaceVariant,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                          ],
-                                        ),
-                                      ),
+                                          ),
+                                    ),
+                                  ),
                                 ),
                                 itemBuilder:
                                     (context) => const [
@@ -405,9 +466,18 @@ class _TimerListScreenState extends State<TimerListScreen> {
                                       color: phaseColor.withValues(alpha: 0.15),
                                       shape: BoxShape.circle,
                                     ),
+                                    // Gene - Nov, 14, 2026: Use contrast-safe phase accent on light backgrounds.
+                                    // child: Icon(
+                                    //   timer.phase.icon,
+                                    //   color: phaseColor,
+                                    //   size: 18,
+                                    // ),
                                     child: Icon(
                                       timer.phase.icon,
-                                      color: phaseColor,
+                                      color: AppTheme.readableAccent(
+                                        phaseColor,
+                                        isDark: isDark,
+                                      ),
                                       size: 18,
                                     ),
                                   ),
@@ -446,13 +516,28 @@ class _TimerListScreenState extends State<TimerListScreen> {
                                                 borderRadius:
                                                     BorderRadius.circular(4),
                                               ),
+                                              // Gene - Nov, 14, 2026: Use contrast-safe phase accent text on light backgrounds.
+                                              // child: Text(
+                                              //   timer.phase.displayName
+                                              //       .toUpperCase(),
+                                              //   style: TextStyle(
+                                              //     fontSize: 9,
+                                              //     fontWeight: FontWeight.w800,
+                                              //     color: phaseColor,
+                                              //     letterSpacing: 0.3,
+                                              //   ),
+                                              // ),
                                               child: Text(
                                                 timer.phase.displayName
                                                     .toUpperCase(),
                                                 style: TextStyle(
                                                   fontSize: 9,
                                                   fontWeight: FontWeight.w800,
-                                                  color: phaseColor,
+                                                  color:
+                                                      AppTheme.readableAccent(
+                                                        phaseColor,
+                                                        isDark: isDark,
+                                                      ),
                                                   letterSpacing: 0.3,
                                                 ),
                                               ),
@@ -472,7 +557,23 @@ class _TimerListScreenState extends State<TimerListScreen> {
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
+                                      // Gene - Nov, 14, 2026: Add tooltips and >= 44x44 minimum tap targets on edit/delete step actions.
+                                      // IconButton(
+                                      //   icon: Icon(
+                                      //     CupertinoIcons.pencil,
+                                      //     color: colorScheme.onSurfaceVariant,
+                                      //     size: 18,
+                                      //   ),
+                                      //   onPressed: () {
+                                      //     HapticFeedback.selectionClick();
+                                      //     controller.editTimer(index);
+                                      //   },
+                                      //   padding: EdgeInsets.zero,
+                                      //   constraints: const BoxConstraints(),
+                                      // ),
+                                      // const SizedBox(width: 10),
                                       IconButton(
+                                        tooltip: 'Edit ${timer.name}',
                                         icon: Icon(
                                           CupertinoIcons.pencil,
                                           color: colorScheme.onSurfaceVariant,
@@ -482,11 +583,16 @@ class _TimerListScreenState extends State<TimerListScreen> {
                                           HapticFeedback.selectionClick();
                                           controller.editTimer(index);
                                         },
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
+                                        padding: const EdgeInsets.all(8),
+                                        constraints: const BoxConstraints(
+                                          minWidth: 44,
+                                          minHeight: 44,
+                                        ),
                                       ),
-                                      const SizedBox(width: 10),
+                                      const SizedBox(width: 2),
                                       IconButton(
+                                        // Gene - Nov, 14, 2026: Add Delete tooltip for timer step button.
+                                        tooltip: 'Delete ${timer.name}',
                                         icon: Icon(
                                           CupertinoIcons.trash,
                                           color: colorScheme.onSurfaceVariant,
@@ -547,8 +653,14 @@ class _TimerListScreenState extends State<TimerListScreen> {
                                             );
                                           }
                                         },
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
+                                        // Gene - Nov, 14, 2026: Enforce >= 44x44 minimum tap target on Delete action.
+                                        // padding: EdgeInsets.zero,
+                                        // constraints: const BoxConstraints(),
+                                        padding: const EdgeInsets.all(8),
+                                        constraints: const BoxConstraints(
+                                          minWidth: 44,
+                                          minHeight: 44,
+                                        ),
                                       ),
                                       const SizedBox(width: 8),
                                       Icon(
@@ -575,6 +687,93 @@ class _TimerListScreenState extends State<TimerListScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
+                    // Gene - Nov, 14, 2026: Use contrast-safe phase accents, 44pt button targets, and luminance-safe Start Activity ink.
+                    // Row(
+                    //   children: [
+                    //     Expanded(
+                    //       child: OutlinedButton.icon(
+                    //         onPressed: () {
+                    //           unawaited(HapticFeedback.selectionClick());
+                    //           controller.addTimer(phase: IntervalPhase.work);
+                    //         },
+                    //         icon: Icon(
+                    //           CupertinoIcons.bolt_fill,
+                    //           size: 13,
+                    //           color: AppTheme.iosOrange,
+                    //         ),
+                    //         label: const Text(
+                    //           '+ Work',
+                    //           style: TextStyle(
+                    //             fontSize: 12,
+                    //             fontWeight: FontWeight.w700,
+                    //           ),
+                    //         ),
+                    //         style: OutlinedButton.styleFrom(
+                    //           padding: const EdgeInsets.symmetric(vertical: 8),
+                    //           shape: RoundedRectangleBorder(
+                    //             borderRadius: BorderRadius.circular(10),
+                    //           ),
+                    //         ),
+                    //       ),
+                    //     ),
+                    //     const SizedBox(width: 8),
+                    //     Expanded(
+                    //       child: OutlinedButton.icon(
+                    //         onPressed: () {
+                    //           unawaited(HapticFeedback.selectionClick());
+                    //           controller.addTimer(phase: IntervalPhase.rest);
+                    //         },
+                    //         icon: Icon(
+                    //           CupertinoIcons.moon_fill,
+                    //           size: 13,
+                    //           color: AppTheme.iosBlue,
+                    //         ),
+                    //         label: const Text(
+                    //           '+ Rest',
+                    //           style: TextStyle(
+                    //             fontSize: 12,
+                    //             fontWeight: FontWeight.w700,
+                    //           ),
+                    //         ),
+                    //         style: OutlinedButton.styleFrom(
+                    //           padding: const EdgeInsets.symmetric(vertical: 8),
+                    //           shape: RoundedRectangleBorder(
+                    //             borderRadius: BorderRadius.circular(10),
+                    //           ),
+                    //         ),
+                    //       ),
+                    //     ),
+                    //     const SizedBox(width: 8),
+                    //     Expanded(
+                    //       child: OutlinedButton.icon(
+                    //         onPressed: () {
+                    //           unawaited(HapticFeedback.selectionClick());
+                    //           controller.addTimer(
+                    //             phase: IntervalPhase.cooldown,
+                    //           );
+                    //         },
+                    //         icon: Icon(
+                    //           CupertinoIcons.snow,
+                    //           size: 13,
+                    //           color: AppTheme.iosGreen,
+                    //         ),
+                    //         label: const Text(
+                    //           '+ Cool',
+                    //           style: TextStyle(
+                    //             fontSize: 12,
+                    //             fontWeight: FontWeight.w700,
+                    //           ),
+                    //         ),
+                    //         style: OutlinedButton.styleFrom(
+                    //           padding: const EdgeInsets.symmetric(vertical: 8),
+                    //           shape: RoundedRectangleBorder(
+                    //             borderRadius: BorderRadius.circular(10),
+                    //           ),
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   ],
+                    // ),
                     Row(
                       children: [
                         Expanded(
@@ -586,7 +785,10 @@ class _TimerListScreenState extends State<TimerListScreen> {
                             icon: Icon(
                               CupertinoIcons.bolt_fill,
                               size: 13,
-                              color: AppTheme.iosOrange,
+                              color: AppTheme.readableAccent(
+                                AppTheme.iosOrange,
+                                isDark: isDark,
+                              ),
                             ),
                             label: const Text(
                               '+ Work',
@@ -596,6 +798,7 @@ class _TimerListScreenState extends State<TimerListScreen> {
                               ),
                             ),
                             style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 44),
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -613,7 +816,10 @@ class _TimerListScreenState extends State<TimerListScreen> {
                             icon: Icon(
                               CupertinoIcons.moon_fill,
                               size: 13,
-                              color: AppTheme.iosBlue,
+                              color: AppTheme.readableAccent(
+                                AppTheme.iosBlue,
+                                isDark: isDark,
+                              ),
                             ),
                             label: const Text(
                               '+ Rest',
@@ -623,6 +829,7 @@ class _TimerListScreenState extends State<TimerListScreen> {
                               ),
                             ),
                             style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 44),
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -642,7 +849,10 @@ class _TimerListScreenState extends State<TimerListScreen> {
                             icon: Icon(
                               CupertinoIcons.snow,
                               size: 13,
-                              color: AppTheme.iosGreen,
+                              color: AppTheme.readableAccent(
+                                AppTheme.iosGreen,
+                                isDark: isDark,
+                              ),
                             ),
                             label: const Text(
                               '+ Cool',
@@ -652,6 +862,7 @@ class _TimerListScreenState extends State<TimerListScreen> {
                               ),
                             ),
                             style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 44),
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -682,27 +893,55 @@ class _TimerListScreenState extends State<TimerListScreen> {
               child: SizedBox(
                 width: double.infinity,
                 height: 50,
+                // Gene - Nov, 14, 2026: Use contrast-safe foreground color on Start Activity primary fill.
+                // child: ElevatedButton.icon(
+                //   onPressed: () {
+                //     unawaited(HapticFeedback.selectionClick());
+                //     controller.startTimerSequence();
+                //   },
+                //   icon: const Icon(
+                //     CupertinoIcons.play_fill,
+                //     size: 18,
+                //     color: Colors.white,
+                //   ),
+                //   label: const Text(
+                //     'Start Activity',
+                //     style: TextStyle(
+                //       color: Colors.white,
+                //       fontWeight: FontWeight.w700,
+                //       fontSize: 16,
+                //     ),
+                //   ),
+                //   style: ElevatedButton.styleFrom(
+                //     backgroundColor: colorScheme.primary,
+                //     foregroundColor: Colors.white,
+                //     elevation: 0,
+                //     shape: RoundedRectangleBorder(
+                //       borderRadius: BorderRadius.circular(12),
+                //     ),
+                //   ),
+                // ),
                 child: ElevatedButton.icon(
                   onPressed: () {
                     unawaited(HapticFeedback.selectionClick());
                     controller.startTimerSequence();
                   },
-                  icon: const Icon(
+                  icon: Icon(
                     CupertinoIcons.play_fill,
                     size: 18,
-                    color: Colors.white,
+                    color: AppTheme.onColor(colorScheme.primary),
                   ),
-                  label: const Text(
+                  label: Text(
                     'Start Activity',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppTheme.onColor(colorScheme.primary),
                       fontWeight: FontWeight.w700,
                       fontSize: 16,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colorScheme.primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppTheme.onColor(colorScheme.primary),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

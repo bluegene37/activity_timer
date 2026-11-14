@@ -45,12 +45,20 @@ class ActivityListScreen extends StatelessWidget {
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         bottom: false,
+        // Gene - Nov, 14, 2026: Increase bottom list padding so cards clear 48pt FAB and stacked floaters, and use contrast-safe header icon color.
+        // child: SingleChildScrollView(
+        //   padding: const EdgeInsets.only(
+        //     left: 20.0,
+        //     right: 20.0,
+        //     top: 12.0,
+        //     bottom: 100.0,
+        //   ),
         child: SingleChildScrollView(
           padding: const EdgeInsets.only(
             left: 20.0,
             right: 20.0,
             top: 12.0,
-            bottom: 100.0,
+            bottom: 140.0,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,9 +88,15 @@ class ActivityListScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: const Icon(
+                    // Gene - Nov, 14, 2026: Derive contrast-safe icon foreground from primary color.
+                    // child: const Icon(
+                    //   CupertinoIcons.flame_fill,
+                    //   color: Colors.white,
+                    //   size: 26,
+                    // ),
+                    child: Icon(
                       CupertinoIcons.flame_fill,
-                      color: Colors.white,
+                      color: AppTheme.onColor(colorScheme.primary),
                       size: 26,
                     ),
                   ),
@@ -174,6 +188,52 @@ class ActivityListScreen extends StatelessWidget {
               const SizedBox(height: 14),
 
               // Category Filter Bar (Segmented Control)
+              // Gene - Nov, 14, 2026: Prevent segment label wrapping/overflow at narrow widths & accessibility text scales.
+              // SignalBuilder(
+              //   builder:
+              //       (_) => SizedBox(
+              //         width: double.infinity,
+              //         child: SegmentedButton<String>(
+              //           segments: const [
+              //             ButtonSegment(
+              //               value: 'all',
+              //               label: Text('All'),
+              //               icon: Icon(
+              //                 CupertinoIcons.square_grid_2x2,
+              //                 size: 16,
+              //               ),
+              //             ),
+              //             ButtonSegment(
+              //               value: 'fitness',
+              //               label: Text('Fitness'),
+              //               icon: Icon(CupertinoIcons.bolt_fill, size: 16),
+              //             ),
+              //             ButtonSegment(
+              //               value: 'work',
+              //               label: Text('Work'),
+              //               icon: Icon(CupertinoIcons.briefcase_fill, size: 16),
+              //             ),
+              //           ],
+              //           selected: {controller.selectedCategory.value},
+              //           onSelectionChanged: (selection) {
+              //             HapticFeedback.selectionClick();
+              //             controller.setCategory(selection.first);
+              //           },
+              //           style: SegmentedButton.styleFrom(
+              //             selectedBackgroundColor: colorScheme.primary
+              //                 .withValues(alpha: 0.18),
+              //             selectedForegroundColor: colorScheme.primary,
+              //             side: BorderSide(
+              //               color: AppTheme.separator(isDark: isDark),
+              //               width: 0.8,
+              //             ),
+              //             shape: RoundedRectangleBorder(
+              //               borderRadius: BorderRadius.circular(10),
+              //             ),
+              //           ),
+              //         ),
+              //       ),
+              // ),
               SignalBuilder(
                 builder:
                     (_) => SizedBox(
@@ -182,7 +242,12 @@ class ActivityListScreen extends StatelessWidget {
                         segments: const [
                           ButtonSegment(
                             value: 'all',
-                            label: Text('All'),
+                            label: Text(
+                              'All',
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                             icon: Icon(
                               CupertinoIcons.square_grid_2x2,
                               size: 16,
@@ -190,12 +255,22 @@ class ActivityListScreen extends StatelessWidget {
                           ),
                           ButtonSegment(
                             value: 'fitness',
-                            label: Text('Fitness'),
+                            label: Text(
+                              'Fitness',
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                             icon: Icon(CupertinoIcons.bolt_fill, size: 16),
                           ),
                           ButtonSegment(
                             value: 'work',
-                            label: Text('Work'),
+                            label: Text(
+                              'Work',
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                             icon: Icon(CupertinoIcons.briefcase_fill, size: 16),
                           ),
                         ],
@@ -205,9 +280,14 @@ class ActivityListScreen extends StatelessWidget {
                           controller.setCategory(selection.first);
                         },
                         style: SegmentedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          visualDensity: VisualDensity.compact,
                           selectedBackgroundColor: colorScheme.primary
                               .withValues(alpha: 0.18),
-                          selectedForegroundColor: colorScheme.primary,
+                          selectedForegroundColor: AppTheme.readableAccent(
+                            colorScheme.primary,
+                            isDark: isDark,
+                          ),
                           side: BorderSide(
                             color: AppTheme.separator(isDark: isDark),
                             width: 0.8,
@@ -468,51 +548,116 @@ class ActivityListScreen extends StatelessWidget {
                               const SizedBox(height: 12),
 
                               // Meta Info Row
-                              Row(
+                              // Gene - Nov, 14, 2026: Replace unwrapped Meta Info Row with Wrap so routine metadata badges wrap cleanly without right overflow on narrow viewports or large text scales.
+                              // Row(
+                              //   children: [
+                              //     Icon(
+                              //       CupertinoIcons.stopwatch,
+                              //       size: 14,
+                              //       color: colorScheme.onSurfaceVariant,
+                              //     ),
+                              //     const SizedBox(width: 4),
+                              //     Text(
+                              //       totalDuration,
+                              //       style: textTheme.bodySmall?.copyWith(
+                              //         fontWeight: FontWeight.w700,
+                              //       ),
+                              //     ),
+                              //     const SizedBox(width: 10),
+                              //     Text('•', style: textTheme.bodySmall),
+                              //     const SizedBox(width: 10),
+                              //     Icon(
+                              //       CupertinoIcons.list_number,
+                              //       size: 14,
+                              //       color: colorScheme.onSurfaceVariant,
+                              //     ),
+                              //     const SizedBox(width: 4),
+                              //     Text(
+                              //       '${sequence.timers.length} steps',
+                              //       style: textTheme.bodySmall,
+                              //     ),
+                              //     if (sequence.defaultLoopEnabled) ...[
+                              //       const SizedBox(width: 10),
+                              //       Text('•', style: textTheme.bodySmall),
+                              //       const SizedBox(width: 10),
+                              //       Icon(
+                              //         CupertinoIcons.repeat,
+                              //         size: 14,
+                              //         color: colorScheme.primary,
+                              //       ),
+                              //       const SizedBox(width: 4),
+                              //       Text(
+                              //         'Loop',
+                              //         style: textTheme.bodySmall?.copyWith(
+                              //           color: colorScheme.primary,
+                              //           fontWeight: FontWeight.w700,
+                              //         ),
+                              //       ),
+                              //     ],
+                              //   ],
+                              // ),
+                              Wrap(
+                                spacing: 10,
+                                runSpacing: 4,
+                                crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
-                                  Icon(
-                                    CupertinoIcons.stopwatch,
-                                    size: 14,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    totalDuration,
-                                    style: textTheme.bodySmall?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Text('•', style: textTheme.bodySmall),
-                                  const SizedBox(width: 10),
-                                  Icon(
-                                    CupertinoIcons.list_number,
-                                    size: 14,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${sequence.timers.length} steps',
-                                    style: textTheme.bodySmall,
-                                  ),
-                                  if (sequence.defaultLoopEnabled) ...[
-                                    const SizedBox(width: 10),
-                                    Text('•', style: textTheme.bodySmall),
-                                    const SizedBox(width: 10),
-                                    Icon(
-                                      CupertinoIcons.repeat,
-                                      size: 14,
-                                      color: colorScheme.primary,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Loop',
-                                      style: textTheme.bodySmall?.copyWith(
-                                        color: colorScheme.primary,
-                                        fontWeight: FontWeight.w700,
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        CupertinoIcons.stopwatch,
+                                        size: 14,
+                                        color: colorScheme.onSurfaceVariant,
                                       ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        totalDuration,
+                                        style: textTheme.bodySmall?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        CupertinoIcons.list_number,
+                                        size: 14,
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${sequence.timers.length} steps',
+                                        style: textTheme.bodySmall,
+                                      ),
+                                    ],
+                                  ),
+                                  if (sequence.defaultLoopEnabled)
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          CupertinoIcons.repeat,
+                                          size: 14,
+                                          color: AppTheme.readableAccent(
+                                            colorScheme.primary,
+                                            isDark: isDark,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Loop',
+                                          style: textTheme.bodySmall?.copyWith(
+                                            color: AppTheme.readableAccent(
+                                              colorScheme.primary,
+                                              isDark: isDark,
+                                            ),
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
                                 ],
                               ),
                               const SizedBox(height: 14),
@@ -567,12 +712,33 @@ class ActivityListScreen extends StatelessWidget {
                                         CupertinoIcons.play_fill,
                                         size: 15,
                                       ),
-                                      label: const Text('Start'),
+                                      // Gene - Nov, 14, 2026: Derive contrast-safe Start button foreground and protect label from wrapping overflow.
+                                      // label: const Text('Start'),
+                                      // style: ElevatedButton.styleFrom(
+                                      //   backgroundColor: colorScheme.primary,
+                                      //   foregroundColor: Colors.white,
+                                      //   padding: const EdgeInsets.symmetric(
+                                      //     vertical: 10,
+                                      //   ),
+                                      //   shape: RoundedRectangleBorder(
+                                      //     borderRadius: BorderRadius.circular(
+                                      //       10,
+                                      //     ),
+                                      //   ),
+                                      // ),
+                                      label: const Text(
+                                        'Start',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: colorScheme.primary,
-                                        foregroundColor: Colors.white,
+                                        foregroundColor: AppTheme.onColor(
+                                          colorScheme.primary,
+                                        ),
                                         padding: const EdgeInsets.symmetric(
                                           vertical: 10,
+                                          horizontal: 8,
                                         ),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(
@@ -1393,6 +1559,32 @@ class ActivityListScreen extends StatelessWidget {
                     ],
                   ),
                 ),
+                // Gene - Nov, 14, 2026: Enforce >=44pt minimum touch target on Quick Timer Custom button and Quick Timer preset chips, and AA accent label contrast.
+                // TextButton.icon(
+                //   key: const Key('quick-timer-custom-button'),
+                //   onPressed: () {
+                //     unawaited(HapticFeedback.selectionClick());
+                //     _showQuickTimerCustomSheet(context);
+                //   },
+                //   icon: Icon(
+                //     CupertinoIcons.slider_horizontal_3,
+                //     size: 14,
+                //     color: colorScheme.primary,
+                //   ),
+                //   label: Text(
+                //     'Custom',
+                //     style: textTheme.bodySmall?.copyWith(
+                //       color: colorScheme.primary,
+                //       fontWeight: FontWeight.w700,
+                //     ),
+                //   ),
+                //   style: TextButton.styleFrom(
+                //     visualDensity: VisualDensity.compact,
+                //     padding: const EdgeInsets.symmetric(horizontal: 8),
+                //     minimumSize: Size.zero,
+                //     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                //   ),
+                // ),
                 TextButton.icon(
                   key: const Key('quick-timer-custom-button'),
                   onPressed: () {
@@ -1402,28 +1594,62 @@ class ActivityListScreen extends StatelessWidget {
                   icon: Icon(
                     CupertinoIcons.slider_horizontal_3,
                     size: 14,
-                    color: colorScheme.primary,
+                    color: AppTheme.readableAccent(
+                      colorScheme.primary,
+                      isDark: isDark,
+                    ),
                   ),
                   label: Text(
                     'Custom',
                     style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.primary,
+                      color: AppTheme.readableAccent(
+                        colorScheme.primary,
+                        isDark: isDark,
+                      ),
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    minimumSize: const Size(44, 44),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
+            // Wrap(
+            //   spacing: 8,
+            //   runSpacing: 8,
+            //   children: [
+            //     for (final (label, minutes) in presets)
+            //       ActionChip(
+            //         key: Key('quick-timer-$label'),
+            //         label: Text(
+            //           label,
+            //           style: TextStyle(
+            //             fontSize: 12.5,
+            //             fontWeight: FontWeight.w700,
+            //             color: colorScheme.primary,
+            //           ),
+            //         ),
+            //         backgroundColor: colorScheme.primary.withValues(
+            //           alpha: 0.12,
+            //         ),
+            //         side: BorderSide.none,
+            //         visualDensity: VisualDensity.compact,
+            //         onPressed: () {
+            //           unawaited(HapticFeedback.selectionClick());
+            //           _startQuickTimer(
+            //             Duration(minutes: minutes),
+            //             customTitle: '$minutes Min Timer',
+            //           );
+            //         },
+            //       ),
+            //   ],
+            // ),
             Wrap(
               spacing: 8,
-              runSpacing: 8,
+              runSpacing: 4,
               children: [
                 for (final (label, minutes) in presets)
                   ActionChip(
@@ -1433,14 +1659,17 @@ class ActivityListScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
-                        color: colorScheme.primary,
+                        color: AppTheme.readableAccent(
+                          colorScheme.primary,
+                          isDark: isDark,
+                        ),
                       ),
                     ),
                     backgroundColor: colorScheme.primary.withValues(
                       alpha: 0.12,
                     ),
                     side: BorderSide.none,
-                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.padded,
                     onPressed: () {
                       unawaited(HapticFeedback.selectionClick());
                       _startQuickTimer(
@@ -1495,7 +1724,115 @@ class ActivityListScreen extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetContext) {
-        return Padding(
+        // Gene - Nov, 14, 2026: Wrap QuickTimerCustomSheet in SingleChildScrollView + Expanded header title + Close tooltip so keyboard/compact viewports never overflow.
+        // return Padding(
+        //   padding: EdgeInsets.only(
+        //     left: 20,
+        //     right: 20,
+        //     top: 14,
+        //     bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+        //   ),
+        //   child: Column(
+        //     mainAxisSize: MainAxisSize.min,
+        //     crossAxisAlignment: CrossAxisAlignment.start,
+        //     children: [
+        //       Center(
+        //         child: Container(
+        //           width: 36,
+        //           height: 5,
+        //           decoration: BoxDecoration(
+        //             color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+        //             borderRadius: BorderRadius.circular(2.5),
+        //           ),
+        //         ),
+        //       ),
+        //       const SizedBox(height: 14),
+        //       Row(
+        //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        //         children: [
+        //           Text(
+        //             'Custom Quick Timer',
+        //             style: textTheme.titleLarge?.copyWith(
+        //               fontWeight: FontWeight.w700,
+        //             ),
+        //           ),
+        //           IconButton(
+        //             icon: const Icon(
+        //               CupertinoIcons.xmark_circle_fill,
+        //               size: 22,
+        //             ),
+        //             color: colorScheme.onSurfaceVariant,
+        //             onPressed: () => Navigator.pop(sheetContext),
+        //           ),
+        //         ],
+        //       ),
+        //       const SizedBox(height: 10),
+        //       DecoratedBox(
+        //         decoration: BoxDecoration(
+        //           color: AppTheme.cardBackground(isDark: isDark),
+        //           borderRadius: BorderRadius.circular(12),
+        //           border: Border.all(
+        //             color: AppTheme.separator(isDark: isDark),
+        //             width: 0.8,
+        //           ),
+        //         ),
+        //         child: TextField(
+        //           controller: labelController,
+        //           decoration: const InputDecoration(
+        //             hintText: 'Timer label (optional, e.g. Pasta, Nap)...',
+        //             border: InputBorder.none,
+        //             contentPadding: EdgeInsets.symmetric(
+        //               horizontal: 14,
+        //               vertical: 12,
+        //             ),
+        //           ),
+        //         ),
+        //       ),
+        //       const SizedBox(height: 12),
+        //       SizedBox(
+        //         height: 180,
+        //         child: CupertinoTimerPicker(
+        //           mode: CupertinoTimerPickerMode.hms,
+        //           initialTimerDuration: selectedDuration,
+        //           onTimerDurationChanged: (newDuration) {
+        //             if (newDuration.inSeconds > 0) {
+        //               selectedDuration = newDuration;
+        //             }
+        //           },
+        //         ),
+        //       ),
+        //       const SizedBox(height: 16),
+        //       SizedBox(
+        //         width: double.infinity,
+        //         height: 48,
+        //         child: ElevatedButton.icon(
+        //           key: const Key('start-custom-quick-timer-button'),
+        //           onPressed: () {
+        //             final label = labelController.text.trim();
+        //             Navigator.pop(sheetContext);
+        //             _startQuickTimer(
+        //               selectedDuration,
+        //               customTitle: label.isEmpty ? null : label,
+        //             );
+        //           },
+        //           icon: const Icon(CupertinoIcons.play_fill, size: 16),
+        //           label: const Text(
+        //             'Start Quick Timer',
+        //             style: TextStyle(fontWeight: FontWeight.w700),
+        //           ),
+        //           style: ElevatedButton.styleFrom(
+        //             backgroundColor: colorScheme.primary,
+        //             foregroundColor: Colors.white,
+        //             shape: RoundedRectangleBorder(
+        //               borderRadius: BorderRadius.circular(12),
+        //             ),
+        //           ),
+        //         ),
+        //       ),
+        //     ],
+        //   ),
+        // );
+        return SingleChildScrollView(
           padding: EdgeInsets.only(
             left: 20,
             right: 20,
@@ -1520,13 +1857,18 @@ class ActivityListScreen extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Custom Quick Timer',
-                    style: textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
+                  Expanded(
+                    child: Text(
+                      'Custom Quick Timer',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   IconButton(
+                    tooltip: 'Close',
                     icon: const Icon(
                       CupertinoIcons.xmark_circle_fill,
                       size: 22,
@@ -1592,7 +1934,7 @@ class ActivityListScreen extends StatelessWidget {
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colorScheme.primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppTheme.onColor(colorScheme.primary),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

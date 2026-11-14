@@ -100,9 +100,33 @@ class _BrewEditScreenState extends State<BrewEditScreen> {
     });
   }
 
+  // Gene - Nov, 14, 2026: Validate raw dose and ratio text fields on Save so cleared or non-positive edits surface validation errors instead of keeping stale _draft values.
+  // Future<void> _save() async {
+  //   _draft.name = _nameField.text.trim();
+  //   final errors = _draft.validationErrors();
+  //   if (errors.isNotEmpty) {
+  //     setState(() => _errors = errors);
+  //     return;
+  //   }
   Future<void> _save() async {
     _draft.name = _nameField.text.trim();
-    final errors = _draft.validationErrors();
+    final inputErrors = <String>[];
+    final parsedDose = double.tryParse(_doseField.text.trim());
+    if (parsedDose == null || parsedDose <= 0) {
+      inputErrors.add('Dose must be greater than 0g.');
+    } else {
+      _draft.doseGrams = parsedDose;
+    }
+    final parsedRatio = double.tryParse(_ratioField.text.trim());
+    if (parsedRatio == null || parsedRatio <= 0) {
+      inputErrors.add('Ratio must be greater than 0.');
+    } else {
+      _draft.ratio = parsedRatio;
+    }
+    final errors = <String>[
+      ...inputErrors,
+      ..._draft.validationErrors().where((e) => !inputErrors.contains(e)),
+    ];
     if (errors.isNotEmpty) {
       setState(() => _errors = errors);
       return;
@@ -175,15 +199,38 @@ class _BrewEditScreenState extends State<BrewEditScreen> {
                   decoration: const InputDecoration(labelText: 'Name'),
                 ),
                 const SizedBox(height: 16),
+                // Gene - Nov, 14, 2026: Enable isExpanded and ellipsis overflow on BrewMethod dropdown so wide method labels never overflow on compact 320px viewports at accessibility text scales.
+                // DropdownButtonFormField<BrewMethod>(
+                //   key: const Key('brew-method-field'),
+                //   initialValue: _draft.method,
+                //   decoration: const InputDecoration(labelText: 'Method'),
+                //   items: [
+                //     for (final method in BrewMethod.values)
+                //       DropdownMenuItem(
+                //         value: method,
+                //         child: Text(method.displayName),
+                //       ),
+                //   ],
+                //   onChanged: (method) {
+                //     if (method != null) {
+                //       setState(() => _draft.method = method);
+                //     }
+                //   },
+                // ),
                 DropdownButtonFormField<BrewMethod>(
                   key: const Key('brew-method-field'),
                   initialValue: _draft.method,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Method'),
                   items: [
                     for (final method in BrewMethod.values)
                       DropdownMenuItem(
                         value: method,
-                        child: Text(method.displayName),
+                        child: Text(
+                          method.displayName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                   ],
                   onChanged: (method) {
@@ -321,17 +368,34 @@ class _StepRow extends StatelessWidget {
                   },
                 ),
               ),
+              // Gene - Nov, 14, 2026: Add tooltips for WCAG labeledTapTargetGuideline compliance on brew step action IconButtons.
+              // IconButton(
+              //   icon: const Icon(Icons.arrow_upward),
+              //   onPressed: onMoveUp,
+              // ),
+              // IconButton(
+              //   icon: const Icon(Icons.arrow_downward),
+              //   onPressed: onMoveDown,
+              // ),
+              // IconButton(
+              //   icon: const Icon(Icons.delete_outline),
+              //   color: palette.lead,
+              //   onPressed: onDelete,
+              // ),
               IconButton(
                 icon: const Icon(Icons.arrow_upward),
+                tooltip: 'Move step up',
                 onPressed: onMoveUp,
               ),
               IconButton(
                 icon: const Icon(Icons.arrow_downward),
+                tooltip: 'Move step down',
                 onPressed: onMoveDown,
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline),
                 color: palette.lead,
+                tooltip: 'Delete step',
                 onPressed: onDelete,
               ),
             ],
@@ -344,8 +408,13 @@ class _StepRow extends StatelessWidget {
                   initialValue: step.seconds.toString(),
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(labelText: 'Seconds'),
+                  // Gene - Nov, 14, 2026: Add accessibility tooltips to step reorder and delete IconButtons, and store 0 when step seconds input is invalid/cleared so Save catches it.
+                  // onChanged: (value) {
+                  //   step.seconds = int.tryParse(value) ?? step.seconds;
+                  //   onChanged();
+                  // },
                   onChanged: (value) {
-                    step.seconds = int.tryParse(value) ?? step.seconds;
+                    step.seconds = int.tryParse(value.trim()) ?? 0;
                     onChanged();
                   },
                 ),

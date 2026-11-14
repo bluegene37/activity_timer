@@ -8,6 +8,8 @@ import '../components/alarm_sound_picker.dart';
 import '../models/alarm_sound.dart';
 import '../models/interval_timer.dart';
 import '../services/database_service.dart';
+// Gene - Nov, 14, 2026: Added IntervalSessionService import to refresh running/armed sessions when edits are saved.
+import '../services/interval_session_service.dart';
 import '../theme/app_theme.dart';
 
 class EditIntervalTimerScreen extends StatefulWidget {
@@ -187,10 +189,20 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
       activeDays: sortedDays,
     );
 
+    // Gene - Nov, 14, 2026: Refresh IntervalSessionService if editing an armed or active interval timer so schedule & OS alarms update immediately, and add tooltips on icon controls.
+    // if (widget.isNew) {
+    //   await _databaseService.createIntervalTimer(updatedTimer);
+    // } else {
+    //   await _databaseService.updateIntervalTimer(updatedTimer);
+    // }
     if (widget.isNew) {
       await _databaseService.createIntervalTimer(updatedTimer);
     } else {
       await _databaseService.updateIntervalTimer(updatedTimer);
+      if (updatedTimer.isActive ||
+          IntervalSessionService().active.value?.timer.id == updatedTimer.id) {
+        IntervalSessionService().refreshIfActive(updatedTimer);
+      }
     }
 
     if (mounted) {
@@ -220,7 +232,17 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        // Gene - Nov, 14, 2026: Add Back tooltip on navigation IconButton for screen reader clarity.
+        // leading: IconButton(
+        //   icon: Icon(
+        //     CupertinoIcons.chevron_back,
+        //     color: colorScheme.onSurface,
+        //     size: 22,
+        //   ),
+        //   onPressed: () => Navigator.pop(context),
+        // ),
         leading: IconButton(
+          tooltip: 'Back',
           icon: Icon(
             CupertinoIcons.chevron_back,
             color: colorScheme.onSurface,
@@ -651,10 +673,55 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
                             horizontal: 18,
                             vertical: 4,
                           ),
+                          // Gene - Nov, 14, 2026: Add tooltips and >= 44x44 minimum tap targets on interval stepper buttons.
+                          // trailing: Row(
+                          //   mainAxisSize: MainAxisSize.min,
+                          //   children: [
+                          //     IconButton(
+                          //       icon: const Icon(
+                          //         CupertinoIcons.minus,
+                          //         size: 16,
+                          //       ),
+                          //       onPressed:
+                          //           _intervalValue > 1
+                          //               ? () {
+                          //                 unawaited(
+                          //                   HapticFeedback.selectionClick(),
+                          //                 );
+                          //                 setState(() => _intervalValue--);
+                          //               }
+                          //               : null,
+                          //       constraints: const BoxConstraints(),
+                          //       padding: const EdgeInsets.all(6),
+                          //     ),
+                          //     const SizedBox(width: 8),
+                          //     Text(
+                          //       '$_intervalValue',
+                          //       style: textTheme.titleMedium?.copyWith(
+                          //         fontWeight: FontWeight.w700,
+                          //       ),
+                          //     ),
+                          //     const SizedBox(width: 8),
+                          //     IconButton(
+                          //       icon: Icon(
+                          //         CupertinoIcons.plus,
+                          //         size: 16,
+                          //         color: colorScheme.primary,
+                          //       ),
+                          //       onPressed: () {
+                          //         unawaited(HapticFeedback.selectionClick());
+                          //         setState(() => _intervalValue++);
+                          //       },
+                          //       constraints: const BoxConstraints(),
+                          //       padding: const EdgeInsets.all(6),
+                          //     ),
+                          //   ],
+                          // ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
+                                tooltip: 'Decrease interval',
                                 icon: const Icon(
                                   CupertinoIcons.minus,
                                   size: 16,
@@ -668,18 +735,22 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
                                           setState(() => _intervalValue--);
                                         }
                                         : null,
-                                constraints: const BoxConstraints(),
-                                padding: const EdgeInsets.all(6),
+                                constraints: const BoxConstraints(
+                                  minWidth: 44,
+                                  minHeight: 44,
+                                ),
+                                padding: const EdgeInsets.all(8),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 4),
                               Text(
                                 '$_intervalValue',
                                 style: textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 4),
                               IconButton(
+                                tooltip: 'Increase interval',
                                 icon: Icon(
                                   CupertinoIcons.plus,
                                   size: 16,
@@ -689,8 +760,11 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
                                   unawaited(HapticFeedback.selectionClick());
                                   setState(() => _intervalValue++);
                                 },
-                                constraints: const BoxConstraints(),
-                                padding: const EdgeInsets.all(6),
+                                constraints: const BoxConstraints(
+                                  minWidth: 44,
+                                  minHeight: 44,
+                                ),
+                                padding: const EdgeInsets.all(8),
                               ),
                             ],
                           ),

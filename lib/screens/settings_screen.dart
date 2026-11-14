@@ -130,11 +130,57 @@ class SettingsScreen extends StatelessWidget {
                             builder:
                                 (_) => SizedBox(
                                   width: double.infinity,
+                                  // Gene - Nov, 14, 2026: Prevent segment wrapping/overflow at larger text scales and compact viewports.
+                                  // child: SegmentedButton<AppThemeStyle>(
+                                  //   segments: const [
+                                  //     ButtonSegment(
+                                  //       value: AppThemeStyle.ios,
+                                  //       label: Text('Modern'),
+                                  //       icon: Icon(
+                                  //         CupertinoIcons.device_phone_portrait,
+                                  //         size: 16,
+                                  //       ),
+                                  //     ),
+                                  //     ButtonSegment(
+                                  //       value: AppThemeStyle.coffee,
+                                  //       label: Text('Coffee'),
+                                  //       icon: Icon(Icons.coffee, size: 16),
+                                  //     ),
+                                  //   ],
+                                  //   selected: {appController.themeStyle.value},
+                                  //   onSelectionChanged: (selection) {
+                                  //     HapticFeedback.selectionClick();
+                                  //     appController.setThemeStyle(
+                                  //       selection.first,
+                                  //     );
+                                  //   },
+                                  //   style: SegmentedButton.styleFrom(
+                                  //     selectedBackgroundColor: colorScheme
+                                  //         .primary
+                                  //         .withValues(alpha: 0.18),
+                                  //     selectedForegroundColor:
+                                  //         colorScheme.primary,
+                                  //     side: BorderSide(
+                                  //       color: AppTheme.separator(
+                                  //         isDark: isDark,
+                                  //       ),
+                                  //       width: 0.8,
+                                  //     ),
+                                  //     shape: RoundedRectangleBorder(
+                                  //       borderRadius: BorderRadius.circular(10),
+                                  //     ),
+                                  //   ),
+                                  // ),
                                   child: SegmentedButton<AppThemeStyle>(
                                     segments: const [
                                       ButtonSegment(
                                         value: AppThemeStyle.ios,
-                                        label: Text('Modern'),
+                                        label: Text(
+                                          'Modern',
+                                          maxLines: 1,
+                                          softWrap: false,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                         icon: Icon(
                                           CupertinoIcons.device_phone_portrait,
                                           size: 16,
@@ -142,7 +188,12 @@ class SettingsScreen extends StatelessWidget {
                                       ),
                                       ButtonSegment(
                                         value: AppThemeStyle.coffee,
-                                        label: Text('Coffee'),
+                                        label: Text(
+                                          'Coffee',
+                                          maxLines: 1,
+                                          softWrap: false,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                         icon: Icon(Icons.coffee, size: 16),
                                       ),
                                     ],
@@ -154,11 +205,17 @@ class SettingsScreen extends StatelessWidget {
                                       );
                                     },
                                     style: SegmentedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                      ),
                                       selectedBackgroundColor: colorScheme
                                           .primary
                                           .withValues(alpha: 0.18),
                                       selectedForegroundColor:
-                                          colorScheme.primary,
+                                          AppTheme.readableAccent(
+                                            colorScheme.primary,
+                                            isDark: isDark,
+                                          ),
                                       side: BorderSide(
                                         color: AppTheme.separator(
                                           isDark: isDark,
@@ -180,8 +237,13 @@ class SettingsScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 3),
+                          // Gene - Nov, 14, 2026: Clarify that Light is the default while System matches device appearance.
+                          // Text(
+                          //   'System follows your device setting',
+                          //   style: textTheme.bodySmall,
+                          // ),
                           Text(
-                            'System follows your device setting',
+                            'Defaults to Light; choose System to match device',
                             style: textTheme.bodySmall,
                           ),
                           const SizedBox(height: 14),
@@ -189,11 +251,68 @@ class SettingsScreen extends StatelessWidget {
                             builder:
                                 (_) => SizedBox(
                                   width: double.infinity,
+                                  // Gene - Nov, 14, 2026: Prevent theme mode segment label wrapping and overflow on 320px/Ahem/large text.
+                                  // child: SegmentedButton<ThemeMode>(
+                                  //   segments: const [
+                                  //     ButtonSegment(
+                                  //       value: ThemeMode.system,
+                                  //       label: Text('System'),
+                                  //       icon: Icon(
+                                  //         CupertinoIcons.device_phone_portrait,
+                                  //         size: 16,
+                                  //       ),
+                                  //     ),
+                                  //     ButtonSegment(
+                                  //       value: ThemeMode.light,
+                                  //       label: Text('Light'),
+                                  //       icon: Icon(
+                                  //         CupertinoIcons.sun_max_fill,
+                                  //         size: 16,
+                                  //       ),
+                                  //     ),
+                                  //     ButtonSegment(
+                                  //       value: ThemeMode.dark,
+                                  //       label: Text('Dark'),
+                                  //       icon: Icon(
+                                  //         CupertinoIcons.moon_fill,
+                                  //         size: 16,
+                                  //       ),
+                                  //     ),
+                                  //   ],
+                                  //   selected: {appController.themeMode.value},
+                                  //   onSelectionChanged: (selection) {
+                                  //     HapticFeedback.selectionClick();
+                                  //     appController.setThemeMode(
+                                  //       selection.first,
+                                  //     );
+                                  //   },
+                                  //   style: SegmentedButton.styleFrom(
+                                  //     selectedBackgroundColor: colorScheme
+                                  //         .primary
+                                  //         .withValues(alpha: 0.18),
+                                  //     selectedForegroundColor:
+                                  //         colorScheme.primary,
+                                  //     side: BorderSide(
+                                  //       color: AppTheme.separator(
+                                  //         isDark: isDark,
+                                  //       ),
+                                  //       width: 0.8,
+                                  //     ),
+                                  //     shape: RoundedRectangleBorder(
+                                  //       borderRadius: BorderRadius.circular(10),
+                                  //     ),
+                                  //   ),
+                                  // ),
                                   child: SegmentedButton<ThemeMode>(
                                     segments: const [
                                       ButtonSegment(
                                         value: ThemeMode.system,
-                                        label: Text('System'),
+                                        label: Text(
+                                          'System',
+                                          maxLines: 1,
+                                          softWrap: false,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                         icon: Icon(
                                           CupertinoIcons.device_phone_portrait,
                                           size: 16,
@@ -201,7 +320,12 @@ class SettingsScreen extends StatelessWidget {
                                       ),
                                       ButtonSegment(
                                         value: ThemeMode.light,
-                                        label: Text('Light'),
+                                        label: Text(
+                                          'Light',
+                                          maxLines: 1,
+                                          softWrap: false,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                         icon: Icon(
                                           CupertinoIcons.sun_max_fill,
                                           size: 16,
@@ -209,7 +333,12 @@ class SettingsScreen extends StatelessWidget {
                                       ),
                                       ButtonSegment(
                                         value: ThemeMode.dark,
-                                        label: Text('Dark'),
+                                        label: Text(
+                                          'Dark',
+                                          maxLines: 1,
+                                          softWrap: false,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                         icon: Icon(
                                           CupertinoIcons.moon_fill,
                                           size: 16,
@@ -224,11 +353,17 @@ class SettingsScreen extends StatelessWidget {
                                       );
                                     },
                                     style: SegmentedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                      ),
                                       selectedBackgroundColor: colorScheme
                                           .primary
                                           .withValues(alpha: 0.18),
                                       selectedForegroundColor:
-                                          colorScheme.primary,
+                                          AppTheme.readableAccent(
+                                            colorScheme.primary,
+                                            isDark: isDark,
+                                          ),
                                       side: BorderSide(
                                         color: AppTheme.separator(
                                           isDark: isDark,
@@ -315,43 +450,87 @@ class SettingsScreen extends StatelessWidget {
                   type: MaterialType.transparency,
                   child: Column(
                     children: [
+                      // Gene - Nov, 14, 2026: Merge label and toggle semantics on all four notification switch rows.
+                      // SignalBuilder(
+                      //   builder:
+                      //       (_) => Padding(
+                      //         padding: const EdgeInsets.symmetric(
+                      //           horizontal: 18,
+                      //           vertical: 12,
+                      //         ),
+                      //         child: Row(
+                      //           children: [
+                      //             Expanded(
+                      //               child: Column(
+                      //                 crossAxisAlignment:
+                      //                     CrossAxisAlignment.start,
+                      //                 children: [
+                      //                   Text(
+                      //                     'Sound Alerts',
+                      //                     style: textTheme.titleSmall?.copyWith(
+                      //                       fontWeight: FontWeight.w600,
+                      //                     ),
+                      //                   ),
+                      //                   const SizedBox(height: 2),
+                      //                   Text(
+                      //                     'Play sound when timer completes',
+                      //                     style: textTheme.bodySmall,
+                      //                   ),
+                      //                 ],
+                      //               ),
+                      //             ),
+                      //             CupertinoSwitch(
+                      //               value: appController.soundEnabled.value,
+                      //               activeTrackColor: colorScheme.primary,
+                      //               onChanged: (value) {
+                      //                 HapticFeedback.selectionClick();
+                      //                 controller.toggleSound(value);
+                      //               },
+                      //             ),
+                      //           ],
+                      //         ),
+                      //       ),
+                      // ),
                       SignalBuilder(
                         builder:
-                            (_) => Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 12,
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Sound Alerts',
-                                          style: textTheme.titleSmall?.copyWith(
-                                            fontWeight: FontWeight.w600,
+                            (_) => MergeSemantics(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 12,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Sound Alerts',
+                                            style: textTheme.titleSmall
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                           ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Play sound when timer completes',
-                                          style: textTheme.bodySmall,
-                                        ),
-                                      ],
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Play sound when timer completes',
+                                            style: textTheme.bodySmall,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  CupertinoSwitch(
-                                    value: appController.soundEnabled.value,
-                                    activeTrackColor: colorScheme.primary,
-                                    onChanged: (value) {
-                                      HapticFeedback.selectionClick();
-                                      controller.toggleSound(value);
-                                    },
-                                  ),
-                                ],
+                                    CupertinoSwitch(
+                                      value: appController.soundEnabled.value,
+                                      activeTrackColor: colorScheme.primary,
+                                      onChanged: (value) {
+                                        HapticFeedback.selectionClick();
+                                        controller.toggleSound(value);
+                                      },
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                       ),
@@ -359,43 +538,87 @@ class SettingsScreen extends StatelessWidget {
                         height: 1,
                         color: AppTheme.separator(isDark: isDark),
                       ),
+                      // SignalBuilder(
+                      //   builder:
+                      //       (_) => Padding(
+                      //         padding: const EdgeInsets.symmetric(
+                      //           horizontal: 18,
+                      //           vertical: 12,
+                      //         ),
+                      //         child: Row(
+                      //           children: [
+                      //             Expanded(
+                      //               child: Column(
+                      //                 crossAxisAlignment:
+                      //                     CrossAxisAlignment.start,
+                      //                 children: [
+                      //                   Text(
+                      //                     'Vibration',
+                      //                     style: textTheme.titleSmall?.copyWith(
+                      //                       fontWeight: FontWeight.w600,
+                      //                     ),
+                      //                   ),
+                      //                   const SizedBox(height: 2),
+                      //                   Text(
+                      //                     'Vibrate when timer completes',
+                      //                     style: textTheme.bodySmall,
+                      //                   ),
+                      //                 ],
+                      //               ),
+                      //             ),
+                      //             CupertinoSwitch(
+                      //               value: appController.vibrationEnabled.value,
+                      //               activeTrackColor: colorScheme.primary,
+                      //               onChanged: (value) {
+                      //                 HapticFeedback.selectionClick();
+                      //                 controller.toggleVibration(value);
+                      //               },
+                      //             ),
+                      //           ],
+                      //         ),
+                      //       ),
+                      // ),
                       SignalBuilder(
                         builder:
-                            (_) => Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 12,
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Vibration',
-                                          style: textTheme.titleSmall?.copyWith(
-                                            fontWeight: FontWeight.w600,
+                            (_) => MergeSemantics(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 12,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Vibration',
+                                            style: textTheme.titleSmall
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                           ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Vibrate when timer completes',
-                                          style: textTheme.bodySmall,
-                                        ),
-                                      ],
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Vibrate when timer completes',
+                                            style: textTheme.bodySmall,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  CupertinoSwitch(
-                                    value: appController.vibrationEnabled.value,
-                                    activeTrackColor: colorScheme.primary,
-                                    onChanged: (value) {
-                                      HapticFeedback.selectionClick();
-                                      controller.toggleVibration(value);
-                                    },
-                                  ),
-                                ],
+                                    CupertinoSwitch(
+                                      value:
+                                          appController.vibrationEnabled.value,
+                                      activeTrackColor: colorScheme.primary,
+                                      onChanged: (value) {
+                                        HapticFeedback.selectionClick();
+                                        controller.toggleVibration(value);
+                                      },
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                       ),
@@ -404,47 +627,94 @@ class SettingsScreen extends StatelessWidget {
                         color: AppTheme.separator(isDark: isDark),
                       ),
                       // Gene - Nov, 8, 2026: Added Countdown Beeps (3-2-1) and Halfway Alert (50%) toggles to SettingsScreen.
+                      // SignalBuilder(
+                      //   builder:
+                      //       (_) => Padding(
+                      //         padding: const EdgeInsets.symmetric(
+                      //           horizontal: 18,
+                      //           vertical: 12,
+                      //         ),
+                      //         child: Row(
+                      //           children: [
+                      //             Expanded(
+                      //               child: Column(
+                      //                 crossAxisAlignment:
+                      //                     CrossAxisAlignment.start,
+                      //                 children: [
+                      //                   Text(
+                      //                     'Countdown Beeps (3-2-1)',
+                      //                     style: textTheme.titleSmall?.copyWith(
+                      //                       fontWeight: FontWeight.w600,
+                      //                     ),
+                      //                   ),
+                      //                   const SizedBox(height: 2),
+                      //                   Text(
+                      //                     'Short ticks on the final 3 seconds',
+                      //                     style: textTheme.bodySmall,
+                      //                   ),
+                      //                 ],
+                      //               ),
+                      //             ),
+                      //             CupertinoSwitch(
+                      //               key: const Key('settings-countdown-beeps'),
+                      //               value:
+                      //                   appController
+                      //                       .countdownBeepsEnabled
+                      //                       .value,
+                      //               activeTrackColor: colorScheme.primary,
+                      //               onChanged: (value) {
+                      //                 HapticFeedback.selectionClick();
+                      //                 controller.toggleCountdownBeeps(value);
+                      //               },
+                      //             ),
+                      //           ],
+                      //         ),
+                      //       ),
+                      // ),
                       SignalBuilder(
                         builder:
-                            (_) => Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 12,
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Countdown Beeps (3-2-1)',
-                                          style: textTheme.titleSmall?.copyWith(
-                                            fontWeight: FontWeight.w600,
+                            (_) => MergeSemantics(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 12,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Countdown Beeps (3-2-1)',
+                                            style: textTheme.titleSmall
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                           ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Short ticks on the final 3 seconds',
-                                          style: textTheme.bodySmall,
-                                        ),
-                                      ],
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Short ticks on the final 3 seconds',
+                                            style: textTheme.bodySmall,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  CupertinoSwitch(
-                                    key: const Key('settings-countdown-beeps'),
-                                    value:
-                                        appController
-                                            .countdownBeepsEnabled
-                                            .value,
-                                    activeTrackColor: colorScheme.primary,
-                                    onChanged: (value) {
-                                      HapticFeedback.selectionClick();
-                                      controller.toggleCountdownBeeps(value);
-                                    },
-                                  ),
-                                ],
+                                    CupertinoSwitch(
+                                      key: const Key('settings-countdown-beeps'),
+                                      value:
+                                          appController
+                                              .countdownBeepsEnabled
+                                              .value,
+                                      activeTrackColor: colorScheme.primary,
+                                      onChanged: (value) {
+                                        HapticFeedback.selectionClick();
+                                        controller.toggleCountdownBeeps(value);
+                                      },
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                       ),
@@ -452,47 +722,94 @@ class SettingsScreen extends StatelessWidget {
                         height: 1,
                         color: AppTheme.separator(isDark: isDark),
                       ),
+                      // SignalBuilder(
+                      //   builder:
+                      //       (_) => Padding(
+                      //         padding: const EdgeInsets.symmetric(
+                      //           horizontal: 18,
+                      //           vertical: 12,
+                      //         ),
+                      //         child: Row(
+                      //           children: [
+                      //             Expanded(
+                      //               child: Column(
+                      //                 crossAxisAlignment:
+                      //                     CrossAxisAlignment.start,
+                      //                 children: [
+                      //                   Text(
+                      //                     'Halfway Alert (50%)',
+                      //                     style: textTheme.titleSmall?.copyWith(
+                      //                       fontWeight: FontWeight.w600,
+                      //                     ),
+                      //                   ),
+                      //                   const SizedBox(height: 2),
+                      //                   Text(
+                      //                     'Gentle chime at the midpoint of steps',
+                      //                     style: textTheme.bodySmall,
+                      //                   ),
+                      //                 ],
+                      //               ),
+                      //             ),
+                      //             CupertinoSwitch(
+                      //               key: const Key('settings-halfway-warning'),
+                      //               value:
+                      //                   appController
+                      //                       .halfwayWarningEnabled
+                      //                       .value,
+                      //               activeTrackColor: colorScheme.primary,
+                      //               onChanged: (value) {
+                      //                 HapticFeedback.selectionClick();
+                      //                 controller.toggleHalfwayWarning(value);
+                      //               },
+                      //             ),
+                      //           ],
+                      //         ),
+                      //       ),
+                      // ),
                       SignalBuilder(
                         builder:
-                            (_) => Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 12,
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Halfway Alert (50%)',
-                                          style: textTheme.titleSmall?.copyWith(
-                                            fontWeight: FontWeight.w600,
+                            (_) => MergeSemantics(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 12,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Halfway Alert (50%)',
+                                            style: textTheme.titleSmall
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                           ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Gentle chime at the midpoint of steps',
-                                          style: textTheme.bodySmall,
-                                        ),
-                                      ],
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Gentle chime at the midpoint of steps',
+                                            style: textTheme.bodySmall,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  CupertinoSwitch(
-                                    key: const Key('settings-halfway-warning'),
-                                    value:
-                                        appController
-                                            .halfwayWarningEnabled
-                                            .value,
-                                    activeTrackColor: colorScheme.primary,
-                                    onChanged: (value) {
-                                      HapticFeedback.selectionClick();
-                                      controller.toggleHalfwayWarning(value);
-                                    },
-                                  ),
-                                ],
+                                    CupertinoSwitch(
+                                      key: const Key('settings-halfway-warning'),
+                                      value:
+                                          appController
+                                              .halfwayWarningEnabled
+                                              .value,
+                                      activeTrackColor: colorScheme.primary,
+                                      onChanged: (value) {
+                                        HapticFeedback.selectionClick();
+                                        controller.toggleHalfwayWarning(value);
+                                      },
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                       ),

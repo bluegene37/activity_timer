@@ -17,10 +17,19 @@ class ActivityTimer extends HiveObject {
     this.phase = IntervalPhase.work,
   }) : id = id ?? const Uuid().v4();
 
+  // Gene - Nov, 14, 2026: Safely cast JSON numeric duration so deserialization handles Hive/JSON num values cleanly.
+  // factory ActivityTimer.fromJson(Map<String, dynamic> json) => ActivityTimer(
+  //   id: json['id'] as String?,
+  //   name: json['name'] as String? ?? 'Timer',
+  //   durationInSeconds: json['durationInSeconds'] as int? ?? 30,
+  //   description: json['description'] as String?,
+  //   alarmSoundName: json['alarmSoundName'] as String?,
+  //   phase: IntervalPhase.fromString(json['phase'] as String?),
+  // );
   factory ActivityTimer.fromJson(Map<String, dynamic> json) => ActivityTimer(
     id: json['id'] as String?,
     name: json['name'] as String? ?? 'Timer',
-    durationInSeconds: json['durationInSeconds'] as int? ?? 30,
+    durationInSeconds: (json['durationInSeconds'] as num?)?.toInt() ?? 30,
     description: json['description'] as String?,
     alarmSoundName: json['alarmSoundName'] as String?,
     phase: IntervalPhase.fromString(json['phase'] as String?),
@@ -99,18 +108,33 @@ class TimerSequence extends HiveObject {
        createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
 
+  // Gene - Nov, 14, 2026: Normalize untyped nested Hive maps via Map<String, dynamic>.from and guard numeric fields so cold-start session restoration does not throw _TypeError.
+  // factory TimerSequence.fromJson(Map<String, dynamic> json) => TimerSequence(
+  //   id: json['id'] as String?,
+  //   name: json['name'] as String? ?? 'Routine',
+  //   description: json['description'] as String?,
+  //   defaultLoopEnabled: json['defaultLoopEnabled'] as bool? ?? false,
+  //   category: json['category'] as String? ?? 'custom',
+  //   preparationSeconds: json['preparationSeconds'] as int? ?? 5,
+  //   createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
+  //   updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
+  //   timers: [
+  //     for (final timer in json['timers'] as List<dynamic>? ?? const [])
+  //       ActivityTimer.fromJson(timer as Map<String, dynamic>),
+  //   ],
+  // );
   factory TimerSequence.fromJson(Map<String, dynamic> json) => TimerSequence(
     id: json['id'] as String?,
     name: json['name'] as String? ?? 'Routine',
     description: json['description'] as String?,
     defaultLoopEnabled: json['defaultLoopEnabled'] as bool? ?? false,
     category: json['category'] as String? ?? 'custom',
-    preparationSeconds: json['preparationSeconds'] as int? ?? 5,
+    preparationSeconds: (json['preparationSeconds'] as num?)?.toInt() ?? 5,
     createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
     updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
     timers: [
       for (final timer in json['timers'] as List<dynamic>? ?? const [])
-        ActivityTimer.fromJson(timer as Map<String, dynamic>),
+        if (timer is Map) ActivityTimer.fromJson(Map<String, dynamic>.from(timer)),
     ],
   );
 

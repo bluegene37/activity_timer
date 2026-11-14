@@ -175,9 +175,15 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
     DateFormat timeFormat,
     DateFormat timeFormatShort,
   ) {
-    final timeDifference = _c.nextAlarmTime.value.difference(
-      _c.currentTime.value,
-    );
+    // Gene - Nov, 14, 2026: Hoist all signal reads synchronously before LayoutBuilder and ListView.builder so SignalBuilder tracks every change.
+    // final timeDifference = _c.nextAlarmTime.value.difference(
+    //   _c.currentTime.value,
+    // );
+    final currentTime = _c.currentTime.value;
+    final nextAlarmTime = _c.nextAlarmTime.value;
+    final currentAlarmIndex = _c.currentAlarmIndex.value;
+    final isRunning = _c.isRunning.value;
+    final timeDifference = nextAlarmTime.difference(currentTime);
     final hours = timeDifference.inHours;
     final minutes = timeDifference.inMinutes % 60;
     final seconds = timeDifference.inSeconds % 60;
@@ -190,427 +196,969 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
         totalSeconds > 0 ? 1.0 - (remainingSeconds / totalSeconds) : 0.0;
     progress = progress.clamp(0.0, 1.0);
 
+    // Gene - Nov, 14, 2026: Make IntervalTimerScreen responsive with dynamic ring sizing, scalable timeline cards, contrast-safe Play/Pause FAB, control tooltips, and Semantics(liveRegion: true).
+    // return SafeArea(
+    //   child: Column(
+    //     children: [
+    //       // Progress indicator (iOS Thin Bar)
+    //       ClipRRect(
+    //         borderRadius: BorderRadius.circular(2),
+    //         child: LinearProgressIndicator(
+    //           value:
+    //               _c.allAlarmTimes.length > 1
+    //                   ? (_c.currentAlarmIndex.value /
+    //                           (_c.allAlarmTimes.length - 1))
+    //                       .clamp(0.0, 1.0)
+    //                   : 0.0,
+    //           minHeight: 4,
+    //           backgroundColor: colorScheme.onSurface.withValues(alpha: 0.06),
+    //           color: colorScheme.primary,
+    //         ),
+    //       ),
+    //
+    //       // Timer info
+    //       Padding(
+    //         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+    //         child: Column(
+    //           children: [
+    //             Text(
+    //               'Current Time',
+    //               style: textTheme.bodySmall?.copyWith(
+    //                 color: colorScheme.onSurfaceVariant,
+    //               ),
+    //             ),
+    //             const SizedBox(height: 2),
+    //             Text(
+    //               timeFormat.format(_c.currentTime.value),
+    //               style: textTheme.headlineSmall?.copyWith(
+    //                 fontWeight: FontWeight.w700,
+    //                 letterSpacing: -0.4,
+    //               ),
+    //             ),
+    //             const SizedBox(height: 14),
+    //             Container(
+    //               padding: const EdgeInsets.symmetric(
+    //                 horizontal: 14,
+    //                 vertical: 6,
+    //               ),
+    //               decoration: BoxDecoration(
+    //                 color: colorScheme.primary.withValues(alpha: 0.12),
+    //                 borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+    //               ),
+    //               child: Row(
+    //                 mainAxisSize: MainAxisSize.min,
+    //                 children: [
+    //                   Text(
+    //                     'Alarm ${_c.currentAlarmIndex.value + 1} of ${_c.allAlarmTimes.length}',
+    //                     style: textTheme.bodySmall?.copyWith(
+    //                       color: colorScheme.primary,
+    //                       fontWeight: FontWeight.w700,
+    //                     ),
+    //                   ),
+    //                   const SizedBox(width: 10),
+    //                   Icon(
+    //                     CupertinoIcons.bell_fill,
+    //                     size: 13,
+    //                     color: colorScheme.primary,
+    //                   ),
+    //                   const SizedBox(width: 4),
+    //                   Text(
+    //                     widget.timer.alarmSound.displayName,
+    //                     style: TextStyle(
+    //                       fontSize: 12,
+    //                       color: colorScheme.primary,
+    //                       fontWeight: FontWeight.w700,
+    //                     ),
+    //                   ),
+    //                 ],
+    //               ),
+    //             ),
+    //           ],
+    //         ),
+    //       ),
+    //
+    //       // Next alarm countdown inside GlowingTimerRing
+    //       Expanded(
+    //         child: Center(
+    //           child: GlowingTimerRing(
+    //             progress: progress,
+    //             color: _getTimerColor(progress, colorScheme),
+    //             backgroundColor: colorScheme.onSurface.withValues(alpha: 0.08),
+    //             size: 280,
+    //             strokeWidth: 20,
+    //             child: Column(
+    //               mainAxisSize: MainAxisSize.min,
+    //               children: [
+    //                 Text(
+    //                   '${hours > 0 ? '${hours.toString()}:' : ''}${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
+    //                   style: TextStyle(
+    //                     fontSize: hours > 0 ? 46 : 60,
+    //                     fontWeight: FontWeight.w900,
+    //                     color: colorScheme.onSurface,
+    //                     letterSpacing: -1.5,
+    //                     fontFeatures: const [FontFeature.tabularFigures()],
+    //                   ),
+    //                 ),
+    //                 Text(
+    //                   'till next alarm',
+    //                   style: textTheme.titleSmall?.copyWith(
+    //                     color: colorScheme.onSurfaceVariant,
+    //                     fontWeight: FontWeight.w500,
+    //                   ),
+    //                 ),
+    //               ],
+    //             ),
+    //           ),
+    //         ),
+    //       ),
+    //
+    //       // Alarm list (iOS Inset Timeline)
+    //       Container(
+    //         height: 130,
+    //         padding: const EdgeInsets.symmetric(vertical: 12),
+    //         decoration: BoxDecoration(
+    //           color: colorScheme.surfaceContainerLow,
+    //           border: Border(
+    //             top: BorderSide(color: colorScheme.outlineVariant, width: 0.8),
+    //           ),
+    //         ),
+    //         child: Column(
+    //           crossAxisAlignment: CrossAxisAlignment.start,
+    //           children: [
+    //             Padding(
+    //               padding: const EdgeInsets.symmetric(
+    //                 horizontal: 20,
+    //                 vertical: 2,
+    //               ),
+    //               child: Row(
+    //                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    //                 children: [
+    //                   Text(
+    //                     'Alarm Schedule',
+    //                     style: textTheme.titleSmall?.copyWith(
+    //                       fontWeight: FontWeight.w700,
+    //                     ),
+    //                   ),
+    //                   Flexible(
+    //                     child: Text(
+    //                       'Next: ${timeFormatShort.format(_c.nextAlarmTime.value)}',
+    //                       maxLines: 1,
+    //                       overflow: TextOverflow.ellipsis,
+    //                       style: textTheme.bodySmall?.copyWith(
+    //                         color: colorScheme.primary,
+    //                         fontWeight: FontWeight.w700,
+    //                       ),
+    //                     ),
+    //                   ),
+    //                 ],
+    //               ),
+    //             ),
+    //             const SizedBox(height: 8),
+    //             Expanded(
+    //               child: ListView.builder(
+    //                 scrollDirection: Axis.horizontal,
+    //                 itemCount: _c.allAlarmTimes.length,
+    //                 padding: const EdgeInsets.symmetric(horizontal: 16),
+    //                 itemBuilder: (context, index) {
+    //                   final alarmTime = _c.allAlarmTimes[index];
+    //                   final isCurrentAlarm =
+    //                       index == _c.currentAlarmIndex.value;
+    //                   final isPastAlarm = index < _c.currentAlarmIndex.value;
+    //
+    //                   return Container(
+    //                     width: 78,
+    //                     margin: const EdgeInsets.symmetric(horizontal: 5),
+    //                     decoration: BoxDecoration(
+    //                       color:
+    //                           isCurrentAlarm
+    //                               ? colorScheme.primary.withValues(alpha: 0.12)
+    //                               : colorScheme.surface,
+    //                       borderRadius: BorderRadius.circular(12),
+    //                       border: Border.all(
+    //                         color:
+    //                             isCurrentAlarm
+    //                                 ? colorScheme.primary
+    //                                 : colorScheme.outlineVariant,
+    //                         width: isCurrentAlarm ? 1.5 : 0.8,
+    //                       ),
+    //                     ),
+    //                     child: Column(
+    //                       mainAxisAlignment: MainAxisAlignment.center,
+    //                       children: [
+    //                         Text(
+    //                           '#${index + 1}',
+    //                           style: TextStyle(
+    //                             fontWeight: FontWeight.w700,
+    //                             fontSize: 12,
+    //                             color:
+    //                                 isCurrentAlarm
+    //                                     ? colorScheme.primary
+    //                                     : isPastAlarm
+    //                                     ? colorScheme.onSurfaceVariant
+    //                                     : colorScheme.onSurface,
+    //                           ),
+    //                         ),
+    //                         const SizedBox(height: 2),
+    //                         Text(
+    //                           timeFormatShort.format(alarmTime),
+    //                           style: TextStyle(
+    //                             fontSize: 11,
+    //                             fontWeight:
+    //                                 isCurrentAlarm
+    //                                     ? FontWeight.w700
+    //                                     : FontWeight.normal,
+    //                             color:
+    //                                 isCurrentAlarm
+    //                                     ? colorScheme.primary
+    //                                     : isPastAlarm
+    //                                     ? colorScheme.onSurfaceVariant
+    //                                     : colorScheme.onSurface,
+    //                           ),
+    //                         ),
+    //                         const SizedBox(height: 4),
+    //                         Icon(
+    //                           isPastAlarm
+    //                               ? CupertinoIcons.check_mark_circled_solid
+    //                               : CupertinoIcons.circle,
+    //                           size: 14,
+    //                           color:
+    //                               isPastAlarm
+    //                                   ? AppTheme.iosGreen
+    //                                   : isCurrentAlarm
+    //                                   ? colorScheme.primary
+    //                                   : colorScheme.onSurfaceVariant.withValues(
+    //                                     alpha: 0.4,
+    //                                   ),
+    //                         ),
+    //                       ],
+    //                     ),
+    //                   );
+    //                 },
+    //               ),
+    //             ),
+    //           ],
+    //         ),
+    //       ),
+    //
+    //       // Control buttons
+    //       Padding(
+    //         padding: const EdgeInsets.symmetric(
+    //           horizontal: 24.0,
+    //           vertical: 20.0,
+    //         ),
+    //         child: Row(
+    //           mainAxisAlignment: MainAxisAlignment.center,
+    //           children: [
+    //             IconButton(
+    //               icon: const Icon(CupertinoIcons.restart),
+    //               onPressed: () {
+    //                 HapticFeedback.selectionClick();
+    //                 _c.reset();
+    //               },
+    //               iconSize: 24,
+    //               color: colorScheme.onSurfaceVariant,
+    //               style: IconButton.styleFrom(
+    //                 backgroundColor: colorScheme.surfaceContainerHighest,
+    //                 padding: const EdgeInsets.all(14),
+    //               ),
+    //             ),
+    //             const SizedBox(width: 24),
+    //             FloatingActionButton.large(
+    //               heroTag: 'play_pause',
+    //               onPressed: () {
+    //                 HapticFeedback.mediumImpact();
+    //                 _c.toggle();
+    //               },
+    //               backgroundColor: colorScheme.primary,
+    //               foregroundColor: Colors.white,
+    //               elevation: 6,
+    //               shape: const CircleBorder(),
+    //               child: Icon(
+    //                 _c.isRunning.value
+    //                     ? CupertinoIcons.pause_fill
+    //                     : CupertinoIcons.play_fill,
+    //                 size: 36,
+    //               ),
+    //             ),
+    //             const SizedBox(width: 24),
+    //             IconButton(
+    //               icon: const Icon(CupertinoIcons.forward_fill),
+    //               onPressed: () {
+    //                 HapticFeedback.selectionClick();
+    //                 _c.skipToNext();
+    //               },
+    //               iconSize: 24,
+    //               color: colorScheme.onSurfaceVariant,
+    //               style: IconButton.styleFrom(
+    //                 backgroundColor: colorScheme.surfaceContainerHighest,
+    //                 padding: const EdgeInsets.all(14),
+    //               ),
+    //             ),
+    //           ],
+    //         ),
+    //       ),
+    //     ],
+    //   ),
+    // );
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final readablePrimary = AppTheme.readableAccent(
+      colorScheme.primary,
+      isDark: isDark,
+    );
+
     return SafeArea(
-      child: Column(
-        children: [
-          // Progress indicator (iOS Thin Bar)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: LinearProgressIndicator(
-              value:
-                  _c.allAlarmTimes.length > 1
-                      ? (_c.currentAlarmIndex.value /
-                              (_c.allAlarmTimes.length - 1))
-                          .clamp(0.0, 1.0)
-                      : 0.0,
-              minHeight: 4,
-              backgroundColor: colorScheme.onSurface.withValues(alpha: 0.06),
-              color: colorScheme.primary,
-            ),
-          ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final ringSize = (constraints.maxHeight * 0.34).clamp(140.0, 280.0);
+          final strokeWidth = (ringSize * 0.072).clamp(12.0, 20.0);
+          final timelineHeight =
+              (130.0 * textScale.clamp(1.0, 1.45)).roundToDouble();
+          final cardWidth =
+              (78.0 * textScale.clamp(1.0, 1.35)).roundToDouble();
 
-          // Timer info
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-            child: Column(
-              children: [
-                Text(
-                  'Current Time',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  timeFormat.format(_c.currentTime.value),
-                  style: textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Alarm ${_c.currentAlarmIndex.value + 1} of ${_c.allAlarmTimes.length}',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Progress indicator (iOS Thin Bar)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      // value:
+                      //     _c.allAlarmTimes.length > 1
+                      //         ? (_c.currentAlarmIndex.value /
+                      //                 (_c.allAlarmTimes.length - 1))
+                      //             .clamp(0.0, 1.0)
+                      //         : 0.0,
+                      value:
+                          _c.allAlarmTimes.length > 1
+                              ? (currentAlarmIndex /
+                                      (_c.allAlarmTimes.length - 1))
+                                  .clamp(0.0, 1.0)
+                              : 0.0,
+                      minHeight: 4,
+                      backgroundColor: colorScheme.onSurface.withValues(
+                        alpha: 0.06,
                       ),
-                      const SizedBox(width: 10),
-                      Icon(
-                        CupertinoIcons.bell_fill,
-                        size: 13,
-                        color: colorScheme.primary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        widget.timer.alarmSound.displayName,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Next alarm countdown inside GlowingTimerRing
-          Expanded(
-            child: Center(
-              child: GlowingTimerRing(
-                progress: progress,
-                color: _getTimerColor(progress, colorScheme),
-                backgroundColor: colorScheme.onSurface.withValues(alpha: 0.08),
-                size: 280,
-                strokeWidth: 20,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${hours > 0 ? '${hours.toString()}:' : ''}${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
-                      style: TextStyle(
-                        fontSize: hours > 0 ? 46 : 60,
-                        fontWeight: FontWeight.w900,
-                        color: colorScheme.onSurface,
-                        letterSpacing: -1.5,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
+                      color: colorScheme.primary,
                     ),
-                    Text(
-                      'till next alarm',
-                      style: textTheme.titleSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Alarm list (iOS Inset Timeline)
-          Container(
-            height: 130,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerLow,
-              border: Border(
-                top: BorderSide(color: colorScheme.outlineVariant, width: 0.8),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 2,
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Alarm Schedule',
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Flexible(
-                        child: Text(
-                          'Next: ${timeFormatShort.format(_c.nextAlarmTime.value)}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+
+                  // Timer info + liveRegion alarm announcement
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: constraints.maxHeight < 600 ? 10 : 16,
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Current Time',
                           style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.primary,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          // timeFormat.format(_c.currentTime.value),
+                          timeFormat.format(currentTime),
+                          style: textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w700,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Semantics(
+                          liveRegion: true,
+                          container: true,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary.withValues(
+                                alpha: 0.12,
+                              ),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.pillRadius,
+                              ),
+                            ),
+                            child: Wrap(
+                              alignment: WrapAlignment.center,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: [
+                                Text(
+                                  // 'Alarm ${_c.currentAlarmIndex.value + 1} of ${_c.allAlarmTimes.length}',
+                                  'Alarm ${currentAlarmIndex + 1} of ${_c.allAlarmTimes.length}',
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: readablePrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      CupertinoIcons.bell_fill,
+                                      size: 13,
+                                      color: readablePrimary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        widget.timer.alarmSound.displayName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: readablePrimary,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Next alarm countdown inside GlowingTimerRing
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Center(
+                      child: GlowingTimerRing(
+                        progress: progress,
+                        color: _getTimerColor(progress, colorScheme),
+                        backgroundColor: colorScheme.onSurface.withValues(
+                          alpha: 0.08,
+                        ),
+                        size: ringSize,
+                        strokeWidth: strokeWidth,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: strokeWidth + 12,
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${hours > 0 ? '${hours.toString()}:' : ''}${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
+                                  style: TextStyle(
+                                    fontSize: hours > 0 ? 46 : 60,
+                                    fontWeight: FontWeight.w900,
+                                    color: colorScheme.onSurface,
+                                    letterSpacing: -1.5,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  'till next alarm',
+                                  style: textTheme.titleSmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _c.allAlarmTimes.length,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemBuilder: (context, index) {
-                      final alarmTime = _c.allAlarmTimes[index];
-                      final isCurrentAlarm =
-                          index == _c.currentAlarmIndex.value;
-                      final isPastAlarm = index < _c.currentAlarmIndex.value;
 
-                      return Container(
-                        width: 78,
-                        margin: const EdgeInsets.symmetric(horizontal: 5),
-                        decoration: BoxDecoration(
-                          color:
-                              isCurrentAlarm
-                                  ? colorScheme.primary.withValues(alpha: 0.12)
-                                  : colorScheme.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color:
-                                isCurrentAlarm
-                                    ? colorScheme.primary
-                                    : colorScheme.outlineVariant,
-                            width: isCurrentAlarm ? 1.5 : 0.8,
+                  // Alarm list (iOS Inset Timeline)
+                  Container(
+                    height: timelineHeight,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLow,
+                      border: Border(
+                        top: BorderSide(
+                          color: colorScheme.outlineVariant,
+                          width: 0.8,
+                        ),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 2,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'Alarm Schedule',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  // 'Next: ${timeFormatShort.format(_c.nextAlarmTime.value)}',
+                                  'Next: ${timeFormatShort.format(nextAlarmTime)}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: readablePrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              '#${index + 1}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                                color:
-                                    isCurrentAlarm
-                                        ? colorScheme.primary
-                                        : isPastAlarm
-                                        ? colorScheme.onSurfaceVariant
-                                        : colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              timeFormatShort.format(alarmTime),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight:
-                                    isCurrentAlarm
-                                        ? FontWeight.w700
-                                        : FontWeight.normal,
-                                color:
-                                    isCurrentAlarm
-                                        ? colorScheme.primary
-                                        : isPastAlarm
-                                        ? colorScheme.onSurfaceVariant
-                                        : colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Icon(
-                              isPastAlarm
-                                  ? CupertinoIcons.check_mark_circled_solid
-                                  : CupertinoIcons.circle,
-                              size: 14,
-                              color:
-                                  isPastAlarm
-                                      ? AppTheme.iosGreen
-                                      : isCurrentAlarm
-                                      ? colorScheme.primary
-                                      : colorScheme.onSurfaceVariant.withValues(
-                                        alpha: 0.4,
-                                      ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _c.allAlarmTimes.length,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemBuilder: (context, index) {
+                              final alarmTime = _c.allAlarmTimes[index];
+                              // final isCurrentAlarm =
+                              //     index == _c.currentAlarmIndex.value;
+                              // final isPastAlarm =
+                              //     index < _c.currentAlarmIndex.value;
+                              final isCurrentAlarm =
+                                  index == currentAlarmIndex;
+                              final isPastAlarm = index < currentAlarmIndex;
 
-          // Control buttons
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24.0,
-              vertical: 20.0,
+                              return Container(
+                                width: cardWidth,
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      isCurrentAlarm
+                                          ? colorScheme.primary.withValues(
+                                            alpha: 0.12,
+                                          )
+                                          : colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color:
+                                        isCurrentAlarm
+                                            ? colorScheme.primary
+                                            : colorScheme.outlineVariant,
+                                    width: isCurrentAlarm ? 1.5 : 0.8,
+                                  ),
+                                ),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        '#${index + 1}',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 12,
+                                          color:
+                                              isCurrentAlarm
+                                                  ? readablePrimary
+                                                  : isPastAlarm
+                                                  ? colorScheme.onSurfaceVariant
+                                                  : colorScheme.onSurface,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        timeFormatShort.format(alarmTime),
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight:
+                                              isCurrentAlarm
+                                                  ? FontWeight.w700
+                                                  : FontWeight.normal,
+                                          color:
+                                              isCurrentAlarm
+                                                  ? readablePrimary
+                                                  : isPastAlarm
+                                                  ? colorScheme.onSurfaceVariant
+                                                  : colorScheme.onSurface,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Icon(
+                                        isPastAlarm
+                                            ? CupertinoIcons
+                                                .check_mark_circled_solid
+                                            : CupertinoIcons.circle,
+                                        size: 14,
+                                        color:
+                                            isPastAlarm
+                                                ? AppTheme.iosGreen
+                                                : isCurrentAlarm
+                                                ? readablePrimary
+                                                : colorScheme.onSurfaceVariant
+                                                    .withValues(alpha: 0.4),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Control buttons
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 24.0,
+                      vertical: constraints.maxHeight < 600 ? 12.0 : 20.0,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          tooltip: 'Reset schedule',
+                          icon: const Icon(CupertinoIcons.restart),
+                          onPressed: () {
+                            HapticFeedback.selectionClick();
+                            _c.reset();
+                          },
+                          iconSize: 24,
+                          color: colorScheme.onSurfaceVariant,
+                          style: IconButton.styleFrom(
+                            backgroundColor:
+                                colorScheme.surfaceContainerHighest,
+                            padding: const EdgeInsets.all(14),
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        FloatingActionButton.large(
+                          heroTag: 'play_pause',
+                          // tooltip:
+                          //     _c.isRunning.value
+                          //         ? 'Pause schedule'
+                          //         : 'Resume schedule',
+                          tooltip:
+                              isRunning ? 'Pause schedule' : 'Resume schedule',
+                          onPressed: () {
+                            HapticFeedback.mediumImpact();
+                            _c.toggle();
+                          },
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: AppTheme.onColor(
+                            colorScheme.primary,
+                          ),
+                          elevation: 6,
+                          shape: const CircleBorder(),
+                          child: Icon(
+                            // _c.isRunning.value
+                            //     ? CupertinoIcons.pause_fill
+                            //     : CupertinoIcons.play_fill,
+                            isRunning
+                                ? CupertinoIcons.pause_fill
+                                : CupertinoIcons.play_fill,
+                            size: 36,
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        IconButton(
+                          tooltip: 'Next alarm',
+                          icon: const Icon(CupertinoIcons.forward_fill),
+                          onPressed: () {
+                            HapticFeedback.selectionClick();
+                            _c.skipToNext();
+                          },
+                          iconSize: 24,
+                          color: colorScheme.onSurfaceVariant,
+                          style: IconButton.styleFrom(
+                            backgroundColor:
+                                colorScheme.surfaceContainerHighest,
+                            padding: const EdgeInsets.all(14),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(CupertinoIcons.restart),
-                  onPressed: () {
-                    HapticFeedback.selectionClick();
-                    _c.reset();
-                  },
-                  iconSize: 24,
-                  color: colorScheme.onSurfaceVariant,
-                  style: IconButton.styleFrom(
-                    backgroundColor: colorScheme.surfaceContainerHighest,
-                    padding: const EdgeInsets.all(14),
-                  ),
-                ),
-                const SizedBox(width: 24),
-                FloatingActionButton.large(
-                  heroTag: 'play_pause',
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    _c.toggle();
-                  },
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 6,
-                  shape: const CircleBorder(),
-                  child: Icon(
-                    _c.isRunning.value
-                        ? CupertinoIcons.pause_fill
-                        : CupertinoIcons.play_fill,
-                    size: 36,
-                  ),
-                ),
-                const SizedBox(width: 24),
-                IconButton(
-                  icon: const Icon(CupertinoIcons.forward_fill),
-                  onPressed: () {
-                    HapticFeedback.selectionClick();
-                    _c.skipToNext();
-                  },
-                  iconSize: 24,
-                  color: colorScheme.onSurfaceVariant,
-                  style: IconButton.styleFrom(
-                    backgroundColor: colorScheme.surfaceContainerHighest,
-                    padding: const EdgeInsets.all(14),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
+  // Gene - Nov, 14, 2026: Wrap completed interval view in SafeArea + SingleChildScrollView and derive contrast-safe check-mark ink.
+  // Widget _buildCompletedView(
+  //   TextTheme textTheme,
+  //   ColorScheme colorScheme,
+  //   DateFormat timeFormatShort,
+  // ) {
+  //   return Center(
+  //     child: Padding(
+  //       padding: const EdgeInsets.all(24.0),
+  //       child: Column(
+  //         mainAxisAlignment: MainAxisAlignment.center,
+  //         children: [
+  //           Container(
+  //             width: 90,
+  //             height: 90,
+  //             decoration: BoxDecoration(
+  //               gradient: LinearGradient(
+  //                 colors: [
+  //                   colorScheme.primary,
+  //                   colorScheme.primary.withValues(alpha: 0.8),
+  //                 ],
+  //                 begin: Alignment.topLeft,
+  //                 end: Alignment.bottomRight,
+  //               ),
+  //               shape: BoxShape.circle,
+  //               boxShadow: [
+  //                 BoxShadow(
+  //                   color: colorScheme.primary.withValues(alpha: 0.35),
+  //                   blurRadius: 20,
+  //                   offset: const Offset(0, 8),
+  //                 ),
+  //               ],
+  //             ),
+  //             child: const Icon(
+  //               CupertinoIcons.check_mark,
+  //               size: 48,
+  //               color: Colors.white,
+  //             ),
+  //           ),
+  //           const SizedBox(height: 24),
+  //           Text(
+  //             'Timer Complete!',
+  //             style: textTheme.headlineLarge?.copyWith(
+  //               fontWeight: FontWeight.w800,
+  //               letterSpacing: -0.8,
+  //             ),
+  //           ),
+  //           const SizedBox(height: 8),
+  //           Text(
+  //             'All ${_c.allAlarmTimes.length} alarms have been triggered',
+  //             style: textTheme.titleMedium?.copyWith(
+  //               color: colorScheme.onSurfaceVariant,
+  //             ),
+  //           ),
+  //           const SizedBox(height: 14),
+  //           Container(
+  //             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  //             decoration: BoxDecoration(
+  //               color: colorScheme.surfaceContainerHighest,
+  //               borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+  //             ),
+  //             child: Text(
+  //               'Time Range: ${DateFormat('h:mm a').format(_c.allAlarmTimes.first)} - ${DateFormat('h:mm a').format(_c.allAlarmTimes.last)}',
+  //               style: textTheme.bodySmall?.copyWith(
+  //                 fontWeight: FontWeight.w600,
+  //               ),
+  //             ),
+  //           ),
+  //           const SizedBox(height: 24),
+  //           SizedBox(
+  //             width: 260,
+  //             height: 46,
+  //             child: OutlinedButton.icon(
+  //               key: const Key('interval-snooze-5m'),
+  //               onPressed: () {
+  //                 HapticFeedback.selectionClick();
+  //                 _c.snooze(const Duration(minutes: 5));
+  //               },
+  //               icon: const Icon(CupertinoIcons.zzz, size: 18),
+  //               label: const Text('Snooze +5m'),
+  //               style: OutlinedButton.styleFrom(
+  //                 shape: RoundedRectangleBorder(
+  //                   borderRadius: BorderRadius.circular(14),
+  //                 ),
+  //               ),
+  //             ),
+  //           ),
+  //           const SizedBox(height: 12),
+  //           SizedBox(
+  //             width: 260,
+  //             height: 50,
+  //             child: ElevatedButton.icon(
+  //               onPressed: () {
+  //                 HapticFeedback.selectionClick();
+  //                 _c.reset();
+  //               },
+  //               icon: const Icon(CupertinoIcons.restart, size: 18),
+  //               label: const Text('Restart Timer'),
+  //               style: ElevatedButton.styleFrom(
+  //                 shape: RoundedRectangleBorder(
+  //                   borderRadius: BorderRadius.circular(14),
+  //                 ),
+  //               ),
+  //             ),
+  //           ),
+  //           const SizedBox(height: 12),
+  //           TextButton(
+  //             onPressed: () => Navigator.pop(context),
+  //             child: Text(
+  //               'Back to Timers',
+  //               style: textTheme.titleSmall?.copyWith(
+  //                 color: colorScheme.onSurfaceVariant,
+  //               ),
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
   Widget _buildCompletedView(
     TextTheme textTheme,
     ColorScheme colorScheme,
     DateFormat timeFormatShort,
   ) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 90,
-              height: 90,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    colorScheme.primary,
-                    colorScheme.primary.withValues(alpha: 0.8),
+    final onPrimary = AppTheme.onColor(colorScheme.primary);
+
+    return SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      colorScheme.primary,
+                      colorScheme.primary.withValues(alpha: 0.8),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: colorScheme.primary.withValues(alpha: 0.35),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
                   ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
                 ),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: colorScheme.primary.withValues(alpha: 0.35),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                CupertinoIcons.check_mark,
-                size: 48,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Timer Complete!',
-              style: textTheme.headlineLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.8,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'All ${_c.allAlarmTimes.length} alarms have been triggered',
-              style: textTheme.titleMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-              ),
-              child: Text(
-                'Time Range: ${DateFormat('h:mm a').format(_c.allAlarmTimes.first)} - ${DateFormat('h:mm a').format(_c.allAlarmTimes.last)}',
-                style: textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+                child: Icon(
+                  CupertinoIcons.check_mark,
+                  size: 48,
+                  color: onPrimary,
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            // Gene - Nov, 8, 2026: Added Snooze +5m button on the completed interval/time-alert screen.
-            SizedBox(
-              width: 260,
-              height: 46,
-              child: OutlinedButton.icon(
-                key: const Key('interval-snooze-5m'),
-                onPressed: () {
-                  HapticFeedback.selectionClick();
-                  _c.snooze(const Duration(minutes: 5));
-                },
-                icon: const Icon(CupertinoIcons.zzz, size: 18),
-                label: const Text('Snooze +5m'),
-                style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+              const SizedBox(height: 24),
+              Text(
+                'Timer Complete!',
+                textAlign: TextAlign.center,
+                style: textTheme.headlineLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.8,
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: 260,
-              height: 50,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  HapticFeedback.selectionClick();
-                  _c.reset();
-                },
-                icon: const Icon(CupertinoIcons.restart, size: 18),
-                label: const Text('Restart Timer'),
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Back to Timers',
-                style: textTheme.titleSmall?.copyWith(
+              const SizedBox(height: 8),
+              Text(
+                'All ${_c.allAlarmTimes.length} alarms have been triggered',
+                textAlign: TextAlign.center,
+                style: textTheme.titleMedium?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+                ),
+                child: Text(
+                  'Time Range: ${DateFormat('h:mm a').format(_c.allAlarmTimes.first)} - ${DateFormat('h:mm a').format(_c.allAlarmTimes.last)}',
+                  textAlign: TextAlign.center,
+                  style: textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Gene - Nov, 8, 2026: Added Snooze +5m button on the completed interval/time-alert screen.
+              SizedBox(
+                width: 260,
+                height: 46,
+                child: OutlinedButton.icon(
+                  key: const Key('interval-snooze-5m'),
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    _c.snooze(const Duration(minutes: 5));
+                  },
+                  icon: const Icon(CupertinoIcons.zzz, size: 18),
+                  label: const Text('Snooze +5m'),
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: 260,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    _c.reset();
+                  },
+                  icon: const Icon(CupertinoIcons.restart, size: 18),
+                  label: const Text('Restart Timer'),
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Back to Timers',
+                  style: textTheme.titleSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

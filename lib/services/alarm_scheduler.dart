@@ -154,6 +154,9 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
   // Gene - Nov, 8, 2026: Added notification action identifiers for Snooze (+5m) and Dismiss.
   static const String snooze5mActionId = 'snooze_5m';
   static const String dismissActionId = 'dismiss_alarm';
+  // Gene - Nov, 14, 2026: Added iOS notification category identifiers so Snooze/Dismiss action buttons appear on Darwin notifications and Brew alerts omit Snooze.
+  static const String alarmCategoryId = 'alarm_actions';
+  static const String brewCategoryId = 'brew_actions';
 
   /// How many notification ids one session type owns. Every scheduler gets
   /// its own block because an activity routine, a brew, and an interval
@@ -375,6 +378,23 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
   }
 
   // Gene - Nov, 06, 2026: Initialize notifications at app launch and check if app was opened via notification tap.
+  // Gene - Nov, 14, 2026: Forward notificationResponse?.actionId to handlePayload on cold-start launches so Snooze 5m and Dismiss action taps are not dropped.
+  // static Future<void> initializeAndCheckLaunch({
+  //   FlutterLocalNotificationsPlugin? plugin,
+  // }) async {
+  //   final scheduler = LocalNotificationAlarmScheduler(plugin: plugin);
+  //   await scheduler._init();
+  //   final p = plugin ?? scheduler._plugin;
+  //   final details = await p.getNotificationAppLaunchDetails();
+  //   if (details?.didNotificationLaunchApp ?? false) {
+  //     final payload = details?.notificationResponse?.payload;
+  //     if (payload != null) {
+  //       WidgetsBinding.instance.addPostFrameCallback((_) {
+  //         handlePayload(payload);
+  //       });
+  //     }
+  //   }
+  // }
   static Future<void> initializeAndCheckLaunch({
     FlutterLocalNotificationsPlugin? plugin,
   }) async {
@@ -383,10 +403,12 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
     final p = plugin ?? scheduler._plugin;
     final details = await p.getNotificationAppLaunchDetails();
     if (details?.didNotificationLaunchApp ?? false) {
-      final payload = details?.notificationResponse?.payload;
+      final response = details?.notificationResponse;
+      final payload = response?.payload;
+      final actionId = response?.actionId;
       if (payload != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          handlePayload(payload);
+          unawaited(handlePayload(payload, actionId: actionId));
         });
       }
     }
@@ -437,20 +459,76 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
   //   await _installDarwinSounds();
   //   _initialized = true;
   // }
+  // Gene - Nov, 14, 2026: Register Darwin notification categories for activity/interval (Snooze 5m + Dismiss) and brew (Dismiss only).
+  // Future<void> _init() async {
+  //   if (_initialized) {
+  //     return;
+  //   }
+  //   tz_data.initializeTimeZones();
+  //   await _plugin.initialize(
+  //     settings: const InitializationSettings(
+  //       android: AndroidInitializationSettings('@mipmap/launcher_icon'),
+  //       // Permission is requested explicitly in ensurePermission() so the
+  //       // prompt lands when the user starts a timer, not at cold start.
+  //       iOS: DarwinInitializationSettings(
+  //         requestAlertPermission: false,
+  //         requestBadgePermission: false,
+  //         requestSoundPermission: false,
+  //       ),
+  //     ),
+  //     onDidReceiveNotificationResponse: onNotificationTapped,
+  //   );
+  //   await _cleanupLegacyAndroidChannels();
+  //   await _installDarwinSounds();
+  //   _initialized = true;
+  // }
   Future<void> _init() async {
     if (_initialized) {
       return;
     }
     tz_data.initializeTimeZones();
     await _plugin.initialize(
-      settings: const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/launcher_icon'),
+      settings: InitializationSettings(
+        android: const AndroidInitializationSettings('@mipmap/launcher_icon'),
         // Permission is requested explicitly in ensurePermission() so the
         // prompt lands when the user starts a timer, not at cold start.
         iOS: DarwinInitializationSettings(
           requestAlertPermission: false,
           requestBadgePermission: false,
           requestSoundPermission: false,
+          notificationCategories: <DarwinNotificationCategory>[
+            DarwinNotificationCategory(
+              alarmCategoryId,
+              actions: <DarwinNotificationAction>[
+                DarwinNotificationAction.plain(
+                  snooze5mActionId,
+                  'Snooze 5m',
+                  options: <DarwinNotificationActionOption>{
+                    DarwinNotificationActionOption.foreground,
+                  },
+                ),
+                DarwinNotificationAction.plain(
+                  dismissActionId,
+                  'Dismiss',
+                  options: <DarwinNotificationActionOption>{
+                    DarwinNotificationActionOption.destructive,
+                  },
+                ),
+              ],
+            ),
+            DarwinNotificationCategory(
+              brewCategoryId,
+              actions: <DarwinNotificationAction>[
+                DarwinNotificationAction.plain(
+                  dismissActionId,
+                  'Dismiss',
+                  options: <DarwinNotificationActionOption>{
+                    DarwinNotificationActionOption.destructive,
+                  },
+                ),
+              ],
+            ),
+          ],
         ),
       ),
       onDidReceiveNotificationResponse: onNotificationTapped,
@@ -653,11 +731,65 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
   //     ),
   //   );
   // }
+  // Gene - Nov, 14, 2026: Omit Snooze 5m on brew notifications (which lack snooze handling) and attach Darwin categoryIdentifier on iOS.
+  // NotificationDetails _detailsFor(ScheduledAlarm alarm) {
+  //   final fileName =
+  //       alarm.isCompletion
+  //           ? AudioCuePlayer.completionSound
+  //           : alarm.sound?.fileName;
+  //
+  //   return NotificationDetails(
+  //     android: AndroidNotificationDetails(
+  //       channelIdFor(alarm.sound, isCompletion: alarm.isCompletion),
+  //       channelName,
+  //       channelDescription: channelDescription,
+  //       importance: Importance.max,
+  //       priority: Priority.high,
+  //       playSound: true,
+  //       enableVibration: true,
+  //       channelAction: AndroidNotificationChannelAction.update,
+  //       // An alarm should read as an alarm on the lock screen.
+  //       category: AndroidNotificationCategory.alarm,
+  //       fullScreenIntent: true,
+  //       audioAttributesUsage: AudioAttributesUsage.alarm,
+  //       sound:
+  //           fileName == null
+  //               ? null
+  //               : RawResourceAndroidNotificationSound(
+  //                 _rawResourceFor(fileName),
+  //               ),
+  //       // Gene - Nov, 8, 2026: Attach Snooze 5m and Dismiss action buttons to alarm notifications.
+  //       actions: const <AndroidNotificationAction>[
+  //         AndroidNotificationAction(
+  //           snooze5mActionId,
+  //           'Snooze 5m',
+  //           showsUserInterface: true,
+  //         ),
+  //         AndroidNotificationAction(
+  //           dismissActionId,
+  //           'Dismiss',
+  //           cancelNotification: true,
+  //           showsUserInterface: true,
+  //         ),
+  //       ],
+  //     ),
+  //     iOS: DarwinNotificationDetails(
+  //       presentAlert: true,
+  //       presentBanner: true,
+  //       presentList: true,
+  //       presentSound: true,
+  //       interruptionLevel: InterruptionLevel.timeSensitive,
+  //       sound: fileName,
+  //     ),
+  //   );
+  // }
   NotificationDetails _detailsFor(ScheduledAlarm alarm) {
     final fileName =
         alarm.isCompletion
             ? AudioCuePlayer.completionSound
             : alarm.sound?.fileName;
+    final isBrew =
+        idBase == brewIdBase || (alarm.payload?.startsWith('brew') ?? false);
 
     return NotificationDetails(
       android: AndroidNotificationDetails(
@@ -680,13 +812,14 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
                   _rawResourceFor(fileName),
                 ),
         // Gene - Nov, 8, 2026: Attach Snooze 5m and Dismiss action buttons to alarm notifications.
-        actions: const <AndroidNotificationAction>[
-          AndroidNotificationAction(
-            snooze5mActionId,
-            'Snooze 5m',
-            showsUserInterface: true,
-          ),
-          AndroidNotificationAction(
+        actions: <AndroidNotificationAction>[
+          if (!isBrew)
+            const AndroidNotificationAction(
+              snooze5mActionId,
+              'Snooze 5m',
+              showsUserInterface: true,
+            ),
+          const AndroidNotificationAction(
             dismissActionId,
             'Dismiss',
             cancelNotification: true,
@@ -700,6 +833,7 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
         presentList: true,
         presentSound: true,
         interruptionLevel: InterruptionLevel.timeSensitive,
+        categoryIdentifier: isBrew ? brewCategoryId : alarmCategoryId,
         sound: fileName,
       ),
     );

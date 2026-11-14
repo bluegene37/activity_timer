@@ -48,6 +48,36 @@ class AppTheme {
   static Color separator({required bool isDark}) =>
       isDark ? _separatorDark : _separatorLight;
 
+  // Gene - Nov, 14, 2026: Contrast-safe foreground ink helper (dark ink on bright accents like Yellow/Orange/Green/Cyan, white on darker accents) and darkened accent text helper on light surfaces.
+  // Gene - Nov, 14, 2026: Select WCAG AA (>=4.5:1) foreground ink across all accent luminances (soft dark ink on bright fills, white on dark fills, pure black on mid-luminance accents like iosBlue/iosPink/iosRed/iosPurple).
+  // static Color onColor(Color background) =>
+  //     ThemeData.estimateBrightnessForColor(background) == Brightness.light
+  //         ? const Color(0xFF1C1C1E)
+  //         : Colors.white;
+  static Color onColor(Color background) {
+    const darkInk = Color(0xFF1C1C1E);
+    final bgLum = background.computeLuminance();
+    final darkInkLum = darkInk.computeLuminance();
+    final darkInkContrast = (bgLum + 0.05) / (darkInkLum + 0.05);
+    if (darkInkContrast >= 4.5) {
+      return darkInk;
+    }
+    final whiteContrast = 1.05 / (bgLum + 0.05);
+    if (whiteContrast >= 4.5) {
+      return Colors.white;
+    }
+    final blackContrast = (bgLum + 0.05) / 0.05;
+    return blackContrast >= whiteContrast ? Colors.black : Colors.white;
+  }
+
+  static Color readableAccent(Color accent, {required bool isDark}) {
+    if (!isDark && accent.computeLuminance() > 0.22) {
+      final hsl = HSLColor.fromColor(accent);
+      return hsl.withLightness(0.25).toColor();
+    }
+    return accent;
+  }
+
   // Modern iOS Typography (SF Pro style with tightened tracking)
   static TextTheme _getTextTheme(Color onSurface, Color onSurfaceVariant) {
     return TextTheme(
@@ -129,7 +159,10 @@ class AppTheme {
     const scaffoldBg = Color(0xFFF2F2F7); // iOS System Grouped Background
     const surfaceColor = Colors.white; // iOS Grouped Card Background
     const onSurface = Color(0xFF000000);
-    const onSurfaceVariant = Color(0xFF8E8E93); // iOS System Gray
+    // Gene - Nov, 14, 2026: Darkened light-mode onSurfaceVariant to AA-compliant gray (#636366, >5.3:1 on #F2F2F7/#FFFFFF) and derived contrast-safe button/FAB foregrounds via AppTheme.onColor.
+    // const onSurfaceVariant = Color(0xFF8E8E93); // iOS System Gray
+    const onSurfaceVariant = Color(0xFF636366);
+    final onPrimaryColor = onColor(primaryColor);
 
     return ThemeData(
       useMaterial3: true,
@@ -138,6 +171,7 @@ class AppTheme {
       scaffoldBackgroundColor: scaffoldBg,
       colorScheme: colorScheme.copyWith(
         primary: primaryColor,
+        onPrimary: onPrimaryColor,
         secondary: secondaryColor,
         surface: surfaceColor,
         onSurface: onSurface,
@@ -178,7 +212,8 @@ class AppTheme {
             borderRadius: BorderRadius.circular(borderRadius),
           ),
           backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
+          // foregroundColor: Colors.white,
+          foregroundColor: onPrimaryColor,
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -202,7 +237,8 @@ class AppTheme {
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
+        // foregroundColor: Colors.white,
+        foregroundColor: onPrimaryColor,
         elevation: 3,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(pillRadius),
@@ -217,6 +253,8 @@ class AppTheme {
     const surfaceColor = Color(0xFF1C1C1E); // Apple Dark Secondary Grouped
     const onSurface = Color(0xFFFFFFFF);
     const onSurfaceVariant = Color(0xFF98989D); // Apple Dark System Gray
+    // Gene - Nov, 14, 2026: Derive contrast-safe dark-theme button and FAB foreground from accent luminance.
+    final onPrimaryColor = onColor(primaryColor);
 
     final darkColorScheme = ColorScheme.fromSeed(
       seedColor: primaryColor,
@@ -231,7 +269,8 @@ class AppTheme {
       scaffoldBackgroundColor: scaffoldBg,
       colorScheme: darkColorScheme.copyWith(
         primary: primaryColor,
-        onPrimary: Colors.white,
+        // onPrimary: Colors.white,
+        onPrimary: onPrimaryColor,
         secondary: darkColorScheme.secondary,
         surface: surfaceColor,
         onSurface: onSurface,
@@ -272,7 +311,8 @@ class AppTheme {
             borderRadius: BorderRadius.circular(borderRadius),
           ),
           backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
+          // foregroundColor: Colors.white,
+          foregroundColor: onPrimaryColor,
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -296,7 +336,8 @@ class AppTheme {
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
+        // foregroundColor: Colors.white,
+        foregroundColor: onPrimaryColor,
         elevation: 3,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(pillRadius),

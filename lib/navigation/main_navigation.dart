@@ -160,7 +160,9 @@ class _MainNavigationState extends State<MainNavigation>
   Widget? _buildFloatingActionButton(ColorScheme colorScheme) {
     if (_currentIndex == 0) {
       return SizedBox(
-        height: 40,
+        // Gene - Nov, 14, 2026: Raise FAB height from 40 to 48pt for >= 44pt tap target compliance.
+        // height: 40,
+        height: 48,
         child: FloatingActionButton.extended(
           heroTag: 'activity_list_fab',
           onPressed: () {
@@ -168,7 +170,9 @@ class _MainNavigationState extends State<MainNavigation>
             locator<ActivityListController>().addNewSequence();
           },
           backgroundColor: colorScheme.primary,
-          foregroundColor: Colors.white,
+          // Gene - Nov, 14, 2026: Use luminance-aware foreground contrast on primary accent fill.
+          // foregroundColor: Colors.white,
+          foregroundColor: AppTheme.onColor(colorScheme.primary),
           elevation: 3,
           shape: const StadiumBorder(),
           extendedPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -186,7 +190,9 @@ class _MainNavigationState extends State<MainNavigation>
       );
     } else if (_currentIndex == 1) {
       return SizedBox(
-        height: 40,
+        // Gene - Nov, 14, 2026: Raise FAB height from 40 to 48pt for >= 44pt tap target compliance.
+        // height: 40,
+        height: 48,
         child: FloatingActionButton.extended(
           heroTag: 'brew_list_fab',
           onPressed: () {
@@ -194,7 +200,9 @@ class _MainNavigationState extends State<MainNavigation>
             unawaited(locator<BrewController>().addNewBrew());
           },
           backgroundColor: colorScheme.primary,
-          foregroundColor: Colors.white,
+          // Gene - Nov, 14, 2026: Use luminance-aware foreground contrast on primary accent fill.
+          // foregroundColor: Colors.white,
+          foregroundColor: AppTheme.onColor(colorScheme.primary),
           elevation: 3,
           shape: const StadiumBorder(),
           extendedPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -212,7 +220,9 @@ class _MainNavigationState extends State<MainNavigation>
       );
     } else if (_currentIndex == 2) {
       return SizedBox(
-        height: 40,
+        // Gene - Nov, 14, 2026: Raise FAB height from 40 to 48pt for >= 44pt tap target compliance.
+        // height: 40,
+        height: 48,
         child: FloatingActionButton.extended(
           heroTag: 'interval_timer_list_fab',
           onPressed: () {
@@ -220,7 +230,9 @@ class _MainNavigationState extends State<MainNavigation>
             locator<IntervalTimerController>().addNewIntervalTimer();
           },
           backgroundColor: colorScheme.primary,
-          foregroundColor: Colors.white,
+          // Gene - Nov, 14, 2026: Use luminance-aware foreground contrast on primary accent fill.
+          // foregroundColor: Colors.white,
+          foregroundColor: AppTheme.onColor(colorScheme.primary),
           elevation: 3,
           shape: const StadiumBorder(),
           extendedPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -364,8 +376,24 @@ class _MainNavigationState extends State<MainNavigation>
                 color: isSelected ? activeColor : inactiveColor,
               ),
               const SizedBox(height: 3),
+              // Gene - Nov, 14, 2026: Keep bottom tab label single-line with ellipsis at larger text scales.
+              // Text(
+              //   label,
+              //   textScaler: TextScaler.linear(
+              //     MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.3),
+              //   ),
+              //   style: TextStyle(
+              //     fontSize: 10,
+              //     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              //     color: isSelected ? activeColor : inactiveColor,
+              //     letterSpacing: -0.1,
+              //   ),
+              // ),
               Text(
                 label,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
                 // The icon already carries the meaning, so the label is
                 // capped well below the system maximum: unbounded scaling
                 // pushes the nav strip over a third of the screen.
@@ -423,7 +451,9 @@ class _BrewFloater extends StatelessWidget {
 
         return Padding(
           // Gap above this chip when it shares the column with another.
-          padding: const EdgeInsets.only(top: 8),
+          // Gene - Nov, 14, 2026: Tighten vertical spacing and inner padding when 3 floaters stack on compact screens.
+          // padding: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.only(top: 6),
           child: Material(
             key: const Key('brew-floater'),
             color: palette.paperRaised,
@@ -442,9 +472,13 @@ class _BrewFloater extends StatelessWidget {
                     ),
                   ),
               child: Padding(
+                // padding: const EdgeInsets.symmetric(
+                //   horizontal: 14,
+                //   vertical: 10,
+                // ),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
-                  vertical: 10,
+                  vertical: 8,
                 ),
                 child: Row(
                   children: [
@@ -531,7 +565,9 @@ class _IntervalFloater extends StatelessWidget {
             '${controller.allAlarmTimes.length}';
 
         return Padding(
-          padding: const EdgeInsets.only(top: 8),
+          // Gene - Nov, 14, 2026: Tighten vertical spacing and inner padding when 3 floaters stack on compact screens.
+          // padding: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.only(top: 6),
           child: Material(
             key: const Key('interval-floater'),
             color: colorScheme.surfaceContainerHigh,
@@ -550,9 +586,13 @@ class _IntervalFloater extends StatelessWidget {
                     ),
                   ),
               child: Padding(
+                // padding: const EdgeInsets.symmetric(
+                //   horizontal: 14,
+                //   vertical: 10,
+                // ),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
-                  vertical: 10,
+                  vertical: 8,
                 ),
                 child: Row(
                   children: [
@@ -641,7 +681,9 @@ class _ActivityFloater extends StatelessWidget {
                 : '${controller.sequence.name} · ${controller.currentTimer.name}';
 
         return Padding(
-          padding: const EdgeInsets.only(top: 8),
+          // Gene - Nov, 14, 2026: Tighten vertical spacing and inner padding when 3 floaters stack on compact screens.
+          // padding: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.only(top: 6),
           child: Material(
             key: const Key('activity-floater'),
             color: colorScheme.surfaceContainerHigh,
@@ -660,9 +702,13 @@ class _ActivityFloater extends StatelessWidget {
                     ),
                   ),
               child: Padding(
+                // padding: const EdgeInsets.symmetric(
+                //   horizontal: 14,
+                //   vertical: 10,
+                // ),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
-                  vertical: 10,
+                  vertical: 8,
                 ),
                 child: Row(
                   children: [

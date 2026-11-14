@@ -36,6 +36,22 @@ class _ColorSelectorState extends State<ColorSelector> {
     Color(0xFF607D8B), // Slate gray
   ];
 
+  // Gene - Nov, 14, 2026: Human-readable accent color names for WCAG screen reader labeling.
+  static const List<String> _colorNames = [
+    'Orange',
+    'Blue',
+    'Green',
+    'Mint',
+    'Teal',
+    'Indigo',
+    'Purple',
+    'Pink',
+    'Red',
+    'Yellow',
+    'Deep Indigo',
+    'Slate Gray',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -88,40 +104,85 @@ class _ColorSelectorState extends State<ColorSelector> {
               final iconColor =
                   _isLightColor(color) ? Colors.black : Colors.white;
 
-              return GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() {
-                    _selectedColor = color;
-                  });
-                  widget.onColorSelected(color);
-                },
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 5,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isSelected ? Colors.white : Colors.transparent,
-                      width: 2.5,
+              // Gene - Nov, 14, 2026: Wrap color swatch in Semantics(button: true, selected, label) so WCAG labeledTapTargetGuideline and screen readers identify each swatch.
+              // return GestureDetector(
+              //   onTap: () {
+              //     HapticFeedback.selectionClick();
+              //     setState(() {
+              //       _selectedColor = color;
+              //     });
+              //     widget.onColorSelected(color);
+              //   },
+              //   child: Container(
+              //     width: 44,
+              //     height: 44,
+              //     margin: const EdgeInsets.symmetric(
+              //       horizontal: 5,
+              //       vertical: 4,
+              //     ),
+              //     decoration: BoxDecoration(
+              //       color: color,
+              //       shape: BoxShape.circle,
+              //       border: Border.all(
+              //         color: isSelected ? Colors.white : Colors.transparent,
+              //         width: 2.5,
+              //       ),
+              //       boxShadow: [
+              //         BoxShadow(
+              //           color: color.withValues(alpha: isSelected ? 0.45 : 0.2),
+              //           blurRadius: isSelected ? 8 : 4,
+              //           offset: const Offset(0, 2),
+              //         ),
+              //       ],
+              //     ),
+              //     child:
+              //         isSelected
+              //             ? Icon(Icons.check, color: iconColor, size: 20)
+              //             : null,
+              //   ),
+              // );
+              return Semantics(
+                button: true,
+                selected: isSelected,
+                label: '${_colorNames[index]} accent color',
+                excludeSemantics: true,
+                child: GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      _selectedColor = color;
+                    });
+                    widget.onColorSelected(color);
+                  },
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 4,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withValues(alpha: isSelected ? 0.45 : 0.2),
-                        blurRadius: isSelected ? 8 : 4,
-                        offset: const Offset(0, 2),
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSelected ? Colors.white : Colors.transparent,
+                        width: 2.5,
                       ),
-                    ],
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withValues(
+                            alpha: isSelected ? 0.45 : 0.2,
+                          ),
+                          blurRadius: isSelected ? 8 : 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child:
+                        isSelected
+                            ? Icon(Icons.check, color: iconColor, size: 20)
+                            : null,
                   ),
-                  child:
-                      isSelected
-                          ? Icon(Icons.check, color: iconColor, size: 20)
-                          : null,
                 ),
               );
             },

@@ -8,6 +8,8 @@ import '../models/session_history.dart';
 import '../services/alarm_scheduler.dart';
 import '../services/cue_player.dart';
 import '../services/database_service.dart';
+// Gene - Nov, 14, 2026: Added IntervalSessionService import to disarm interval timers on schedule completion and re-arm on reset/snooze.
+import '../services/interval_session_service.dart';
 
 /// Runs an interval timer on the wall clock, decoupled from any screen.
 ///
@@ -377,6 +379,9 @@ class IntervalRunController {
       _logSessionCompletion();
       // Gene - Nov, 7, 2026: Clear persisted interval session when schedule completes.
       unawaited(DatabaseService().clearActiveIntervalSession());
+      // Gene - Nov, 14, 2026: Disarm IntervalTimer.isActive when schedule completes so the card switch reflects completion.
+      timer.isActive = false;
+      IntervalSessionService().syncArmedFlag(timer.id, isActive: false);
     }
   }
 
@@ -401,12 +406,47 @@ class IntervalRunController {
     unawaited(_syncBackgroundAlarms());
   }
 
+  // Gene - Nov, 14, 2026: Re-arm active interval session state when restarted or snoozed while registered as the active session.
+  // void reset() {
+  //   _ticker?.cancel();
+  //   isCompleted.value = false;
+  //   isRunning.value = true;
+  //   _initialize();
+  //   _startTicker();
+  //   unawaited(_syncBackgroundAlarms());
+  // }
+  //
+  // // Gene - Nov, 8, 2026: Added snooze() to schedule an immediate follow-up alarm after [duration] (both mid-schedule and after completion) and re-sync OS notifications.
+  // void snooze(Duration duration) {
+  //   final now = _now();
+  //   final snoozeTime = now.add(duration);
+  //   currentTime.value = now;
+  //
+  //   final updated = List<DateTime>.from(allAlarmTimes)..add(snoozeTime);
+  //   updated.sort();
+  //   allAlarmTimes = updated;
+  //
+  //   final idx = allAlarmTimes.indexWhere(
+  //     (t) => t.isAtSameMomentAs(snoozeTime),
+  //   );
+  //   currentAlarmIndex.value = idx >= 0 ? idx : allAlarmTimes.length - 1;
+  //   nextAlarmTime.value = snoozeTime;
+  //   isCompleted.value = false;
+  //   isRunning.value = true;
+  //   _startTicker();
+  //   unawaited(_syncBackgroundAlarms());
+  // }
   void reset() {
     _ticker?.cancel();
     isCompleted.value = false;
     isRunning.value = true;
     _initialize();
     _startTicker();
+    if (identical(IntervalSessionService().active.value, this)) {
+      timer.isActive = true;
+      IntervalSessionService().syncArmedFlag(timer.id, isActive: true);
+      unawaited(IntervalSessionService().persistActiveSession());
+    }
     unawaited(_syncBackgroundAlarms());
   }
 
@@ -428,6 +468,11 @@ class IntervalRunController {
     isCompleted.value = false;
     isRunning.value = true;
     _startTicker();
+    if (identical(IntervalSessionService().active.value, this)) {
+      timer.isActive = true;
+      IntervalSessionService().syncArmedFlag(timer.id, isActive: true);
+      unawaited(IntervalSessionService().persistActiveSession());
+    }
     unawaited(_syncBackgroundAlarms());
   }
 

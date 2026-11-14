@@ -131,11 +131,30 @@ class ActivityListController {
     return encoder.convert(sequence.toJson());
   }
 
+  // Gene - Nov, 14, 2026: Reject malformed or negative timer/preparation durations when decoding shared routine JSON, and require non-empty timers on UI import.
+  // static TimerSequence? sequenceFromJson(String jsonString) {
+  //   try {
+  //     final decoded = jsonDecode(jsonString);
+  //     if (decoded is Map<String, dynamic>) {
+  //       return TimerSequence.fromJson(decoded);
+  //     }
+  //     return null;
+  //   } catch (_) {
+  //     return null;
+  //   }
+  // }
   static TimerSequence? sequenceFromJson(String jsonString) {
     try {
       final decoded = jsonDecode(jsonString);
-      if (decoded is Map<String, dynamic>) {
-        return TimerSequence.fromJson(decoded);
+      if (decoded is Map) {
+        final sequence = TimerSequence.fromJson(
+          Map<String, dynamic>.from(decoded),
+        );
+        if (sequence.preparationSeconds < 0 ||
+            sequence.timers.any((t) => t.durationInSeconds <= 0)) {
+          return null;
+        }
+        return sequence;
       }
       return null;
     } catch (_) {
@@ -153,9 +172,19 @@ class ActivityListController {
     );
   }
 
+  // Gene - Nov, 14, 2026: Require non-empty valid timers when importing a routine from clipboard/JSON.
+  // Future<bool> importSequenceFromJson(String jsonString) async {
+  //   final sequence = sequenceFromJson(jsonString);
+  //   if (sequence == null) {
+  //     UiMessenger().showMessage(
+  //       'Invalid timer routine JSON format.',
+  //       title: 'Import Failed',
+  //     );
+  //     return false;
+  //   }
   Future<bool> importSequenceFromJson(String jsonString) async {
     final sequence = sequenceFromJson(jsonString);
-    if (sequence == null) {
+    if (sequence == null || sequence.timers.isEmpty) {
       UiMessenger().showMessage(
         'Invalid timer routine JSON format.',
         title: 'Import Failed',
