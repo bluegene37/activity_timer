@@ -67,17 +67,50 @@ jobs:
       #       exit 1
       #     fi
       #     echo "VERSION=$PUBSPEC_VERSION" >> "$GITHUB_ENV"
+      # Gene - Nov, 16, 2026: Support git tags with or without +build suffix (e.g. v1.0.4+4 or v1.0.4) in Validate Version Alignment
+      # - name: Validate Version Alignment
+      #   run: |
+      #     PUBSPEC_VERSION=$(sed -n 's/^version: \([0-9.]*\)+.*/\1/p' pubspec.yaml)
+      #     REF_TAG="${{ github.event.inputs.version_tag }}"
+      #     if [ -z "$REF_TAG" ] && [ "${{ github.ref_type }}" = "tag" ]; then
+      #       REF_TAG="${{ github.ref_name }}"
+      #     fi
+      #     if [ -n "$REF_TAG" ]; then
+      #       TAG_VERSION="${REF_TAG#v}"
+      #       if [ -n "$TAG_VERSION" ] && [ "$PUBSPEC_VERSION" != "$TAG_VERSION" ]; then
+      #         echo "::error::Tag version ($TAG_VERSION) does not match pubspec.yaml version ($PUBSPEC_VERSION)"
+      #         exit 1
+      #       fi
+      #     fi
+      #     echo "VERSION=$PUBSPEC_VERSION" >> "$GITHUB_ENV"
       - name: Validate Version Alignment
+        env:
+          INPUT_VERSION_TAG: ${{ github.event.inputs.version_tag }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          PUBSPEC_VERSION=$(sed -n 's/^version: \([0-9.]*\)+.*/\1/p' pubspec.yaml)
-          REF_TAG="${{ github.event.inputs.version_tag }}"
-          if [ -z "$REF_TAG" ] && [ "${{ github.ref_type }}" = "tag" ]; then
-            REF_TAG="${{ github.ref_name }}"
+          PUBSPEC_FULL_VERSION=$(sed -n 's/^version:[[:space:]]*\([^[:space:]#]*\).*/\1/p' pubspec.yaml | head -n 1)
+          PUBSPEC_VERSION="${PUBSPEC_FULL_VERSION%%+*}"
+          if [ -z "$PUBSPEC_VERSION" ]; then
+            echo "::error::Failed to parse version from pubspec.yaml"
+            exit 1
+          fi
+          REF_TAG="$INPUT_VERSION_TAG"
+          if [ -z "$REF_TAG" ] && [ "$REF_TYPE" = "tag" ]; then
+            REF_TAG="$REF_NAME"
           fi
           if [ -n "$REF_TAG" ]; then
             TAG_VERSION="${REF_TAG#v}"
-            if [ -n "$TAG_VERSION" ] && [ "$PUBSPEC_VERSION" != "$TAG_VERSION" ]; then
-              echo "::error::Tag version ($TAG_VERSION) does not match pubspec.yaml version ($PUBSPEC_VERSION)"
+            case "$TAG_VERSION" in
+              *+*)
+                EXPECTED_VERSION="$PUBSPEC_FULL_VERSION"
+                ;;
+              *)
+                EXPECTED_VERSION="$PUBSPEC_VERSION"
+                ;;
+            esac
+            if [ -n "$TAG_VERSION" ] && [ "$EXPECTED_VERSION" != "$TAG_VERSION" ]; then
+              echo "::error::Tag version ($TAG_VERSION) does not match pubspec.yaml version ($EXPECTED_VERSION)"
               exit 1
             fi
           fi
@@ -308,9 +341,42 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Resolve Version
+      # Gene - Nov, 16, 2026: Align iOS version resolution and tag validation with Android job to support +build tags and prevent split releases
+      # - name: Resolve Version
+      #   run: |
+      #     PUBSPEC_VERSION=$(sed -n 's/^version: \([0-9.]*\)+.*/\1/p' pubspec.yaml)
+      #     echo "VERSION=$PUBSPEC_VERSION" >> "$GITHUB_ENV"
+      - name: Validate Version Alignment
+        env:
+          INPUT_VERSION_TAG: ${{ github.event.inputs.version_tag }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          PUBSPEC_VERSION=$(sed -n 's/^version: \([0-9.]*\)+.*/\1/p' pubspec.yaml)
+          PUBSPEC_FULL_VERSION=$(sed -n 's/^version:[[:space:]]*\([^[:space:]#]*\).*/\1/p' pubspec.yaml | head -n 1)
+          PUBSPEC_VERSION="${PUBSPEC_FULL_VERSION%%+*}"
+          if [ -z "$PUBSPEC_VERSION" ]; then
+            echo "::error::Failed to parse version from pubspec.yaml"
+            exit 1
+          fi
+          REF_TAG="$INPUT_VERSION_TAG"
+          if [ -z "$REF_TAG" ] && [ "$REF_TYPE" = "tag" ]; then
+            REF_TAG="$REF_NAME"
+          fi
+          if [ -n "$REF_TAG" ]; then
+            TAG_VERSION="${REF_TAG#v}"
+            case "$TAG_VERSION" in
+              *+*)
+                EXPECTED_VERSION="$PUBSPEC_FULL_VERSION"
+                ;;
+              *)
+                EXPECTED_VERSION="$PUBSPEC_VERSION"
+                ;;
+            esac
+            if [ -n "$TAG_VERSION" ] && [ "$EXPECTED_VERSION" != "$TAG_VERSION" ]; then
+              echo "::error::Tag version ($TAG_VERSION) does not match pubspec.yaml version ($EXPECTED_VERSION)"
+              exit 1
+            fi
+          fi
           echo "VERSION=$PUBSPEC_VERSION" >> "$GITHUB_ENV"
 
       # Gene - Nov 7, 2026: Configure curl retries via ~/.curlrc to prevent subosito/flutter-action setup.sh exit code 56 timeouts on 2.16GB macOS Flutter SDK download
