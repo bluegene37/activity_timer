@@ -125,16 +125,24 @@ class ActivityRunController {
   Timer? _ticker;
   DateTime? _deadline;
   int _prepDurationMs = 0;
+  // Gene - Nov, 16, 2026: Track expanded duration of the active step when extended or snoozed so progress never clamps to 0.0.
+  int _activeStepDurationMs = 0;
   int _lastHapticSecond = -1;
   // Gene - Nov, 8, 2026: Track whether the 50% halfway cue has fired for the current step.
   bool _halfwayCuePlayed = false;
 
   ActivityTimer get currentTimer => timers[currentIndex.value];
 
-  int get currentDurationMs =>
-      isPreparing.value
-          ? _prepDurationMs
-          : timers[currentIndex.value].durationInSeconds * 1000;
+  // Gene - Nov, 16, 2026: Expand currentDurationMs when step is extended or snoozed past its baseline duration.
+  // int get currentDurationMs =>
+  //     isPreparing.value
+  //         ? _prepDurationMs
+  //         : timers[currentIndex.value].durationInSeconds * 1000;
+  int get currentDurationMs {
+    if (isPreparing.value) return _prepDurationMs;
+    final baseMs = timers[currentIndex.value].durationInSeconds * 1000;
+    return math.max(baseMs, _activeStepDurationMs);
+  }
 
   /// The live remaining time: derived from the deadline while running, and
   /// from the stored value while paused.
@@ -156,8 +164,23 @@ class ActivityRunController {
     return loopEnabled.value ? timers.first : null;
   }
 
+  // Gene - Nov, 16, 2026: Reset _activeStepDurationMs on initialization.
+  // void onInit() {
+  //   loopEnabled.value = sequence.defaultLoopEnabled;
+  //
+  //   if (sequence.preparationSeconds > 0) {
+  //     isPreparing.value = true;
+  //     _prepDurationMs = sequence.preparationSeconds * 1000;
+  //     remainingMs.value = _prepDurationMs;
+  //   } else {
+  //     isPreparing.value = false;
+  //     remainingMs.value = currentDurationMs;
+  //   }
+  //   start();
+  // }
   void onInit() {
     loopEnabled.value = sequence.defaultLoopEnabled;
+    _activeStepDurationMs = 0;
 
     if (sequence.preparationSeconds > 0) {
       isPreparing.value = true;
@@ -308,6 +331,22 @@ class ActivityRunController {
 
   /// The +15s / -15s controls: stretch the running deadline, or the stored
   /// remainder when paused. Never drops below one second.
+  // Gene - Nov, 16, 2026: Expand _prepDurationMs / _activeStepDurationMs when extending past original step duration so ring progress stays visible.
+  // void addSeconds(int deltaSeconds) {
+  //   final deltaMs = deltaSeconds * 1000;
+  //   final deadline = _deadline;
+  //   if (isRunning.value && deadline != null) {
+  //     final extended = deadline.add(Duration(milliseconds: deltaMs));
+  //     if (extended.isAfter(_now().add(const Duration(seconds: 1)))) {
+  //       _deadline = extended;
+  //     }
+  //     remainingMs.value = math.max(0, remainingMsNow);
+  //     unawaited(_syncBackgroundAlarms());
+  //   } else {
+  //     remainingMs.value = math.max(1000, remainingMs.value + deltaMs);
+  //   }
+  //   unawaited(_persistSession());
+  // }
   void addSeconds(int deltaSeconds) {
     final deltaMs = deltaSeconds * 1000;
     final deadline = _deadline;
@@ -320,6 +359,14 @@ class ActivityRunController {
       unawaited(_syncBackgroundAlarms());
     } else {
       remainingMs.value = math.max(1000, remainingMs.value + deltaMs);
+    }
+    if (isPreparing.value) {
+      _prepDurationMs = math.max(_prepDurationMs, remainingMs.value);
+    } else {
+      _activeStepDurationMs = math.max(
+        _activeStepDurationMs,
+        remainingMs.value,
+      );
     }
     unawaited(_persistSession());
   }
@@ -512,9 +559,36 @@ class ActivityRunController {
   //   unawaited(_syncBackgroundAlarms());
   //   unawaited(_persistSession());
   // }
+  // Gene - Nov, 16, 2026: Reset _activeStepDurationMs when transitioning out of preparation.
+  // void _finishPreparation({int overshootMs = 0, bool playCue = true}) {
+  //   isPreparing.value = false;
+  //   currentIndex.value = 0;
+  //   _lastHapticSecond = -1;
+  //   // Gene - Nov, 8, 2026: Reset halfway cue flag when step 0 starts after preparation.
+  //   _halfwayCuePlayed = false;
+  //   final d0 = currentDurationMs;
+  //   if (overshootMs <= 0) {
+  //     if (playCue) {
+  //       unawaited(_cuePlayer.playStart());
+  //     }
+  //     remainingMs.value = d0;
+  //   } else if (overshootMs < d0) {
+  //     if (playCue) {
+  //       unawaited(_cuePlayer.playStart());
+  //     }
+  //     remainingMs.value = d0 - overshootMs;
+  //   } else {
+  //     advance(overshootMs: overshootMs - d0, playCue: playCue);
+  //     return;
+  //   }
+  //   _deadline = _now().add(Duration(milliseconds: remainingMs.value));
+  //   unawaited(_syncBackgroundAlarms());
+  //   unawaited(_persistSession());
+  // }
   void _finishPreparation({int overshootMs = 0, bool playCue = true}) {
     isPreparing.value = false;
     currentIndex.value = 0;
+    _activeStepDurationMs = 0;
     _lastHapticSecond = -1;
     // Gene - Nov, 8, 2026: Reset halfway cue flag when step 0 starts after preparation.
     _halfwayCuePlayed = false;
@@ -577,10 +651,50 @@ class ActivityRunController {
   //   unawaited(_syncBackgroundAlarms());
   //   unawaited(_persistSession());
   // }
+  // Gene - Nov, 16, 2026: Reset _activeStepDurationMs when advancing to the next step.
+  // void advance({int overshootMs = 0, bool playCue = true}) {
+  //   var index = currentIndex.value;
+  //   var carry = overshootMs;
+  //   var loops = loopCount.value;
+  //
+  //   final cycleMs = sequence.totalDuration * 1000;
+  //   while (true) {
+  //     if (index < timers.length - 1) {
+  //       index++;
+  //     } else if (loopEnabled.value && cycleMs > 0) {
+  //       index = 0;
+  //       loops++;
+  //       if (carry >= cycleMs) {
+  //         loops += carry ~/ cycleMs;
+  //         carry %= cycleMs;
+  //       }
+  //     } else {
+  //       _complete(playCue: playCue);
+  //       return;
+  //     }
+  //
+  //     final durationMs = timers[index].durationInSeconds * 1000;
+  //     if (carry < durationMs) {
+  //       currentIndex.value = index;
+  //       loopCount.value = loops;
+  //       remainingMs.value = durationMs - carry;
+  //       break;
+  //     }
+  //     carry -= durationMs;
+  //   }
+  //
+  //   _lastHapticSecond = -1;
+  //   // Gene - Nov, 8, 2026: Reset halfway cue flag when advancing to a new step.
+  //   _halfwayCuePlayed = remainingMs.value <= currentDurationMs ~/ 2;
+  //   _deadline = _now().add(Duration(milliseconds: remainingMs.value));
+  //   unawaited(_syncBackgroundAlarms());
+  //   unawaited(_persistSession());
+  // }
   void advance({int overshootMs = 0, bool playCue = true}) {
     var index = currentIndex.value;
     var carry = overshootMs;
     var loops = loopCount.value;
+    _activeStepDurationMs = 0;
 
     final cycleMs = sequence.totalDuration * 1000;
     while (true) {
@@ -655,6 +769,23 @@ class ActivityRunController {
     }
   }
 
+  // Gene - Nov, 16, 2026: Reset _activeStepDurationMs when navigating to the previous step.
+  // void goToPrevious() {
+  //   if (isPreparing.value || currentIndex.value == 0) {
+  //     return;
+  //   }
+  //   final wasRunning = isRunning.value;
+  //   _ticker?.cancel();
+  //   currentIndex.value -= 1;
+  //   remainingMs.value = currentDurationMs;
+  //   _lastHapticSecond = -1;
+  //   // Gene - Nov, 8, 2026: Reset halfway cue flag when going to previous step.
+  //   _halfwayCuePlayed = false;
+  //   isRunning.value = false;
+  //   if (wasRunning) {
+  //     start();
+  //   }
+  // }
   void goToPrevious() {
     if (isPreparing.value || currentIndex.value == 0) {
       return;
@@ -662,6 +793,7 @@ class ActivityRunController {
     final wasRunning = isRunning.value;
     _ticker?.cancel();
     currentIndex.value -= 1;
+    _activeStepDurationMs = 0;
     remainingMs.value = currentDurationMs;
     _lastHapticSecond = -1;
     // Gene - Nov, 8, 2026: Reset halfway cue flag when going to previous step.
@@ -727,6 +859,40 @@ class ActivityRunController {
     unawaited(_clearSession());
   }
 
+  // Gene - Nov, 16, 2026: Reset _activeStepDurationMs on reset and set it to durationMs on snooze.
+  // void reset() {
+  //   _ticker?.cancel();
+  //   _ticker = null;
+  //   unawaited(WakelockPlus.disable());
+  //   unawaited(_scheduler.cancelAll());
+  //   isPreparing.value = sequence.preparationSeconds > 0;
+  //   _prepDurationMs = sequence.preparationSeconds * 1000;
+  //   currentIndex.value = 0;
+  //   remainingMs.value = isPreparing.value ? _prepDurationMs : currentDurationMs;
+  //   isRunning.value = false;
+  //   isCompleted.value = false;
+  //   loopCount.value = 0;
+  //   _lastHapticSecond = -1;
+  //   // Gene - Nov, 8, 2026: Reset halfway cue flag on reset and add snooze() method to extend or re-arm completed timers.
+  //   _halfwayCuePlayed = false;
+  //   _deadline = null;
+  //   unawaited(_clearSession());
+  // }
+  //
+  // /// Re-arms a completed timer (or extends a running timer) by [duration]
+  // /// and schedules the background OS notification for the snoozed deadline.
+  // void snooze(Duration duration) {
+  //   final durationMs = math.max(1000, duration.inMilliseconds);
+  //   _ticker?.cancel();
+  //   _ticker = null;
+  //   isPreparing.value = false;
+  //   isCompleted.value = false;
+  //   currentIndex.value = timers.length - 1;
+  //   remainingMs.value = durationMs;
+  //   _lastHapticSecond = -1;
+  //   _halfwayCuePlayed = true;
+  //   start();
+  // }
   void reset() {
     _ticker?.cancel();
     _ticker = null;
@@ -734,6 +900,7 @@ class ActivityRunController {
     unawaited(_scheduler.cancelAll());
     isPreparing.value = sequence.preparationSeconds > 0;
     _prepDurationMs = sequence.preparationSeconds * 1000;
+    _activeStepDurationMs = 0;
     currentIndex.value = 0;
     remainingMs.value = isPreparing.value ? _prepDurationMs : currentDurationMs;
     isRunning.value = false;
@@ -755,6 +922,7 @@ class ActivityRunController {
     isPreparing.value = false;
     isCompleted.value = false;
     currentIndex.value = timers.length - 1;
+    _activeStepDurationMs = durationMs;
     remainingMs.value = durationMs;
     _lastHapticSecond = -1;
     _halfwayCuePlayed = true;
@@ -1162,6 +1330,71 @@ class ActivityRunController {
   }
 
   // Gene - Nov, 06, 2026: Restores controller state from snapshot and synchronizes running deadline to current wall clock.
+  // Gene - Nov, 16, 2026: Preserve expanded _activeStepDurationMs / _prepDurationMs across snapshot restoration when a step was extended or snoozed.
+  // void restoreFromSnapshot({
+  //   required int initialIndex,
+  //   required bool wasPreparing,
+  //   required bool wasRunning,
+  //   required int savedRemainingMs,
+  //   required int? deadlineMs,
+  //   required bool savedLoopEnabled,
+  //   required int savedLoopCount,
+  // }) {
+  //   loopEnabled.value = savedLoopEnabled;
+  //   loopCount.value = savedLoopCount;
+  //   _prepDurationMs = sequence.preparationSeconds * 1000;
+  //
+  //   if (!wasRunning) {
+  //     isPreparing.value = wasPreparing;
+  //     currentIndex.value = initialIndex.clamp(0, timers.length - 1);
+  //     remainingMs.value = savedRemainingMs;
+  //     isRunning.value = false;
+  //     isCompleted.value = false;
+  //     return;
+  //   }
+  //
+  //   final now = _now();
+  //   final deadline =
+  //       deadlineMs != null
+  //           ? DateTime.fromMillisecondsSinceEpoch(deadlineMs)
+  //           : now.add(Duration(milliseconds: savedRemainingMs));
+  //
+  //   final diffMs = deadline.difference(now).inMilliseconds;
+  //
+  //   if (diffMs > 0) {
+  //     // The current step is still in progress.
+  //     isPreparing.value = wasPreparing;
+  //     currentIndex.value = initialIndex.clamp(0, timers.length - 1);
+  //     remainingMs.value = diffMs;
+  //     start();
+  //     return;
+  //   }
+  //
+  //   // Step has elapsed while app was suspended/killed.
+  //   final overshootMs = -diffMs;
+  //   if (wasPreparing) {
+  //     isPreparing.value = false;
+  //     currentIndex.value = 0;
+  //     final d0 = timers[0].durationInSeconds * 1000;
+  //     if (overshootMs < d0) {
+  //       remainingMs.value = d0 - overshootMs;
+  //       start();
+  //       return;
+  //     }
+  //     // Gene - Nov, 8, 2026: Catch up elapsed background steps silently on restore so OS notification audio is not duplicated.
+  //     // advance(overshootMs: overshootMs - d0);
+  //     advance(overshootMs: overshootMs - d0, playCue: false);
+  //   } else {
+  //     currentIndex.value = initialIndex.clamp(0, timers.length - 1);
+  //     // Gene - Nov, 8, 2026: Catch up elapsed background steps silently on restore so OS notification audio is not duplicated.
+  //     // advance(overshootMs: overshootMs);
+  //     advance(overshootMs: overshootMs, playCue: false);
+  //   }
+  //
+  //   if (!isCompleted.value) {
+  //     start();
+  //   }
+  // }
   void restoreFromSnapshot({
     required int initialIndex,
     required bool wasPreparing,
@@ -1174,11 +1407,17 @@ class ActivityRunController {
     loopEnabled.value = savedLoopEnabled;
     loopCount.value = savedLoopCount;
     _prepDurationMs = sequence.preparationSeconds * 1000;
+    _activeStepDurationMs = 0;
 
     if (!wasRunning) {
       isPreparing.value = wasPreparing;
       currentIndex.value = initialIndex.clamp(0, timers.length - 1);
       remainingMs.value = savedRemainingMs;
+      if (!wasPreparing) {
+        _activeStepDurationMs = math.max(0, savedRemainingMs);
+      } else {
+        _prepDurationMs = math.max(_prepDurationMs, savedRemainingMs);
+      }
       isRunning.value = false;
       isCompleted.value = false;
       return;
@@ -1197,6 +1436,11 @@ class ActivityRunController {
       isPreparing.value = wasPreparing;
       currentIndex.value = initialIndex.clamp(0, timers.length - 1);
       remainingMs.value = diffMs;
+      if (!wasPreparing) {
+        _activeStepDurationMs = math.max(0, diffMs);
+      } else {
+        _prepDurationMs = math.max(_prepDurationMs, diffMs);
+      }
       start();
       return;
     }

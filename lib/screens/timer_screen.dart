@@ -92,12 +92,31 @@ class _TimerScreenState extends State<TimerScreen> {
     // above this line would leave the screen frozen.
     return SignalBuilder(
       builder: (_) {
+        // Gene - Nov, 16, 2026: Compute 60s pace sweep progress for multi-minute / 1h+ activity timers and pass to portrait layout.
+        // final remainingMs = math.max(0, _c.remainingMs.value);
+        // final remainingSeconds = (remainingMs / 1000).ceil();
+        // final double progress =
+        //     _c.currentDurationMs > 0
+        //         ? (1 - (remainingMs / _c.currentDurationMs)).clamp(0.0, 1.0)
+        //         : 0.0;
         final remainingMs = math.max(0, _c.remainingMs.value);
         final remainingSeconds = (remainingMs / 1000).ceil();
+        final totalDurationMs = _c.currentDurationMs;
         final double progress =
-            _c.currentDurationMs > 0
-                ? (1 - (remainingMs / _c.currentDurationMs)).clamp(0.0, 1.0)
+            totalDurationMs > 0
+                ? (1 - (remainingMs / totalDurationMs)).clamp(0.0, 1.0)
                 : 0.0;
+        final double? minuteSweepProgress =
+            totalDurationMs >= 120000
+                ? (() {
+                  if (remainingMs <= 0) return 1.0;
+                  final remMod = remainingMs % 60000;
+                  if (remMod == 0) {
+                    return remainingMs < totalDurationMs ? 1.0 : 0.0;
+                  }
+                  return (60000 - remMod) / 60000.0;
+                })()
+                : null;
 
         return Scaffold(
           backgroundColor: theme.scaffoldBackgroundColor,
@@ -180,11 +199,19 @@ class _TimerScreenState extends State<TimerScreen> {
                     textTheme,
                     colorScheme,
                   )
+                  // Gene - Nov, 16, 2026: Pass optional minuteSweepProgress to portrait layout.
+                  // : _buildPortraitLayout(
+                  //   progress,
+                  //   remainingSeconds,
+                  //   textTheme,
+                  //   colorScheme,
+                  // ),
                   : _buildPortraitLayout(
                     progress,
                     remainingSeconds,
                     textTheme,
                     colorScheme,
+                    minuteSweepProgress: minuteSweepProgress,
                   ),
         );
       },
@@ -480,12 +507,20 @@ class _TimerScreenState extends State<TimerScreen> {
   //     ),
   //   );
   // }
+  // Gene - Nov, 16, 2026: Accept optional minuteSweepProgress for 60s inner pace ring.
+  // Widget _buildPortraitLayout(
+  //   double progress,
+  //   int remainingSeconds,
+  //   TextTheme textTheme,
+  //   ColorScheme colorScheme,
+  // ) {
   Widget _buildPortraitLayout(
     double progress,
     int remainingSeconds,
     TextTheme textTheme,
-    ColorScheme colorScheme,
-  ) {
+    ColorScheme colorScheme, {
+    double? minuteSweepProgress,
+  }) {
     // Gene - Nov, 14, 2026: Hoist reactive signal reads and next-step preview synchronously before LayoutBuilder so SignalBuilder tracks isRunning/phase/loop state.
     // final currentTimer = _c.timers[_c.currentIndex.value];
     // final activePhase =
@@ -657,8 +692,22 @@ class _TimerScreenState extends State<TimerScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Center(
+                      // Gene - Nov, 16, 2026: Wire secondaryProgress 60s pace ring and inner padding for multi-minute / 1h+ timers.
+                      // child: GlowingTimerRing(
+                      //   progress: progress,
+                      //   color: phaseColor,
+                      //   backgroundColor: colorScheme.onSurface.withValues(
+                      //     alpha: 0.08,
+                      //   ),
+                      //   size: ringSize,
+                      //   strokeWidth: strokeWidth,
+                      //   child: Padding(
+                      //     padding: EdgeInsets.symmetric(
+                      //       horizontal: strokeWidth + 12,
+                      //     ),
                       child: GlowingTimerRing(
                         progress: progress,
+                        secondaryProgress: minuteSweepProgress,
                         color: phaseColor,
                         backgroundColor: colorScheme.onSurface.withValues(
                           alpha: 0.08,
@@ -667,7 +716,9 @@ class _TimerScreenState extends State<TimerScreen> {
                         strokeWidth: strokeWidth,
                         child: Padding(
                           padding: EdgeInsets.symmetric(
-                            horizontal: strokeWidth + 12,
+                            horizontal:
+                                strokeWidth +
+                                (minuteSweepProgress != null ? 20 : 12),
                           ),
                           child: FittedBox(
                             fit: BoxFit.scaleDown,

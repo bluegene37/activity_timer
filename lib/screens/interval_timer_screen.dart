@@ -1,4 +1,6 @@
 import 'dart:async';
+// Gene - Nov, 16, 2026: Import dart:math for segment/minute-sweep ring calculations.
+import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -42,12 +44,19 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
 
   final _settings = AppSettings();
 
+  // Gene - Nov, 16, 2026: Prevent low-progress lightness boost from washing out the ring color in Light Mode.
+  // Color _getTimerColor(double progress, ColorScheme colorScheme) {
+  //   final baseColor = HSLColor.fromColor(colorScheme.primary);
+  //   final targetLightness = (baseColor.lightness + 0.15 - progress * 0.3).clamp(
+  //     0.2,
+  //     0.8,
+  //   );
+  //   return baseColor.withLightness(targetLightness).toColor();
+  // }
   Color _getTimerColor(double progress, ColorScheme colorScheme) {
     final baseColor = HSLColor.fromColor(colorScheme.primary);
-    final targetLightness = (baseColor.lightness + 0.15 - progress * 0.3).clamp(
-      0.2,
-      0.8,
-    );
+    final targetLightness = (baseColor.lightness + 0.04 - progress * 0.14)
+        .clamp(0.32, 0.62);
     return baseColor.withLightness(targetLightness).toColor();
   }
 
@@ -179,8 +188,26 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
     // final timeDifference = _c.nextAlarmTime.value.difference(
     //   _c.currentTime.value,
     // );
+    // Gene - Nov, 16, 2026: Hoist segmentStartTime and compute progress across the active countdown segment plus a 60s pace ring for >= 2-minute intervals.
+    // final currentTime = _c.currentTime.value;
+    // final nextAlarmTime = _c.nextAlarmTime.value;
+    // final currentAlarmIndex = _c.currentAlarmIndex.value;
+    // final isRunning = _c.isRunning.value;
+    // final timeDifference = nextAlarmTime.difference(currentTime);
+    // final hours = timeDifference.inHours;
+    // final minutes = timeDifference.inMinutes % 60;
+    // final seconds = timeDifference.inSeconds % 60;
+    //
+    // // Calculate progress for the current interval
+    // final totalSeconds = widget.timer.intervalInSeconds;
+    // final remainingSeconds = timeDifference.inSeconds;
+    //
+    // double progress =
+    //     totalSeconds > 0 ? 1.0 - (remainingSeconds / totalSeconds) : 0.0;
+    // progress = progress.clamp(0.0, 1.0);
     final currentTime = _c.currentTime.value;
     final nextAlarmTime = _c.nextAlarmTime.value;
+    final segmentStartTime = _c.segmentStartTime.value;
     final currentAlarmIndex = _c.currentAlarmIndex.value;
     final isRunning = _c.isRunning.value;
     final timeDifference = nextAlarmTime.difference(currentTime);
@@ -188,13 +215,23 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
     final minutes = timeDifference.inMinutes % 60;
     final seconds = timeDifference.inSeconds % 60;
 
-    // Calculate progress for the current interval
-    final totalSeconds = widget.timer.intervalInSeconds;
-    final remainingSeconds = timeDifference.inSeconds;
-
-    double progress =
-        totalSeconds > 0 ? 1.0 - (remainingSeconds / totalSeconds) : 0.0;
-    progress = progress.clamp(0.0, 1.0);
+    final totalSegmentMs = math.max(
+      0,
+      nextAlarmTime.difference(segmentStartTime).inMilliseconds,
+    );
+    final remainingMs = math.max(0, timeDifference.inMilliseconds);
+    final double progress = _c.currentSegmentProgress;
+    final double? minuteSweepProgress =
+        totalSegmentMs >= 120000
+            ? (() {
+              if (remainingMs <= 0) return 1.0;
+              final remMod = remainingMs % 60000;
+              if (remMod == 0) {
+                return remainingMs < totalSegmentMs ? 1.0 : 0.0;
+              }
+              return (60000 - remMod) / 60000.0;
+            })()
+            : null;
 
     // Gene - Nov, 14, 2026: Make IntervalTimerScreen responsive with dynamic ring sizing, scalable timeline cards, contrast-safe Play/Pause FAB, control tooltips, and Semantics(liveRegion: true).
     // return SafeArea(
@@ -514,8 +551,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
           final strokeWidth = (ringSize * 0.072).clamp(12.0, 20.0);
           final timelineHeight =
               (130.0 * textScale.clamp(1.0, 1.45)).roundToDouble();
-          final cardWidth =
-              (78.0 * textScale.clamp(1.0, 1.35)).roundToDouble();
+          final cardWidth = (78.0 * textScale.clamp(1.0, 1.35)).roundToDouble();
 
           return SingleChildScrollView(
             child: ConstrainedBox(
@@ -636,8 +672,22 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Center(
+                      // Gene - Nov, 16, 2026: Pass secondaryProgress 60s pace ring and extra inner clearance padding for multi-minute / 1h+ timers.
+                      // child: GlowingTimerRing(
+                      //   progress: progress,
+                      //   color: _getTimerColor(progress, colorScheme),
+                      //   backgroundColor: colorScheme.onSurface.withValues(
+                      //     alpha: 0.08,
+                      //   ),
+                      //   size: ringSize,
+                      //   strokeWidth: strokeWidth,
+                      //   child: Padding(
+                      //     padding: EdgeInsets.symmetric(
+                      //       horizontal: strokeWidth + 12,
+                      //     ),
                       child: GlowingTimerRing(
                         progress: progress,
+                        secondaryProgress: minuteSweepProgress,
                         color: _getTimerColor(progress, colorScheme),
                         backgroundColor: colorScheme.onSurface.withValues(
                           alpha: 0.08,
@@ -646,7 +696,9 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                         strokeWidth: strokeWidth,
                         child: Padding(
                           padding: EdgeInsets.symmetric(
-                            horizontal: strokeWidth + 12,
+                            horizontal:
+                                strokeWidth +
+                                (minuteSweepProgress != null ? 20 : 12),
                           ),
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
@@ -742,8 +794,7 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                               //     index == _c.currentAlarmIndex.value;
                               // final isPastAlarm =
                               //     index < _c.currentAlarmIndex.value;
-                              final isCurrentAlarm =
-                                  index == currentAlarmIndex;
+                              final isCurrentAlarm = index == currentAlarmIndex;
                               final isPastAlarm = index < currentAlarmIndex;
 
                               return Container(

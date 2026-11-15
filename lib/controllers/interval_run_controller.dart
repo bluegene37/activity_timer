@@ -1,4 +1,6 @@
 import 'dart:async';
+// Gene - Nov, 16, 2026: Import dart:math for segment duration clamping in IntervalRunController.
+import 'dart:math' as math;
 
 import 'package:signals/signals_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -47,6 +49,8 @@ class IntervalRunController {
 
   late final currentTime = signal(_now());
   late final nextAlarmTime = signal(_now());
+  // Gene - Nov, 16, 2026: Track start timestamp of the active countdown segment so progress scales accurately over 1h+ intervals and point-in-time alerts.
+  late final segmentStartTime = signal(_now());
   final currentAlarmIndex = signal(0);
   final isRunning = signal(true);
   final isCompleted = signal(false);
@@ -59,6 +63,21 @@ class IntervalRunController {
   Duration get untilNextAlarm {
     final difference = nextAlarmTime.value.difference(currentTime.value);
     return difference.isNegative ? Duration.zero : difference;
+  }
+
+  // Gene - Nov, 16, 2026: Expose current segment duration and clamped 0..1 progress for outer ring rendering.
+  int get currentSegmentDurationMs => math.max(
+    0,
+    nextAlarmTime.value.difference(segmentStartTime.value).inMilliseconds,
+  );
+
+  double get currentSegmentProgress {
+    if (isCompleted.value) return 1.0;
+    final totalMs = currentSegmentDurationMs;
+    if (totalMs <= 0) return 0.0;
+    final remainingMs =
+        nextAlarmTime.value.difference(currentTime.value).inMilliseconds;
+    return (1.0 - (remainingMs / totalMs)).clamp(0.0, 1.0);
   }
 
   void onInit() {
@@ -313,6 +332,35 @@ class IntervalRunController {
 
     allAlarmTimes = tempTimer.getAllAlarmTimes();
 
+    // Gene - Nov, 16, 2026: Initialize segmentStartTime alongside nextAlarmTime so multi-hour alerts and pre-window countdowns show immediate progress.
+    // if (now.isBefore(normalizedStart)) {
+    //   // Before the window opens the first alarm is the start itself.
+    //   nextAlarmTime.value = normalizedStart;
+    //   currentAlarmIndex.value = 0;
+    // } else if (now.isAfter(normalizedEnd)) {
+    //   // Unreachable given the normalization above, but kept for safety.
+    //   nextAlarmTime.value = normalizedEnd;
+    //   currentAlarmIndex.value = allAlarmTimes.length - 1;
+    //   isCompleted.value = true;
+    // } else {
+    //   nextAlarmTime.value = tempTimer.getNextAlarmTime(now);
+    //   currentAlarmIndex.value = allAlarmTimes.indexWhere(
+    //     (time) => time.isAtSameMomentAs(nextAlarmTime.value),
+    //   );
+    //
+    //   if (currentAlarmIndex.value == -1) {
+    //     // No exact match: the closest future alarm, or done.
+    //     currentAlarmIndex.value = allAlarmTimes.indexWhere(
+    //       (time) => time.isAfter(now),
+    //     );
+    //     if (currentAlarmIndex.value == -1) {
+    //       currentAlarmIndex.value = allAlarmTimes.length - 1;
+    //       isCompleted.value = true;
+    //     } else {
+    //       nextAlarmTime.value = allAlarmTimes[currentAlarmIndex.value];
+    //     }
+    //   }
+    // }
     if (now.isBefore(normalizedStart)) {
       // Before the window opens the first alarm is the start itself.
       nextAlarmTime.value = normalizedStart;
@@ -340,6 +388,14 @@ class IntervalRunController {
           nextAlarmTime.value = allAlarmTimes[currentAlarmIndex.value];
         }
       }
+    }
+
+    if (currentAlarmIndex.value > 0 &&
+        !isCompleted.value &&
+        !now.isBefore(allAlarmTimes[currentAlarmIndex.value - 1])) {
+      segmentStartTime.value = allAlarmTimes[currentAlarmIndex.value - 1];
+    } else {
+      segmentStartTime.value = now;
     }
   }
 
@@ -418,10 +474,37 @@ class IntervalRunController {
     }
   }
 
+  // Gene - Nov, 16, 2026: Update segmentStartTime when advancing or skipping to the next alarm.
+  // void _advance() {
+  //   if (currentAlarmIndex.value < allAlarmTimes.length - 1) {
+  //     currentAlarmIndex.value += 1;
+  //     nextAlarmTime.value = allAlarmTimes[currentAlarmIndex.value];
+  //   } else {
+  //     isCompleted.value = true;
+  //     isRunning.value = false;
+  //     _ticker?.cancel();
+  //     _ticker = null;
+  //     unawaited(WakelockPlus.disable());
+  //     unawaited(_scheduler.cancelAll());
+  //     _logSessionCompletion();
+  //     // Gene - Nov, 7, 2026: Clear persisted interval session when schedule completes.
+  //     unawaited(DatabaseService().clearActiveIntervalSession());
+  //     // Gene - Nov, 14, 2026: Disarm IntervalTimer.isActive when schedule completes so the card switch reflects completion.
+  //     timer.isActive = false;
+  //     IntervalSessionService().syncArmedFlag(timer.id, isActive: false);
+  //   }
+  // }
+  //
+  // /// The forward button: silently skip to the next alarm.
+  // void skipToNext() {
+  //   _advance();
+  //   unawaited(_syncBackgroundAlarms());
+  // }
   void _advance() {
     if (currentAlarmIndex.value < allAlarmTimes.length - 1) {
       currentAlarmIndex.value += 1;
       nextAlarmTime.value = allAlarmTimes[currentAlarmIndex.value];
+      segmentStartTime.value = allAlarmTimes[currentAlarmIndex.value - 1];
     } else {
       isCompleted.value = true;
       isRunning.value = false;
@@ -441,6 +524,13 @@ class IntervalRunController {
   /// The forward button: silently skip to the next alarm.
   void skipToNext() {
     _advance();
+    if (!isCompleted.value) {
+      final now = _now();
+      currentTime.value = now;
+      if (now.isBefore(segmentStartTime.value)) {
+        segmentStartTime.value = now;
+      }
+    }
     unawaited(_syncBackgroundAlarms());
   }
 
@@ -504,18 +594,42 @@ class IntervalRunController {
   }
 
   // Gene - Nov, 8, 2026: Added snooze() to schedule an immediate follow-up alarm after [duration] (both mid-schedule and after completion) and re-sync OS notifications.
+  // Gene - Nov, 16, 2026: Set segmentStartTime to now on snooze so snooze countdown ring animates from 0% to 100%.
+  // void snooze(Duration duration) {
+  //   final now = _now();
+  //   final snoozeTime = now.add(duration);
+  //   currentTime.value = now;
+  //
+  //   final updated = List<DateTime>.from(allAlarmTimes)..add(snoozeTime);
+  //   updated.sort();
+  //   allAlarmTimes = updated;
+  //
+  //   final idx = allAlarmTimes.indexWhere(
+  //     (t) => t.isAtSameMomentAs(snoozeTime),
+  //   );
+  //   currentAlarmIndex.value = idx >= 0 ? idx : allAlarmTimes.length - 1;
+  //   nextAlarmTime.value = snoozeTime;
+  //   isCompleted.value = false;
+  //   isRunning.value = true;
+  //   _startTicker();
+  //   if (identical(IntervalSessionService().active.value, this)) {
+  //     timer.isActive = true;
+  //     IntervalSessionService().syncArmedFlag(timer.id, isActive: true);
+  //     unawaited(IntervalSessionService().persistActiveSession());
+  //   }
+  //   unawaited(_syncBackgroundAlarms());
+  // }
   void snooze(Duration duration) {
     final now = _now();
     final snoozeTime = now.add(duration);
     currentTime.value = now;
+    segmentStartTime.value = now;
 
     final updated = List<DateTime>.from(allAlarmTimes)..add(snoozeTime);
     updated.sort();
     allAlarmTimes = updated;
 
-    final idx = allAlarmTimes.indexWhere(
-      (t) => t.isAtSameMomentAs(snoozeTime),
-    );
+    final idx = allAlarmTimes.indexWhere((t) => t.isAtSameMomentAs(snoozeTime));
     currentAlarmIndex.value = idx >= 0 ? idx : allAlarmTimes.length - 1;
     nextAlarmTime.value = snoozeTime;
     isCompleted.value = false;
