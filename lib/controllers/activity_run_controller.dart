@@ -931,18 +931,92 @@ class ActivityRunController {
   //   }
   //   return alarms;
   // }
-  int _alarmIdForStep(int stepIndex) =>
-      ((loopCount.value * timers.length + stepIndex) %
+  // Gene - Nov, 15, 2026: Schedule upcoming loop laps (up to maxPendingPerSession) when loopEnabled is true so looping routines continue firing notifications in the background, and label loop-wrap notifications with the first step name.
+  // int _alarmIdForStep(int stepIndex) =>
+  //     ((loopCount.value * timers.length + stepIndex) %
+  //         (LocalNotificationAlarmScheduler.idSpaceSize - 1)) +
+  //     1;
+  //
+  // List<ScheduledAlarm> pendingAlarms() {
+  //   final alarms = <ScheduledAlarm>[];
+  //   var offsetMs = remainingMsNow;
+  //   if (offsetMs <= 0) {
+  //     return alarms;
+  //   }
+  //   final from = _now();
+  //
+  //   if (isPreparing.value) {
+  //     alarms.add(
+  //       ScheduledAlarm(
+  //         id: 0,
+  //         at: from.add(Duration(milliseconds: offsetMs)),
+  //         title: sequence.name,
+  //         body: 'Get ready — starting ${timers.first.name}.',
+  //         sound: _soundFor(0),
+  //         payload: 'activity:${sequence.id}',
+  //       ),
+  //     );
+  //     // Keep going past the countdown. The OS is the only thing running once
+  //     // the phone is pocketed — Dart timers are suspended, so
+  //     // _finishPreparation() never fires to hand over the rest. Stopping at
+  //     // the prep alarm left a routine started and immediately pocketed
+  //     // ringing exactly once and then silent for the whole session.
+  //     for (var i = 0; i < timers.length; i++) {
+  //       offsetMs += timers[i].durationInSeconds * 1000;
+  //       alarms.add(
+  //         ScheduledAlarm(
+  //           id: _alarmIdForStep(i),
+  //           at: from.add(Duration(milliseconds: offsetMs)),
+  //           title: sequence.name,
+  //           body: _bodyFor(i),
+  //           sound: _soundFor(i),
+  //           isCompletion: _endsSessionAt(i),
+  //           payload: 'activity:${sequence.id}',
+  //         ),
+  //       );
+  //     }
+  //   } else {
+  //     alarms.add(
+  //       ScheduledAlarm(
+  //         id: _alarmIdForStep(currentIndex.value),
+  //         at: from.add(Duration(milliseconds: offsetMs)),
+  //         title: sequence.name,
+  //         body: _bodyFor(currentIndex.value),
+  //         sound: _soundFor(currentIndex.value),
+  //         isCompletion: _endsSessionAt(currentIndex.value),
+  //         payload: 'activity:${sequence.id}',
+  //       ),
+  //     );
+  //     for (var i = currentIndex.value + 1; i < timers.length; i++) {
+  //       offsetMs += timers[i].durationInSeconds * 1000;
+  //       alarms.add(
+  //         ScheduledAlarm(
+  //           id: _alarmIdForStep(i),
+  //           at: from.add(Duration(milliseconds: offsetMs)),
+  //           title: sequence.name,
+  //           body: _bodyFor(i),
+  //           sound: _soundFor(i),
+  //           isCompletion: _endsSessionAt(i),
+  //           payload: 'activity:${sequence.id}',
+  //         ),
+  //       );
+  //     }
+  //   }
+  //   return alarms;
+  // }
+  int _alarmIdForStep(int stepIndex, {int loopOffset = 0}) =>
+      (((loopCount.value + loopOffset) * timers.length + stepIndex) %
           (LocalNotificationAlarmScheduler.idSpaceSize - 1)) +
       1;
 
   List<ScheduledAlarm> pendingAlarms() {
     final alarms = <ScheduledAlarm>[];
     var offsetMs = remainingMsNow;
-    if (offsetMs <= 0) {
+    if (offsetMs <= 0 || timers.isEmpty) {
       return alarms;
     }
     final from = _now();
+    const maxPending = LocalNotificationAlarmScheduler.maxPendingPerSession;
 
     if (isPreparing.value) {
       alarms.add(
@@ -960,7 +1034,7 @@ class ActivityRunController {
       // _finishPreparation() never fires to hand over the rest. Stopping at
       // the prep alarm left a routine started and immediately pocketed
       // ringing exactly once and then silent for the whole session.
-      for (var i = 0; i < timers.length; i++) {
+      for (var i = 0; i < timers.length && alarms.length < maxPending; i++) {
         offsetMs += timers[i].durationInSeconds * 1000;
         alarms.add(
           ScheduledAlarm(
@@ -986,7 +1060,11 @@ class ActivityRunController {
           payload: 'activity:${sequence.id}',
         ),
       );
-      for (var i = currentIndex.value + 1; i < timers.length; i++) {
+      for (
+        var i = currentIndex.value + 1;
+        i < timers.length && alarms.length < maxPending;
+        i++
+      ) {
         offsetMs += timers[i].durationInSeconds * 1000;
         alarms.add(
           ScheduledAlarm(
@@ -1001,6 +1079,27 @@ class ActivityRunController {
         );
       }
     }
+
+    if (loopEnabled.value && sequence.totalDuration > 0) {
+      var loopOffset = 1;
+      while (alarms.length < maxPending) {
+        for (var i = 0; i < timers.length && alarms.length < maxPending; i++) {
+          offsetMs += timers[i].durationInSeconds * 1000;
+          alarms.add(
+            ScheduledAlarm(
+              id: _alarmIdForStep(i, loopOffset: loopOffset),
+              at: from.add(Duration(milliseconds: offsetMs)),
+              title: sequence.name,
+              body: _bodyFor(i),
+              sound: _soundFor(i),
+              isCompletion: _endsSessionAt(i),
+              payload: 'activity:${sequence.id}',
+            ),
+          );
+        }
+        loopOffset++;
+      }
+    }
     return alarms;
   }
 
@@ -1012,10 +1111,19 @@ class ActivityRunController {
   bool _endsSessionAt(int index) =>
       index >= timers.length - 1 && !loopEnabled.value;
 
-  String _bodyFor(int finishedIndex) =>
-      finishedIndex >= timers.length - 1
-          ? 'Routine complete.'
-          : 'Next: ${timers[finishedIndex + 1].name}';
+  // Gene - Nov, 15, 2026: Preserve original _bodyFor and announce loop restart step when loopEnabled is true.
+  // String _bodyFor(int finishedIndex) =>
+  //     finishedIndex >= timers.length - 1
+  //         ? 'Routine complete.'
+  //         : 'Next: ${timers[finishedIndex + 1].name}';
+  String _bodyFor(int finishedIndex) {
+    if (finishedIndex < timers.length - 1) {
+      return 'Next: ${timers[finishedIndex + 1].name}';
+    }
+    return loopEnabled.value
+        ? 'Next: ${timers.first.name}'
+        : 'Routine complete.';
+  }
 
   void _logSessionCompletion() {
     try {

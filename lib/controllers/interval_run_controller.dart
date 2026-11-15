@@ -103,13 +103,40 @@ class IntervalRunController {
   // }
 
   // Gene - Nov, 7, 2026: Added interval payload to ScheduledAlarm and syncWithClock() for background notification tap handling.
+  // Gene - Nov, 15, 2026: Bound pendingAlarms to maxPendingPerSession and wrap IDs within idSpaceSize so long/frequent interval schedules fit within OS notification quotas without dropping alarms.
+  // List<ScheduledAlarm> pendingAlarms() {
+  //   final alarms = <ScheduledAlarm>[];
+  //   for (var i = currentAlarmIndex.value; i < allAlarmTimes.length; i++) {
+  //     final isLast = i == allAlarmTimes.length - 1;
+  //     alarms.add(
+  //       ScheduledAlarm(
+  //         id: i,
+  //         at: allAlarmTimes[i],
+  //         title: timer.name,
+  //         body:
+  //             isLast
+  //                 ? 'Final alarm — the schedule is complete.'
+  //                 : 'Alarm ${i + 1} of ${allAlarmTimes.length}',
+  //         sound: timer.alarmSound,
+  //         isCompletion: isLast,
+  //         payload: 'interval:${timer.id}',
+  //       ),
+  //     );
+  //   }
+  //   return alarms;
+  // }
   List<ScheduledAlarm> pendingAlarms() {
     final alarms = <ScheduledAlarm>[];
-    for (var i = currentAlarmIndex.value; i < allAlarmTimes.length; i++) {
+    for (
+      var i = currentAlarmIndex.value;
+      i < allAlarmTimes.length &&
+          alarms.length < LocalNotificationAlarmScheduler.maxPendingPerSession;
+      i++
+    ) {
       final isLast = i == allAlarmTimes.length - 1;
       alarms.add(
         ScheduledAlarm(
-          id: i,
+          id: i % LocalNotificationAlarmScheduler.idSpaceSize,
           at: allAlarmTimes[i],
           title: timer.name,
           body:
@@ -342,6 +369,29 @@ class IntervalRunController {
   //     unawaited(_cuePlayer.playAlarm(timer.alarmSound));
   //   }
   // }
+  // Gene - Nov, 15, 2026: Replenish the rolling OS alarm window after advancing across an alarm boundary while still running.
+  // void _tick({bool playCue = true}) {
+  //   currentTime.value = _now();
+  //   if (isCompleted.value || currentTime.value.isBefore(nextAlarmTime.value)) {
+  //     return;
+  //   }
+  //   // Advance past every alarm that already elapsed (several may have passed
+  //   // at once if the app was backgrounded), sounding only once — the
+  //   // dedicated completion alarm when the schedule just ended, a step cue
+  //   // otherwise.
+  //   while (!isCompleted.value &&
+  //       !currentTime.value.isBefore(nextAlarmTime.value)) {
+  //     _advance();
+  //   }
+  //   if (!playCue) {
+  //     return;
+  //   }
+  //   if (isCompleted.value) {
+  //     unawaited(_cuePlayer.playCompletion());
+  //   } else {
+  //     unawaited(_cuePlayer.playAlarm(timer.alarmSound));
+  //   }
+  // }
   void _tick({bool playCue = true}) {
     currentTime.value = _now();
     if (isCompleted.value || currentTime.value.isBefore(nextAlarmTime.value)) {
@@ -354,6 +404,9 @@ class IntervalRunController {
     while (!isCompleted.value &&
         !currentTime.value.isBefore(nextAlarmTime.value)) {
       _advance();
+    }
+    if (!isCompleted.value) {
+      unawaited(_syncBackgroundAlarms());
     }
     if (!playCue) {
       return;

@@ -391,7 +391,12 @@ class BrewRunController {
       elapsedInStepMs.value = overflowMs;
       advancedStep = true;
     }
+    // Gene - Nov, 15, 2026: Re-sync OS alarms when advancing across a brew step boundary so rolling schedules stay armed.
+    // if (advancedStep) {
+    //   unawaited(_persistSession());
+    // }
     if (advancedStep) {
+      unawaited(_syncBackgroundAlarms());
       unawaited(_persistSession());
     }
   }

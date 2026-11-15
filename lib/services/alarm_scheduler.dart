@@ -2,8 +2,13 @@ import 'dart:async';
 import 'dart:io';
 
 // Gene - Nov, 06, 2026: Commented out unnecessary foundation.dart import since widgets.dart already exports foundation elements.
+// Gene - Nov, 15, 2026: Import TargetPlatform and defaultTargetPlatform for Android exact-alarm capability probing.
 // import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
+// Gene - Nov, 15, 2026: Expose PlatformException alongside rootBundle so exact-alarm denial on Android falls back to inexact scheduling.
+// import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show PlatformException, rootBundle;
 // Gene - Nov, 06, 2026: Added widgets, routes, and session service imports to support notification tap handling.
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -132,17 +137,35 @@ abstract interface class AlarmScheduler {
 }
 
 /// The production scheduler, backed by OS local notifications.
+// Gene - Nov, 15, 2026: Shared per-plugin serialization and pending-ID state so cross-instance cancelAll() calls from an ending controller never race ahead of or wipe a newly started session's alarms.
+class _PluginScheduleState {
+  bool initialized = false;
+  Future<void> opChain = Future<void>.value();
+  final Map<int, Map<int, DateTime>> pendingByBlock =
+      <int, Map<int, DateTime>>{};
+
+  Map<int, DateTime> pendingFor(int idBase) =>
+      pendingByBlock.putIfAbsent(idBase, () => <int, DateTime>{});
+}
+
 class LocalNotificationAlarmScheduler implements AlarmScheduler {
   // Gene - Nov, 8, 2026: Added optional clock parameter, operation serialization, and scheduled fire-time tracking so cancelAll never silences already-delivered notifications.
   // LocalNotificationAlarmScheduler({
   //   FlutterLocalNotificationsPlugin? plugin,
   //   this.idBase = activityIdBase,
   // }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+  // Gene - Nov, 15, 2026: Route default plugin calls through a single shared _defaultPlugin so separate controller schedulers serialize on the same Expando-backed state.
+  // LocalNotificationAlarmScheduler({
+  //   FlutterLocalNotificationsPlugin? plugin,
+  //   this.idBase = activityIdBase,
+  //   DateTime Function()? clock,
+  // }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
+  //      _clock = clock ?? DateTime.now;
   LocalNotificationAlarmScheduler({
     FlutterLocalNotificationsPlugin? plugin,
     this.idBase = activityIdBase,
     DateTime Function()? clock,
-  }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
+  }) : _plugin = plugin ?? _defaultPlugin,
        _clock = clock ?? DateTime.now;
 
   static const String channelId = 'activity_timer_alarms';
@@ -164,6 +187,13 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
   /// `MainNavigation`) and each numbers its alarms from zero — one shared
   /// block would let a brew's step alarm quietly replace a routine's.
   static const int idSpaceSize = 1000;
+  // Gene - Nov, 15, 2026: Bound queued OS notifications per session to 20 so 3 concurrent sessions (<= 60) stay below iOS's 64-notification per-app limit and Android's 500-alarm cap.
+  static const int maxPendingPerSession = 20;
+
+  static final FlutterLocalNotificationsPlugin _defaultPlugin =
+      FlutterLocalNotificationsPlugin();
+  static final Expando<_PluginScheduleState> _pluginStates =
+      Expando<_PluginScheduleState>('LocalNotificationAlarmSchedulerState');
 
   /// Notifications survive the process, so ids must not collide with a
   /// previous run: every session type's alarms live in one reserved block.
@@ -178,15 +208,34 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
   final FlutterLocalNotificationsPlugin _plugin;
   final DateTime Function() _clock;
 
-  bool _initialized = false;
-  // Gene - Nov, 8, 2026: Replaced Set<int> _pending with Map<int, DateTime> _pending to track each notification's scheduled fire time and avoid cancelling delivered notifications whose sound is playing.
-  // final Set<int> _pending = <int>{};
-  final Map<int, DateTime> _pending = <int, DateTime>{};
-  Future<void> _opChain = Future<void>.value();
+  // Gene - Nov, 15, 2026: Back _initialized, _pending, and _opChain by per-plugin Expando state so separate controller instances serialize safely.
+  // bool _initialized = false;
+  // // Gene - Nov, 8, 2026: Replaced Set<int> _pending with Map<int, DateTime> _pending to track each notification's scheduled fire time and avoid cancelling delivered notifications whose sound is playing.
+  // // final Set<int> _pending = <int>{};
+  // final Map<int, DateTime> _pending = <int, DateTime>{};
+  // Future<void> _opChain = Future<void>.value();
+  //
+  // Future<T> _serialize<T>(Future<T> Function() action) {
+  //   final completer = Completer<T>();
+  //   _opChain = _opChain.then((_) async {
+  //     try {
+  //       completer.complete(await action());
+  //     } catch (e, st) {
+  //       completer.completeError(e, st);
+  //     }
+  //   });
+  //   return completer.future;
+  // }
+  _PluginScheduleState get _state =>
+      _pluginStates[_plugin] ??= _PluginScheduleState();
+  bool get _initialized => _state.initialized;
+  set _initialized(bool value) => _state.initialized = value;
+  Map<int, DateTime> get _pending => _state.pendingFor(idBase);
 
   Future<T> _serialize<T>(Future<T> Function() action) {
     final completer = Completer<T>();
-    _opChain = _opChain.then((_) async {
+    final state = _state;
+    state.opChain = state.opChain.then((_) async {
       try {
         completer.complete(await action());
       } catch (e, st) {
@@ -507,11 +556,20 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
                     DarwinNotificationActionOption.foreground,
                   },
                 ),
+                // Gene - Nov, 15, 2026: Ensure iOS Dismiss action wakes the foreground notification response handler reliably.
+                // DarwinNotificationAction.plain(
+                //   dismissActionId,
+                //   'Dismiss',
+                //   options: <DarwinNotificationActionOption>{
+                //     DarwinNotificationActionOption.destructive,
+                //   },
+                // ),
                 DarwinNotificationAction.plain(
                   dismissActionId,
                   'Dismiss',
                   options: <DarwinNotificationActionOption>{
                     DarwinNotificationActionOption.destructive,
+                    DarwinNotificationActionOption.foreground,
                   },
                 ),
               ],
@@ -519,11 +577,20 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
             DarwinNotificationCategory(
               brewCategoryId,
               actions: <DarwinNotificationAction>[
+                // Gene - Nov, 15, 2026: Ensure iOS Brew Dismiss action wakes the foreground notification response handler reliably.
+                // DarwinNotificationAction.plain(
+                //   dismissActionId,
+                //   'Dismiss',
+                //   options: <DarwinNotificationActionOption>{
+                //     DarwinNotificationActionOption.destructive,
+                //   },
+                // ),
                 DarwinNotificationAction.plain(
                   dismissActionId,
                   'Dismiss',
                   options: <DarwinNotificationActionOption>{
                     DarwinNotificationActionOption.destructive,
+                    DarwinNotificationActionOption.foreground,
                   },
                 ),
               ],
@@ -656,42 +723,171 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
   //     // Scheduling is best-effort; the in-app cue still fires.
   //   }
   // }
+  // Gene - Nov, 15, 2026: Cap queued alarms to maxPendingPerSession, upsert before pruning stale IDs, normalize sub-second trigger timestamps, and fall back to inexactAllowWhileIdle if Android exact alarms are denied.
+  // @override
+  // Future<void> schedule(List<ScheduledAlarm> alarms) => _serialize(() async {
+  //   try {
+  //     await _init();
+  //     await _cancelUnfiredPending();
+  //
+  //     final now = _clock();
+  //     for (final alarm in alarms) {
+  //       if (!alarm.at.isAfter(now)) {
+  //         continue; // Already elapsed: the in-app cue covered it.
+  //       }
+  //       if (alarm.id < 0 || alarm.id >= idSpaceSize) {
+  //         continue; // Outside this scheduler's block: never another's alarm.
+  //       }
+  //       final notificationId = idBase + alarm.id;
+  //       await _plugin.zonedSchedule(
+  //         id: notificationId,
+  //         title: alarm.title,
+  //         body: alarm.body,
+  //         scheduledDate: tz.TZDateTime.from(alarm.at, tz.local),
+  //         notificationDetails: _detailsFor(alarm),
+  //         // Exact timing is the entire point of a timer; inexact scheduling
+  //         // would drift by minutes under Doze.
+  //         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+  //         payload:
+  //             alarm.payload ??
+  //             (idBase == activityIdBase
+  //                 ? 'activity'
+  //                 : (idBase == intervalIdBase ? 'interval' : 'brew')),
+  //       );
+  //       _pending[notificationId] = alarm.at;
+  //     }
+  //   } catch (_) {
+  //     // Scheduling is best-effort; the in-app cue still fires.
+  //   }
+  // });
   @override
   Future<void> schedule(List<ScheduledAlarm> alarms) => _serialize(() async {
     try {
       await _init();
-      await _cancelUnfiredPending();
 
       final now = _clock();
-      for (final alarm in alarms) {
-        if (!alarm.at.isAfter(now)) {
-          continue; // Already elapsed: the in-app cue covered it.
-        }
-        if (alarm.id < 0 || alarm.id >= idSpaceSize) {
-          continue; // Outside this scheduler's block: never another's alarm.
-        }
+      final eligible = <ScheduledAlarm>[
+        for (final alarm in alarms)
+          if (alarm.at.isAfter(now) &&
+              alarm.id >= 0 &&
+              alarm.id < idSpaceSize)
+            alarm,
+      ];
+      eligible.sort((a, b) => a.at.compareTo(b.at));
+      final window = eligible.take(maxPendingPerSession).toList();
+
+      var scheduleMode = await _resolveAndroidScheduleMode();
+      final scheduledIds = <int>{};
+
+      for (final alarm in window) {
         final notificationId = idBase + alarm.id;
-        await _plugin.zonedSchedule(
-          id: notificationId,
-          title: alarm.title,
-          body: alarm.body,
-          scheduledDate: tz.TZDateTime.from(alarm.at, tz.local),
-          notificationDetails: _detailsFor(alarm),
-          // Exact timing is the entire point of a timer; inexact scheduling
-          // would drift by minutes under Doze.
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          payload:
-              alarm.payload ??
-              (idBase == activityIdBase
-                  ? 'activity'
-                  : (idBase == intervalIdBase ? 'interval' : 'brew')),
-        );
-        _pending[notificationId] = alarm.at;
+        final fireAt = _normalizeTriggerTime(alarm.at, now);
+        final payload =
+            alarm.payload ??
+            (idBase == activityIdBase
+                ? 'activity'
+                : (idBase == intervalIdBase ? 'interval' : 'brew'));
+        final details = _detailsFor(alarm);
+
+        try {
+          await _plugin.zonedSchedule(
+            id: notificationId,
+            title: alarm.title,
+            body: alarm.body,
+            scheduledDate: tz.TZDateTime.from(fireAt, tz.local),
+            notificationDetails: details,
+            androidScheduleMode: scheduleMode,
+            payload: payload,
+          );
+          scheduledIds.add(notificationId);
+          _pending[notificationId] = fireAt;
+        } on PlatformException catch (_) {
+          if (scheduleMode != AndroidScheduleMode.inexactAllowWhileIdle) {
+            scheduleMode = AndroidScheduleMode.inexactAllowWhileIdle;
+            try {
+              await _plugin.zonedSchedule(
+                id: notificationId,
+                title: alarm.title,
+                body: alarm.body,
+                scheduledDate: tz.TZDateTime.from(fireAt, tz.local),
+                notificationDetails: details,
+                androidScheduleMode: scheduleMode,
+                payload: payload,
+              );
+              scheduledIds.add(notificationId);
+              _pending[notificationId] = fireAt;
+            } catch (_) {
+              // Best-effort per alarm; keep scheduling remaining alarms.
+            }
+          }
+        } catch (_) {
+          // Best-effort per alarm; keep scheduling remaining alarms.
+        }
       }
+
+      await _cancelUnfiredPending(keepIds: scheduledIds);
     } catch (_) {
       // Scheduling is best-effort; the in-app cue still fires.
     }
   });
+
+  Future<AndroidScheduleMode> _resolveAndroidScheduleMode() async {
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      return AndroidScheduleMode.exactAllowWhileIdle;
+    }
+    try {
+      final android =
+          _plugin
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
+      final canExact = await android?.canScheduleExactNotifications();
+      if (canExact == false) {
+        return AndroidScheduleMode.inexactAllowWhileIdle;
+      }
+    } catch (_) {
+      // Fall back to exact and recover per-call if the OS rejects it.
+    }
+    return AndroidScheduleMode.exactAllowWhileIdle;
+  }
+
+  static DateTime _truncateToSecond(DateTime value) =>
+      value.isUtc
+          ? DateTime.utc(
+            value.year,
+            value.month,
+            value.day,
+            value.hour,
+            value.minute,
+            value.second,
+          )
+          : DateTime(
+            value.year,
+            value.month,
+            value.day,
+            value.hour,
+            value.minute,
+            value.second,
+          );
+
+  /// Rounds sub-second triggers up to the next whole second so platforms using
+  /// second-granularity triggers (e.g. iOS UNCalendarNotificationTrigger) never
+  /// truncate a near-future deadline into the past.
+  static DateTime _normalizeTriggerTime(DateTime target, DateTime now) {
+    final hasSubSecond = target.millisecond > 0 || target.microsecond > 0;
+    var normalized = _truncateToSecond(target);
+    if (hasSubSecond) {
+      normalized = normalized.add(const Duration(seconds: 1));
+    }
+    final comparableNow = target.isUtc ? now.toUtc() : now.toLocal();
+    final nextWholeSecond = _truncateToSecond(
+      comparableNow,
+    ).add(const Duration(seconds: 1));
+    if (normalized.isBefore(nextWholeSecond)) {
+      normalized = nextWholeSecond;
+    }
+    return normalized;
+  }
 
   // Gene - Nov, 8, 2026: Expose notification details builder for unit test verification of platform sound and banner settings.
   @visibleForTesting
@@ -868,27 +1064,59 @@ class LocalNotificationAlarmScheduler implements AlarmScheduler {
     } catch (_) {}
   });
 
-  Future<void> _cancelUnfiredPending() async {
+  // Gene - Nov, 15, 2026: Preserved original _cancelUnfiredPending without keepIds pruning support.
+  // Future<void> _cancelUnfiredPending() async {
+  //   final now = _clock();
+  //   // Notifications outlive the process, so a session killed mid-run
+  //   // leaves alarms this in-memory map knows nothing about. Sweep all
+  //   // unfired pending requests in the owned block, plus any in-memory IDs
+  //   // whose scheduled fire time is still in the future. Do NOT cancel IDs
+  //   // whose fire time has already arrived, because _plugin.cancel(id) also
+  //   // dismisses delivered notifications and cuts off their sound mid-playback.
+  //   final ids = <int>{
+  //     for (final entry in _pending.entries)
+  //       if (entry.value.isAfter(now)) entry.key,
+  //   };
+  //   for (final request in await _plugin.pendingNotificationRequests()) {
+  //     if (request.id >= idBase && request.id < idBase + idSpaceSize) {
+  //       ids.add(request.id);
+  //     }
+  //   }
+  //   for (final id in ids) {
+  //     await _plugin.cancel(id: id);
+  //   }
+  //   _pending.clear();
+  // }
+  Future<void> _cancelUnfiredPending({
+    Set<int> keepIds = const <int>{},
+  }) async {
     final now = _clock();
     // Notifications outlive the process, so a session killed mid-run
     // leaves alarms this in-memory map knows nothing about. Sweep all
-    // unfired pending requests in the owned block, plus any in-memory IDs
-    // whose scheduled fire time is still in the future. Do NOT cancel IDs
-    // whose fire time has already arrived, because _plugin.cancel(id) also
-    // dismisses delivered notifications and cuts off their sound mid-playback.
+    // unfired pending requests in the owned block not in [keepIds], plus any
+    // in-memory IDs whose scheduled fire time is still in the future and not
+    // in [keepIds]. Do NOT cancel IDs whose fire time has already arrived,
+    // because _plugin.cancel(id) also dismisses delivered notifications and
+    // cuts off their sound mid-playback.
     final ids = <int>{
       for (final entry in _pending.entries)
-        if (entry.value.isAfter(now)) entry.key,
+        if (entry.value.isAfter(now) && !keepIds.contains(entry.key))
+          entry.key,
     };
     for (final request in await _plugin.pendingNotificationRequests()) {
-      if (request.id >= idBase && request.id < idBase + idSpaceSize) {
+      if (request.id >= idBase &&
+          request.id < idBase + idSpaceSize &&
+          !keepIds.contains(request.id)) {
         ids.add(request.id);
       }
     }
     for (final id in ids) {
       await _plugin.cancel(id: id);
+      _pending.remove(id);
     }
-    _pending.clear();
+    _pending.removeWhere(
+      (id, fireAt) => !keepIds.contains(id) && !fireAt.isAfter(now),
+    );
   }
 }
 
