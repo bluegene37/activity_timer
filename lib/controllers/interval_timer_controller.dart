@@ -59,8 +59,28 @@ class IntervalTimerController {
     }
   }
 
+  // Gene - Nov, 22, 2026: Clear active interval session and disarm OS alarms when deleting the currently running timer.
+  // Future<void> deleteIntervalTimer(String id) async {
+  //   try {
+  //     await _databaseService.deleteIntervalTimer(id);
+  //     intervalTimers.removeWhere((timer) => timer.id == id);
+  //
+  //     // Delay snackbar slightly to ensure any dialog has closed
+  //     await Future<void>.delayed(const Duration(milliseconds: 100));
+  //     UiMessenger().showMessage('Interval timer deleted', title: 'Success');
+  //   } catch (e) {
+  //     await Future<void>.delayed(const Duration(milliseconds: 100));
+  //     UiMessenger().showMessage(
+  //       'Failed to delete interval timer: $e',
+  //       title: 'Error',
+  //     );
+  //   }
+  // }
   Future<void> deleteIntervalTimer(String id) async {
     try {
+      if (IntervalSessionService().active.value?.timer.id == id) {
+        IntervalSessionService().clear(timerId: id);
+      }
       await _databaseService.deleteIntervalTimer(id);
       intervalTimers.removeWhere((timer) => timer.id == id);
 

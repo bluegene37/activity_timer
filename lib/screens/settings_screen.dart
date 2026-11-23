@@ -1,3 +1,6 @@
+// Gene - Nov, 22, 2026: Convert SettingsScreen to StatefulWidget with WidgetsBindingObserver so notification permission status refreshes on open/resume, and display Notification Permissions tile.
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,8 +13,42 @@ import '../models/settings.dart';
 import '../services/locator.dart';
 import '../theme/app_theme.dart';
 
-class SettingsScreen extends StatelessWidget {
+// class SettingsScreen extends StatelessWidget {
+//   const SettingsScreen({super.key});
+//
+//   @override
+//   Widget build(BuildContext context) {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    if (locator.isRegistered<SettingsController>()) {
+      unawaited(locator<SettingsController>().refreshNotificationStatus());
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        locator.isRegistered<SettingsController>()) {
+      unawaited(locator<SettingsController>().refreshNotificationStatus());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -869,6 +906,85 @@ class SettingsScreen extends StatelessWidget {
                                 ],
                               ),
                             ),
+                      ),
+                      // Gene - Nov, 22, 2026: Added Notification Permissions inspection & system settings deep-link tile.
+                      Divider(
+                        height: 1,
+                        color: AppTheme.separator(isDark: isDark),
+                      ),
+                      SignalBuilder(
+                        builder: (_) {
+                          final status = controller.notificationStatus.value;
+                          final String subtitleText;
+                          final Color? indicatorColor;
+                          if (status.notificationsEnabled == false) {
+                            subtitleText =
+                                'Disabled — tap to enable timer alerts';
+                            indicatorColor = colorScheme.error;
+                          } else if (status.exactAlarmsEnabled == false) {
+                            subtitleText =
+                                'Exact alarms off — tap to allow precise timing';
+                            indicatorColor = Colors.orange.shade700;
+                          } else if (status.notificationsEnabled == true) {
+                            subtitleText =
+                                'Allowed for background timer alerts';
+                            indicatorColor = Colors.green.shade600;
+                          } else {
+                            subtitleText = 'Manage system notification settings';
+                            indicatorColor = null;
+                          }
+
+                          return MergeSemantics(
+                            child: ListTile(
+                              key: const Key('settings-notification-permissions'),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 6,
+                              ),
+                              title: Text(
+                                'Notification Permissions',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: Text(
+                                subtitleText,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: textTheme.bodySmall,
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (indicatorColor != null) ...[
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: indicatorColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  Icon(
+                                    CupertinoIcons.chevron_right,
+                                    size: 18,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ],
+                              ),
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                unawaited(
+                                  controller.handleNotificationAccessTap(),
+                                );
+                              },
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

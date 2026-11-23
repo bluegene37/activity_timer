@@ -1,8 +1,14 @@
+// Gene - Nov, 22, 2026: Import dart:async and session services so sound/vibration setting changes reschedule active background notifications immediately.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:signals/signals_flutter.dart';
 
 import '../models/alarm_sound.dart';
 import '../models/settings.dart';
+import '../services/activity_session_service.dart';
+import '../services/brew_session_service.dart';
+import '../services/interval_session_service.dart';
 
 class AppController {
   final _settings = AppSettings();
@@ -49,19 +55,64 @@ class AppController {
     await _settings.setThemeColor(color);
   }
 
+  // Gene - Nov, 22, 2026: Reschedule armed OS alarms whenever sound, vibration, or default alarm sound preferences change.
+  // Future<void> setSoundEnabled(bool enabled) async {
+  //   soundEnabled.value = enabled;
+  //   await _settings.setSoundEnabled(enabled);
+  // }
+  //
+  // Future<void> setVibrationEnabled(bool enabled) async {
+  //   vibrationEnabled.value = enabled;
+  //   await _settings.setVibrationEnabled(enabled);
+  // }
+  //
+  // Future<void> setDefaultAlarmSound(AlarmSound sound) async {
+  //   defaultAlarmSound.value = sound;
+  //   await _settings.setDefaultAlarmSound(sound);
+  // }
+  void _rescheduleActiveSessions() {
+    unawaited(ActivitySessionService().rescheduleActiveAlarms());
+    unawaited(IntervalSessionService().rescheduleActiveAlarms());
+    unawaited(BrewSessionService().rescheduleActiveAlarms());
+  }
+
+  // Gene - Nov, 23, 2026: Trigger active-session alarm rescheduling immediately upon in-memory setting updates before awaiting Hive disk persistence.
+  // Future<void> setSoundEnabled(bool enabled) async {
+  //   soundEnabled.value = enabled;
+  //   await _settings.setSoundEnabled(enabled);
+  //   _rescheduleActiveSessions();
+  // }
+  //
+  // Future<void> setVibrationEnabled(bool enabled) async {
+  //   vibrationEnabled.value = enabled;
+  //   await _settings.setVibrationEnabled(enabled);
+  //   _rescheduleActiveSessions();
+  // }
+  //
+  // Future<void> setDefaultAlarmSound(AlarmSound sound) async {
+  //   defaultAlarmSound.value = sound;
+  //   await _settings.setDefaultAlarmSound(sound);
+  //   _rescheduleActiveSessions();
+  // }
   Future<void> setSoundEnabled(bool enabled) async {
     soundEnabled.value = enabled;
-    await _settings.setSoundEnabled(enabled);
+    final save = _settings.setSoundEnabled(enabled);
+    _rescheduleActiveSessions();
+    await save;
   }
 
   Future<void> setVibrationEnabled(bool enabled) async {
     vibrationEnabled.value = enabled;
-    await _settings.setVibrationEnabled(enabled);
+    final save = _settings.setVibrationEnabled(enabled);
+    _rescheduleActiveSessions();
+    await save;
   }
 
   Future<void> setDefaultAlarmSound(AlarmSound sound) async {
     defaultAlarmSound.value = sound;
-    await _settings.setDefaultAlarmSound(sound);
+    final save = _settings.setDefaultAlarmSound(sound);
+    _rescheduleActiveSessions();
+    await save;
   }
 
   Future<void> setThemeStyle(AppThemeStyle style) async {

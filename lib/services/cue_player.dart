@@ -47,10 +47,127 @@ extension CuePlayerPrompts on CuePlayer {
   }
 }
 
-// class AudioCuePlayer implements CuePlayer {
+// Gene - Nov, 22, 2026: Await audio session configuration before playback, retry setAudioContext if it fails, guard against post-dispose calls, and serialize playback cleanly through _play.
+// // class AudioCuePlayer implements CuePlayer {
+// class AudioCuePlayer implements CuePlayer, PromptCuePlayer {
+//   AudioCuePlayer() {
+//     unawaited(_configure());
+//   }
+//
+//   /// The whole session is over, so this cue is worth being longer and
+//   /// louder than a step boundary.
+//   static const String completionSound = 'timer_complete.wav';
+//
+//   static bool _contextConfigured = false;
+//
+//   final AudioPlayer _player = AudioPlayer();
+//   final AppSettings _settings = AppSettings();
+//
+//   Future<void> _configure() async {
+//     try {
+//       // One-shot cues: stop (rather than release) after playback so the
+//       // next cue starts without re-preparing the player.
+//       await _player.setReleaseMode(ReleaseMode.stop);
+//       await _player.setVolume(1);
+//
+//       if (_contextConfigured) {
+//         return;
+//       }
+//       _contextConfigured = true;
+//       // The audio session, and the two decisions that matter for a timer:
+//       //
+//       //  * respectSilence stays false, so iOS uses the `playback` category
+//       //    and an alarm still sounds with the ringer switch off — the whole
+//       //    point of an alarm.
+//       //  * duckOthers dips music or a podcast for the length of the cue
+//       //    instead of stopping it outright, which is what every timer app
+//       //    people run alongside audio does.
+//       await AudioPlayer.global.setAudioContext(
+//         AudioContextConfig(focus: AudioContextConfigFocus.duckOthers).build(),
+//       );
+//     } catch (_) {
+//       // Audio is best-effort; haptics still fire below.
+//     }
+//   }
+//
+//   Future<void> _play(String fileName) async {
+//     if (_settings.soundEnabled) {
+//       try {
+//         await _player.stop();
+//         await _player.setVolume(1);
+//         await _player.setSource(AssetSource('sounds/$fileName'));
+//         await _player.resume();
+//       } catch (_) {}
+//     }
+//   }
+//
+//   Future<void> _buzz(int count) async {
+//     if (!_settings.vibrationEnabled) {
+//       return;
+//     }
+//     for (var i = 0; i < count; i++) {
+//       if (i > 0) {
+//         await Future<void>.delayed(const Duration(milliseconds: 220));
+//       }
+//       unawaited(HapticFeedback.heavyImpact());
+//     }
+//   }
+//
+//   @override
+//   Future<void> playAlarm(AlarmSound sound) async {
+//     await _play(sound.fileName);
+//     unawaited(_buzz(2));
+//   }
+//
+//   @override
+//   Future<void> playCompletion() async {
+//     await _play(completionSound);
+//     // Three buzzes: felt through a pocket, and distinct from a boundary.
+//     unawaited(_buzz(3));
+//   }
+//
+//   @override
+//   Future<void> playStart() async {
+//     await _play(AlarmSound.beep.fileName);
+//     unawaited(_buzz(1));
+//   }
+//
+//   // Gene - Nov, 8, 2026: Implemented playCountdownTick and playHalfwayWarning on AudioCuePlayer.
+//   @override
+//   Future<void> playCountdownTick() async {
+//     if (_settings.soundEnabled && _settings.countdownBeepsEnabled) {
+//       try {
+//         await _player.stop();
+//         await _player.setVolume(0.45);
+//         await _player.setSource(AssetSource('sounds/${AlarmSound.beep.fileName}'));
+//         await _player.resume();
+//       } catch (_) {}
+//     }
+//   }
+//
+//   @override
+//   Future<void> playHalfwayWarning() async {
+//     if (_settings.soundEnabled && _settings.halfwayWarningEnabled) {
+//       try {
+//         await _player.stop();
+//         await _player.setVolume(0.65);
+//         await _player.setSource(
+//           AssetSource('sounds/${AlarmSound.chime.fileName}'),
+//         );
+//         await _player.resume();
+//       } catch (_) {}
+//     }
+//     if (_settings.vibrationEnabled && _settings.halfwayWarningEnabled) {
+//       unawaited(HapticFeedback.mediumImpact());
+//     }
+//   }
+//
+//   @override
+//   Future<void> dispose() => _player.dispose();
+// }
 class AudioCuePlayer implements CuePlayer, PromptCuePlayer {
   AudioCuePlayer() {
-    unawaited(_configure());
+    _ready = _configure();
   }
 
   /// The whole session is over, so this cue is worth being longer and
@@ -61,9 +178,14 @@ class AudioCuePlayer implements CuePlayer, PromptCuePlayer {
 
   final AudioPlayer _player = AudioPlayer();
   final AppSettings _settings = AppSettings();
+  late final Future<void> _ready;
+  bool _disposed = false;
 
   Future<void> _configure() async {
     try {
+      if (_disposed) {
+        return;
+      }
       // One-shot cues: stop (rather than release) after playback so the
       // next cue starts without re-preparing the player.
       await _player.setReleaseMode(ReleaseMode.stop);
@@ -72,7 +194,6 @@ class AudioCuePlayer implements CuePlayer, PromptCuePlayer {
       if (_contextConfigured) {
         return;
       }
-      _contextConfigured = true;
       // The audio session, and the two decisions that matter for a timer:
       //
       //  * respectSilence stays false, so iOS uses the `playback` category
@@ -84,29 +205,39 @@ class AudioCuePlayer implements CuePlayer, PromptCuePlayer {
       await AudioPlayer.global.setAudioContext(
         AudioContextConfig(focus: AudioContextConfigFocus.duckOthers).build(),
       );
+      _contextConfigured = true;
     } catch (_) {
       // Audio is best-effort; haptics still fire below.
     }
   }
 
-  Future<void> _play(String fileName) async {
-    if (_settings.soundEnabled) {
-      try {
-        await _player.stop();
-        await _player.setVolume(1);
-        await _player.setSource(AssetSource('sounds/$fileName'));
-        await _player.resume();
-      } catch (_) {}
+  Future<void> _play(String fileName, {double volume = 1.0}) async {
+    if (_disposed || !_settings.soundEnabled) {
+      return;
     }
+    try {
+      await _ready;
+      if (_disposed || !_settings.soundEnabled) {
+        return;
+      }
+      await _player.stop();
+      if (_disposed) {
+        return;
+      }
+      await _player.play(AssetSource('sounds/$fileName'), volume: volume);
+    } catch (_) {}
   }
 
   Future<void> _buzz(int count) async {
-    if (!_settings.vibrationEnabled) {
+    if (_disposed || !_settings.vibrationEnabled) {
       return;
     }
     for (var i = 0; i < count; i++) {
       if (i > 0) {
         await Future<void>.delayed(const Duration(milliseconds: 220));
+      }
+      if (_disposed || !_settings.vibrationEnabled) {
+        return;
       }
       unawaited(HapticFeedback.heavyImpact());
     }
@@ -135,32 +266,31 @@ class AudioCuePlayer implements CuePlayer, PromptCuePlayer {
   @override
   Future<void> playCountdownTick() async {
     if (_settings.soundEnabled && _settings.countdownBeepsEnabled) {
-      try {
-        await _player.stop();
-        await _player.setVolume(0.45);
-        await _player.setSource(AssetSource('sounds/${AlarmSound.beep.fileName}'));
-        await _player.resume();
-      } catch (_) {}
+      await _play(AlarmSound.beep.fileName, volume: 0.45);
     }
   }
 
   @override
   Future<void> playHalfwayWarning() async {
-    if (_settings.soundEnabled && _settings.halfwayWarningEnabled) {
-      try {
-        await _player.stop();
-        await _player.setVolume(0.65);
-        await _player.setSource(
-          AssetSource('sounds/${AlarmSound.chime.fileName}'),
-        );
-        await _player.resume();
-      } catch (_) {}
+    if (_disposed) {
+      return;
     }
-    if (_settings.vibrationEnabled && _settings.halfwayWarningEnabled) {
+    if (_settings.soundEnabled && _settings.halfwayWarningEnabled) {
+      await _play(AlarmSound.chime.fileName, volume: 0.65);
+    }
+    if (!_disposed &&
+        _settings.vibrationEnabled &&
+        _settings.halfwayWarningEnabled) {
       unawaited(HapticFeedback.mediumImpact());
     }
   }
 
   @override
-  Future<void> dispose() => _player.dispose();
+  Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
+    await _player.dispose();
+  }
 }

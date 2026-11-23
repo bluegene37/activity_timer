@@ -7,17 +7,29 @@ enum AlarmSound {
   @HiveField(0)
   beep('Beep', 'beep.wav', description: 'Short and neutral'),
 
+  // Gene - Nov, 22, 2026: Converted bell, chime, digital, and gentle to 16-bit PCM .wav so iOS UNNotificationSound plays every alarm sound reliably.
+  // @HiveField(1)
+  // bell('Bell', 'bell.mp3', description: 'Resonant single strike'),
+  //
+  // @HiveField(2)
+  // chime('Chime', 'chime.mp3', description: 'Gentle ascending notes'),
+  //
+  // @HiveField(3)
+  // digital('Digital', 'digital.mp3', description: 'Classic clock radio'),
+  //
+  // @HiveField(4)
+  // gentle('Gentle', 'gentle.mp3', description: 'Soft and unhurried'),
   @HiveField(1)
-  bell('Bell', 'bell.mp3', description: 'Resonant single strike'),
+  bell('Bell', 'bell.wav', description: 'Resonant single strike'),
 
   @HiveField(2)
-  chime('Chime', 'chime.mp3', description: 'Gentle ascending notes'),
+  chime('Chime', 'chime.wav', description: 'Gentle ascending notes'),
 
   @HiveField(3)
-  digital('Digital', 'digital.mp3', description: 'Classic clock radio'),
+  digital('Digital', 'digital.wav', description: 'Classic clock radio'),
 
   @HiveField(4)
-  gentle('Gentle', 'gentle.mp3', description: 'Soft and unhurried'),
+  gentle('Gentle', 'gentle.wav', description: 'Soft and unhurried'),
 
   @HiveField(5)
   alert('Alert', 'alert.wav', description: 'Urgent triple pulse — loudest'),

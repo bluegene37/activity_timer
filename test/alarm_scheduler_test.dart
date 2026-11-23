@@ -304,10 +304,19 @@ void main() {
           expect(details.android, isNotNull);
           expect(details.android!.playSound, isTrue);
           expect(details.android!.enableVibration, isTrue);
+          // Gene - Nov, 22, 2026: Require createIfNotExists so Android 8+ creates channels cleanly on first use, plus public lockscreen visibility and auto-cancelling Snooze action.
           expect(
             details.android!.channelAction,
-            AndroidNotificationChannelAction.update,
+            AndroidNotificationChannelAction.createIfNotExists,
           );
+          expect(
+            details.android!.visibility,
+            NotificationVisibility.public,
+          );
+          final snoozeAction = details.android!.actions!.firstWhere(
+            (a) => a.id == LocalNotificationAlarmScheduler.snooze5mActionId,
+          );
+          expect(snoozeAction.cancelNotification, isTrue);
           expect(
             details.android!.sound,
             isA<RawResourceAndroidNotificationSound>(),
@@ -863,7 +872,15 @@ class _MockAndroidNotificationsPlugin extends Fake
   final bool canScheduleExact;
 
   @override
+  Future<void> createNotificationChannel(
+    AndroidNotificationChannel notificationChannel,
+  ) async {}
+
+  @override
   Future<void> deleteNotificationChannel({required String channelId}) async {}
+
+  @override
+  Future<bool?> areNotificationsEnabled() async => true;
 
   @override
   Future<bool?> canScheduleExactNotifications() async => canScheduleExact;

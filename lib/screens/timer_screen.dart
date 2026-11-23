@@ -8,10 +8,13 @@ import 'package:signals/signals_flutter.dart';
 
 import '../components/glowing_timer_ring.dart';
 import '../controllers/activity_run_controller.dart';
+// Gene - Nov, 22, 2026: Sync in-screen mute toggle with AppController so SettingsScreen and OS notifications stay synchronized.
+import '../controllers/app_controller.dart';
 import '../models/activity_timer.dart';
 import '../models/interval_phase.dart';
 import '../models/settings.dart';
 import '../services/activity_session_service.dart';
+import '../services/locator.dart';
 import '../theme/app_theme.dart';
 import '../utils/time_format.dart';
 
@@ -135,24 +138,64 @@ class _TimerScreenState extends State<TimerScreen> {
               onPressed: () => Navigator.pop(context),
             ),
             actions: [
+              // Gene - Nov, 22, 2026: Route mute button through AppController when registered so SettingsScreen and background notifications update immediately.
+              // IconButton(
+              //   icon: Icon(
+              //     _settings.soundEnabled
+              //         ? CupertinoIcons.speaker_2_fill
+              //         : CupertinoIcons.speaker_slash_fill,
+              //     color:
+              //         _settings.soundEnabled
+              //             ? colorScheme.primary
+              //             : colorScheme.onSurfaceVariant,
+              //     size: 20,
+              //   ),
+              //   onPressed: () async {
+              //     unawaited(HapticFeedback.selectionClick());
+              //     final bool newValue = !_settings.soundEnabled;
+              //     await _settings.setSoundEnabled(newValue);
+              //     setState(() {});
+              //   },
+              //   tooltip: _settings.soundEnabled ? 'Mute sound' : 'Enable sound',
+              // ),
               IconButton(
                 icon: Icon(
-                  _settings.soundEnabled
+                  (locator.isRegistered<AppController>()
+                          ? locator<AppController>().soundEnabled.value
+                          : _settings.soundEnabled)
                       ? CupertinoIcons.speaker_2_fill
                       : CupertinoIcons.speaker_slash_fill,
                   color:
-                      _settings.soundEnabled
+                      (locator.isRegistered<AppController>()
+                              ? locator<AppController>().soundEnabled.value
+                              : _settings.soundEnabled)
                           ? colorScheme.primary
                           : colorScheme.onSurfaceVariant,
                   size: 20,
                 ),
                 onPressed: () async {
                   unawaited(HapticFeedback.selectionClick());
-                  final bool newValue = !_settings.soundEnabled;
-                  await _settings.setSoundEnabled(newValue);
-                  setState(() {});
+                  final hasApp = locator.isRegistered<AppController>();
+                  final current =
+                      hasApp
+                          ? locator<AppController>().soundEnabled.value
+                          : _settings.soundEnabled;
+                  final next = !current;
+                  if (hasApp) {
+                    await locator<AppController>().setSoundEnabled(next);
+                  } else {
+                    await _settings.setSoundEnabled(next);
+                  }
+                  if (mounted) {
+                    setState(() {});
+                  }
                 },
-                tooltip: _settings.soundEnabled ? 'Mute sound' : 'Enable sound',
+                tooltip:
+                    (locator.isRegistered<AppController>()
+                            ? locator<AppController>().soundEnabled.value
+                            : _settings.soundEnabled)
+                        ? 'Mute sound'
+                        : 'Enable sound',
               ),
               IconButton(
                 icon: Icon(
@@ -1439,8 +1482,16 @@ class _TimerScreenState extends State<TimerScreen> {
                   color: colorScheme.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(AppTheme.pillRadius),
                 ),
+                // Gene - Nov, 22, 2026: Fix broken string interpolation so loop count number renders instead of controller.toString().
+                // child: Text(
+                //   'Loops completed: $_c.loopCount.value',
+                //   style: textTheme.titleSmall?.copyWith(
+                //     color: colorScheme.primary,
+                //     fontWeight: FontWeight.w700,
+                //   ),
+                // ),
                 child: Text(
-                  'Loops completed: $_c.loopCount.value',
+                  'Loops completed: ${_c.loopCount.value}',
                   style: textTheme.titleSmall?.copyWith(
                     color: colorScheme.primary,
                     fontWeight: FontWeight.w700,

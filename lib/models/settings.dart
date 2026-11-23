@@ -1,3 +1,6 @@
+// Gene - Nov, 23, 2026: Import dart:async for FakeAsync zone detection to prevent Hive RandomAccessFile deadlocks in widget tests.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:hive_ce/hive.dart';
 
@@ -133,6 +136,13 @@ class AppSettings {
     _halfwayWarningEnabled = settings.halfwayWarningEnabled;
   }
 
+  // Gene - Nov, 23, 2026: Skip Hive disk writes in FakeAsync widget tests (mirroring DatabaseService) so Settings toggles never deadlock on RandomAccessFile locks.
+  bool get _isInFakeAsync {
+    final timer = Zone.current.createTimer(Duration.zero, () {});
+    timer.cancel();
+    return timer.runtimeType.toString().contains('Fake');
+  }
+
   /// Read-modify-write the single persisted settings record.
   Future<void> _update(void Function(AppSettingsData settings) change) async {
     // Gene - Nov, 8, 2026: Guard Hive box persistence in _update so in-memory settings mutations work cleanly in unit tests that do not initialize a Hive directory.
@@ -140,6 +150,18 @@ class AppSettings {
     // final settings = box.get(_settingsKey) ?? AppSettingsData();
     // change(settings);
     // await box.put(_settingsKey, settings);
+    // Gene - Nov, 23, 2026: Preserved disk update block prior to FakeAsync guard.
+    // try {
+    //   final box = await Hive.openBox<AppSettingsData>(_boxName);
+    //   final settings = box.get(_settingsKey) ?? AppSettingsData();
+    //   change(settings);
+    //   await box.put(_settingsKey, settings);
+    // } catch (_) {
+    //   // Ignore HiveError when running in unit tests without Hive.init.
+    // }
+    if (_isInFakeAsync) {
+      return;
+    }
     try {
       final box = await Hive.openBox<AppSettingsData>(_boxName);
       final settings = box.get(_settingsKey) ?? AppSettingsData();

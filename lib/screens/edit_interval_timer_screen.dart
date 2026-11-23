@@ -104,10 +104,18 @@ class _EditIntervalTimerScreenState extends State<EditIntervalTimerScreen> {
 
     if (pickedTime != null) {
       setState(() {
+        // Gene - Nov, 22, 2026: Anchor picked end time to _startTime's calendar date rather than _endTime's date (which may be tomorrow after midnight wrapping).
+        // _endTime = DateTime(
+        //   _endTime.year,
+        //   _endTime.month,
+        //   _endTime.day,
+        //   pickedTime.hour,
+        //   pickedTime.minute,
+        // );
         _endTime = DateTime(
-          _endTime.year,
-          _endTime.month,
-          _endTime.day,
+          _startTime.year,
+          _startTime.month,
+          _startTime.day,
           pickedTime.hour,
           pickedTime.minute,
         );

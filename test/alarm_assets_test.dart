@@ -102,5 +102,26 @@ void main() {
         );
       }
     });
+
+    // Gene - Nov, 22, 2026: Ensure every bundled & Android raw cue uses an iOS UNNotificationSound-supported Linear PCM .wav format (never .mp3).
+    test('every alarm cue uses iOS-compatible .wav format on both platforms', () {
+      for (final fileName in allCueFiles()) {
+        expect(
+          fileName.toLowerCase(),
+          endsWith('.wav'),
+          reason:
+              '$fileName must use .wav (or .caf/.aiff) so iOS UNNotificationSound plays it natively',
+        );
+        final flutterAsset = File('assets/sounds/$fileName');
+        final androidRaw = File('android/app/src/main/res/raw/$fileName');
+        expect(isWav(head(flutterAsset, 12)), isTrue);
+        expect(
+          androidRaw.existsSync(),
+          isTrue,
+          reason: 'Android res/raw/$fileName must exist alongside asset',
+        );
+        expect(isWav(head(androidRaw, 12)), isTrue);
+      }
+    });
   });
 }

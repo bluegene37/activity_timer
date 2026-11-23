@@ -19,6 +19,8 @@ import '../screens/brew_list_screen.dart';
 import '../screens/interval_timer_list_screen.dart';
 import '../screens/settings_screen.dart';
 import '../services/activity_session_service.dart';
+// Gene - Nov, 22, 2026: Wire foreground/background lifecycle state into LocalNotificationAlarmScheduler to eliminate Android double audio.
+import '../services/alarm_scheduler.dart';
 import '../services/brew_session_service.dart';
 import '../services/interval_session_service.dart';
 import '../services/locator.dart';
@@ -39,27 +41,30 @@ class _MainNavigationState extends State<MainNavigation>
     with WidgetsBindingObserver {
   int _currentIndex = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  // Gene - Nov, 8, 2026: Suspend in-app periodic tickers when entering hidden/paused background states so Dart timers never race and cancel firing OS notifications; persist only on inactive so on-screen countdowns keep ticking when pulling down the notification shade.
+  // Gene - Nov, 22, 2026: Track app foreground state in LocalNotificationAlarmScheduler and flush/suppress Android OS alarms across lifecycle transitions.
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   WidgetsBinding.instance.addObserver(this);
+  // }
+  //
+  // @override
+  // void dispose() {
+  //   WidgetsBinding.instance.removeObserver(this);
+  //   super.dispose();
+  // }
+  //
   // @override
   // void didChangeAppLifecycleState(AppLifecycleState state) {
-  //   if (state == AppLifecycleState.paused ||
-  //       state == AppLifecycleState.inactive ||
-  //       state == AppLifecycleState.hidden) {
+  //   if (state == AppLifecycleState.inactive) {
   //     unawaited(ActivitySessionService().persistActiveSession());
   //     unawaited(IntervalSessionService().persistActiveSession());
   //     unawaited(BrewSessionService().persistActiveSession());
+  //   } else if (state == AppLifecycleState.hidden ||
+  //       state == AppLifecycleState.paused) {
+  //     unawaited(ActivitySessionService().onEnterBackground());
+  //     unawaited(IntervalSessionService().onEnterBackground());
+  //     unawaited(BrewSessionService().onEnterBackground());
   //   } else if (state == AppLifecycleState.resumed) {
   //     unawaited(ActivitySessionService().syncOrRestore());
   //     unawaited(IntervalSessionService().syncOrRestore());
@@ -67,17 +72,34 @@ class _MainNavigationState extends State<MainNavigation>
   //   }
   // }
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    LocalNotificationAlarmScheduler.setAppInForeground(true);
+  }
+
+  @override
+  void dispose() {
+    LocalNotificationAlarmScheduler.setAppInForeground(false);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive) {
       unawaited(ActivitySessionService().persistActiveSession());
       unawaited(IntervalSessionService().persistActiveSession());
       unawaited(BrewSessionService().persistActiveSession());
+      unawaited(LocalNotificationAlarmScheduler.onAppBackgrounded());
     } else if (state == AppLifecycleState.hidden ||
         state == AppLifecycleState.paused) {
       unawaited(ActivitySessionService().onEnterBackground());
       unawaited(IntervalSessionService().onEnterBackground());
       unawaited(BrewSessionService().onEnterBackground());
+      unawaited(LocalNotificationAlarmScheduler.onAppBackgrounded());
     } else if (state == AppLifecycleState.resumed) {
+      unawaited(LocalNotificationAlarmScheduler.onAppForegrounded());
       unawaited(ActivitySessionService().syncOrRestore());
       unawaited(IntervalSessionService().syncOrRestore());
       unawaited(BrewSessionService().syncOrRestore());

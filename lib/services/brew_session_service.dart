@@ -1,3 +1,6 @@
+// Gene - Nov, 22, 2026: Import dart:async for unawaited OS scheduler cleanup on cold-start dismissal.
+import 'dart:async';
+
 import 'package:signals/signals.dart';
 
 import '../controllers/brew_run_controller.dart';
@@ -100,14 +103,41 @@ class BrewSessionService {
 
   /// Ends the session: cancels the ticker, releases the wakelock, disposes
   /// the cue player.
+  // Gene - Nov, 22, 2026: Cancel OS brew alarms on cold-start Dismiss even when active.value is null, and add rescheduleActiveAlarms() for settings sync.
+  // void clear() {
+  //   active.value?.onClose();
+  //   _lastCuePlayer = null;
+  //   _lastScheduler = null;
+  //   _lastClock = null;
+  //   _restoreInFlight = null;
+  //   setAfterBuild(active, null);
+  //   DatabaseService().clearActiveBrewSession();
+  // }
+  Future<void> rescheduleActiveAlarms() async {
+    final current = active.value;
+    if (current != null && current.isRunning.value && !current.isFinished.value) {
+      await current.rescheduleBackgroundAlarms();
+    }
+  }
+
   void clear() {
-    active.value?.onClose();
+    final current = active.value;
+    if (current != null) {
+      current.onClose();
+    } else {
+      final scheduler =
+          _lastScheduler ??
+          LocalNotificationAlarmScheduler(
+            idBase: LocalNotificationAlarmScheduler.brewIdBase,
+          );
+      unawaited(scheduler.cancelAll());
+    }
     _lastCuePlayer = null;
     _lastScheduler = null;
     _lastClock = null;
     _restoreInFlight = null;
     setAfterBuild(active, null);
-    DatabaseService().clearActiveBrewSession();
+    unawaited(DatabaseService().clearActiveBrewSession());
   }
 
   /// Drops the in-memory controller while preserving the persisted Hive

@@ -14,6 +14,8 @@ import '../services/alarm_scheduler.dart';
 import '../services/cue_player.dart';
 import '../services/database_service.dart';
 import '../services/ui_messenger.dart';
+// Gene - Nov, 22, 2026: Coordinate wakelock release across concurrent sessions.
+import '../services/wakelock_coordinator.dart';
 
 /// Runs an activity routine on the clock, decoupled from any screen.
 ///
@@ -216,7 +218,33 @@ class ActivityRunController {
   // }
 
   // Gene - Nov, 7, 2026: Included serialized sequenceJson in persisted session snapshot so sessions restore reliably even if the sequence is not yet stored in the sequences box, and exposed persistSession() for background lifecycle hooks.
+  // Gene - Nov, 22, 2026: Save expanded step/prep durations in session snapshot and expose rescheduleBackgroundAlarms() for sound setting updates.
+  // Future<void> persistSession() => _persistSession();
+  //
+  // Future<void> _persistSession() async {
+  //   if (isCompleted.value) {
+  //     await _clearSession();
+  //     return;
+  //   }
+  //   final data = <String, dynamic>{
+  //     'sequenceId': sequence.id,
+  //     'sequenceJson': sequence.toJson(),
+  //     'currentIndex': currentIndex.value,
+  //     'isPreparing': isPreparing.value,
+  //     'deadlineMs': _deadline?.millisecondsSinceEpoch,
+  //     'remainingMs': remainingMs.value,
+  //     'isRunning': isRunning.value,
+  //     'loopEnabled': loopEnabled.value,
+  //     'loopCount': loopCount.value,
+  //     'lastUpdatedMs': _now().millisecondsSinceEpoch,
+  //   };
+  //   try {
+  //     await _saveSession(data);
+  //   } catch (_) {}
+  // }
   Future<void> persistSession() => _persistSession();
+
+  Future<void> rescheduleBackgroundAlarms() => _syncBackgroundAlarms();
 
   Future<void> _persistSession() async {
     if (isCompleted.value) {
@@ -233,6 +261,8 @@ class ActivityRunController {
       'isRunning': isRunning.value,
       'loopEnabled': loopEnabled.value,
       'loopCount': loopCount.value,
+      'activeStepDurationMs': _activeStepDurationMs,
+      'prepDurationMs': _prepDurationMs,
       'lastUpdatedMs': _now().millisecondsSinceEpoch,
     };
     try {
@@ -317,13 +347,23 @@ class ActivityRunController {
     unawaited(_persistSession());
   }
 
+  // Gene - Nov, 22, 2026: Use WakelockCoordinator.releaseIfIdle() on pause so concurrent sessions keep screen awake.
+  // void pause() {
+  //   remainingMs.value = math.max(0, remainingMsNow);
+  //   _ticker?.cancel();
+  //   _ticker = null;
+  //   unawaited(WakelockPlus.disable());
+  //   unawaited(_scheduler.cancelAll());
+  //   isRunning.value = false;
+  //   unawaited(_persistSession());
+  // }
   void pause() {
     remainingMs.value = math.max(0, remainingMsNow);
     _ticker?.cancel();
     _ticker = null;
-    unawaited(WakelockPlus.disable());
-    unawaited(_scheduler.cancelAll());
     isRunning.value = false;
+    unawaited(WakelockCoordinator.releaseIfIdle());
+    unawaited(_scheduler.cancelAll());
     unawaited(_persistSession());
   }
 
@@ -748,8 +788,76 @@ class ActivityRunController {
   //     }
   //   }
   // }
+  // Gene - Nov, 22, 2026: Preserve paused state on skipToNext (prep & step) and persist goToPrevious when paused.
+  // void skipToNext() {
+  //   if (isPreparing.value) {
+  //     _finishPreparation();
+  //     return;
+  //   }
+  //   if (currentIndex.value < timers.length - 1 || loopEnabled.value) {
+  //     final wasRunning = isRunning.value;
+  //     _ticker?.cancel();
+  //     _ticker = null;
+  //     advance();
+  //     if (wasRunning && !isCompleted.value) {
+  //       _ticker = Timer.periodic(tickInterval, (_) => _tick());
+  //       unawaited(WakelockPlus.enable());
+  //       isRunning.value = true;
+  //     } else if (!isCompleted.value) {
+  //       _deadline = null;
+  //       isRunning.value = false;
+  //     }
+  //   }
+  // }
+  //
+  // // Gene - Nov, 16, 2026: Reset _activeStepDurationMs when navigating to the previous step.
+  // // void goToPrevious() {
+  // //   if (isPreparing.value || currentIndex.value == 0) {
+  // //     return;
+  // //   }
+  // //   final wasRunning = isRunning.value;
+  // //   _ticker?.cancel();
+  // //   currentIndex.value -= 1;
+  // //   remainingMs.value = currentDurationMs;
+  // //   _lastHapticSecond = -1;
+  // //   // Gene - Nov, 8, 2026: Reset halfway cue flag when going to previous step.
+  // //   _halfwayCuePlayed = false;
+  // //   isRunning.value = false;
+  // //   if (wasRunning) {
+  // //     start();
+  // //   }
+  // // }
+  // void goToPrevious() {
+  //   if (isPreparing.value || currentIndex.value == 0) {
+  //     return;
+  //   }
+  //   final wasRunning = isRunning.value;
+  //   _ticker?.cancel();
+  //   currentIndex.value -= 1;
+  //   _activeStepDurationMs = 0;
+  //   remainingMs.value = currentDurationMs;
+  //   _lastHapticSecond = -1;
+  //   // Gene - Nov, 8, 2026: Reset halfway cue flag when going to previous step.
+  //   _halfwayCuePlayed = false;
+  //   isRunning.value = false;
+  //   if (wasRunning) {
+  //     start();
+  //   }
+  // }
   void skipToNext() {
     if (isPreparing.value) {
+      if (!isRunning.value) {
+        isPreparing.value = false;
+        currentIndex.value = 0;
+        _activeStepDurationMs = 0;
+        remainingMs.value = currentDurationMs;
+        _lastHapticSecond = -1;
+        _halfwayCuePlayed = false;
+        _deadline = null;
+        unawaited(_scheduler.cancelAll());
+        unawaited(_persistSession());
+        return;
+      }
       _finishPreparation();
       return;
     }
@@ -765,33 +873,19 @@ class ActivityRunController {
       } else if (!isCompleted.value) {
         _deadline = null;
         isRunning.value = false;
+        unawaited(_scheduler.cancelAll());
+        unawaited(_persistSession());
       }
     }
   }
 
-  // Gene - Nov, 16, 2026: Reset _activeStepDurationMs when navigating to the previous step.
-  // void goToPrevious() {
-  //   if (isPreparing.value || currentIndex.value == 0) {
-  //     return;
-  //   }
-  //   final wasRunning = isRunning.value;
-  //   _ticker?.cancel();
-  //   currentIndex.value -= 1;
-  //   remainingMs.value = currentDurationMs;
-  //   _lastHapticSecond = -1;
-  //   // Gene - Nov, 8, 2026: Reset halfway cue flag when going to previous step.
-  //   _halfwayCuePlayed = false;
-  //   isRunning.value = false;
-  //   if (wasRunning) {
-  //     start();
-  //   }
-  // }
   void goToPrevious() {
     if (isPreparing.value || currentIndex.value == 0) {
       return;
     }
     final wasRunning = isRunning.value;
     _ticker?.cancel();
+    _ticker = null;
     currentIndex.value -= 1;
     _activeStepDurationMs = 0;
     remainingMs.value = currentDurationMs;
@@ -799,8 +893,11 @@ class ActivityRunController {
     // Gene - Nov, 8, 2026: Reset halfway cue flag when going to previous step.
     _halfwayCuePlayed = false;
     isRunning.value = false;
+    _deadline = null;
     if (wasRunning) {
       start();
+    } else {
+      unawaited(_persistSession());
     }
   }
 
@@ -845,16 +942,30 @@ class ActivityRunController {
   //   _logSessionCompletion();
   //   unawaited(_clearSession());
   // }
+  // Gene - Nov, 22, 2026: Coordinate wakelock release via WakelockCoordinator on _complete & reset and persist loop state in toggleLoop.
+  // void _complete({bool playCue = true}) {
+  //   _ticker?.cancel();
+  //   _ticker = null;
+  //   if (playCue) {
+  //     unawaited(_cuePlayer.playCompletion());
+  //   }
+  //   unawaited(WakelockPlus.disable());
+  //   unawaited(_scheduler.cancelAll());
+  //   isRunning.value = false;
+  //   isCompleted.value = true;
+  //   _logSessionCompletion();
+  //   unawaited(_clearSession());
+  // }
   void _complete({bool playCue = true}) {
     _ticker?.cancel();
     _ticker = null;
     if (playCue) {
       unawaited(_cuePlayer.playCompletion());
     }
-    unawaited(WakelockPlus.disable());
-    unawaited(_scheduler.cancelAll());
     isRunning.value = false;
     isCompleted.value = true;
+    unawaited(WakelockCoordinator.releaseIfIdle());
+    unawaited(_scheduler.cancelAll());
     _logSessionCompletion();
     unawaited(_clearSession());
   }
@@ -896,15 +1007,15 @@ class ActivityRunController {
   void reset() {
     _ticker?.cancel();
     _ticker = null;
-    unawaited(WakelockPlus.disable());
+    isRunning.value = false;
+    isCompleted.value = false;
+    unawaited(WakelockCoordinator.releaseIfIdle());
     unawaited(_scheduler.cancelAll());
     isPreparing.value = sequence.preparationSeconds > 0;
     _prepDurationMs = sequence.preparationSeconds * 1000;
     _activeStepDurationMs = 0;
     currentIndex.value = 0;
     remainingMs.value = isPreparing.value ? _prepDurationMs : currentDurationMs;
-    isRunning.value = false;
-    isCompleted.value = false;
     loopCount.value = 0;
     _lastHapticSecond = -1;
     // Gene - Nov, 8, 2026: Reset halfway cue flag on reset and add snooze() method to extend or re-arm completed timers.
@@ -931,6 +1042,17 @@ class ActivityRunController {
 
   /// The loop toggle is the routine's saved preference, not just a switch
   /// for this run.
+  // Gene - Nov, 22, 2026: Persist active session snapshot when toggling loop so background restore keeps the updated loop preference.
+  // void toggleLoop() {
+  //   // Flip relative to the routine, not to the cached signal: the list
+  //   // screen can change the routine while this session is minimized, and
+  //   // toggling off a stale value would write the old setting back.
+  //   final next = !sequence.defaultLoopEnabled;
+  //   sequence.defaultLoopEnabled = next;
+  //   loopEnabled.value = next;
+  //   unawaited(_persistLoop());
+  //   unawaited(_syncBackgroundAlarms());
+  // }
   void toggleLoop() {
     // Flip relative to the routine, not to the cached signal: the list
     // screen can change the routine while this session is minimized, and
@@ -940,6 +1062,7 @@ class ActivityRunController {
     loopEnabled.value = next;
     unawaited(_persistLoop());
     unawaited(_syncBackgroundAlarms());
+    unawaited(_persistSession());
   }
 
   /// Re-reads the routine's saved preference. The session service calls this
@@ -1321,80 +1444,21 @@ class ActivityRunController {
   //   unawaited(WakelockPlus.disable());
   // }
 
-  // Gene - Nov, 06, 2026: Dispose ticker, cues, background alarms, and wakelock on controller close. Session clearing is managed by session service and completion.
+  // Gene - Nov, 22, 2026: Release wakelock via WakelockCoordinator on close, restore expanded activeStepDurationMs/prepDurationMs, and initialize _halfwayCuePlayed cleanly so restored mid-step routines do not replay halfway chimes.
+  // void onClose() {
+  //   _ticker?.cancel();
+  //   unawaited(_cuePlayer.dispose());
+  //   unawaited(_scheduler.cancelAll());
+  //   unawaited(WakelockPlus.disable());
+  // }
   void onClose() {
     _ticker?.cancel();
+    isRunning.value = false;
     unawaited(_cuePlayer.dispose());
     unawaited(_scheduler.cancelAll());
-    unawaited(WakelockPlus.disable());
+    unawaited(WakelockCoordinator.releaseIfIdle());
   }
 
-  // Gene - Nov, 06, 2026: Restores controller state from snapshot and synchronizes running deadline to current wall clock.
-  // Gene - Nov, 16, 2026: Preserve expanded _activeStepDurationMs / _prepDurationMs across snapshot restoration when a step was extended or snoozed.
-  // void restoreFromSnapshot({
-  //   required int initialIndex,
-  //   required bool wasPreparing,
-  //   required bool wasRunning,
-  //   required int savedRemainingMs,
-  //   required int? deadlineMs,
-  //   required bool savedLoopEnabled,
-  //   required int savedLoopCount,
-  // }) {
-  //   loopEnabled.value = savedLoopEnabled;
-  //   loopCount.value = savedLoopCount;
-  //   _prepDurationMs = sequence.preparationSeconds * 1000;
-  //
-  //   if (!wasRunning) {
-  //     isPreparing.value = wasPreparing;
-  //     currentIndex.value = initialIndex.clamp(0, timers.length - 1);
-  //     remainingMs.value = savedRemainingMs;
-  //     isRunning.value = false;
-  //     isCompleted.value = false;
-  //     return;
-  //   }
-  //
-  //   final now = _now();
-  //   final deadline =
-  //       deadlineMs != null
-  //           ? DateTime.fromMillisecondsSinceEpoch(deadlineMs)
-  //           : now.add(Duration(milliseconds: savedRemainingMs));
-  //
-  //   final diffMs = deadline.difference(now).inMilliseconds;
-  //
-  //   if (diffMs > 0) {
-  //     // The current step is still in progress.
-  //     isPreparing.value = wasPreparing;
-  //     currentIndex.value = initialIndex.clamp(0, timers.length - 1);
-  //     remainingMs.value = diffMs;
-  //     start();
-  //     return;
-  //   }
-  //
-  //   // Step has elapsed while app was suspended/killed.
-  //   final overshootMs = -diffMs;
-  //   if (wasPreparing) {
-  //     isPreparing.value = false;
-  //     currentIndex.value = 0;
-  //     final d0 = timers[0].durationInSeconds * 1000;
-  //     if (overshootMs < d0) {
-  //       remainingMs.value = d0 - overshootMs;
-  //       start();
-  //       return;
-  //     }
-  //     // Gene - Nov, 8, 2026: Catch up elapsed background steps silently on restore so OS notification audio is not duplicated.
-  //     // advance(overshootMs: overshootMs - d0);
-  //     advance(overshootMs: overshootMs - d0, playCue: false);
-  //   } else {
-  //     currentIndex.value = initialIndex.clamp(0, timers.length - 1);
-  //     // Gene - Nov, 8, 2026: Catch up elapsed background steps silently on restore so OS notification audio is not duplicated.
-  //     // advance(overshootMs: overshootMs);
-  //     advance(overshootMs: overshootMs, playCue: false);
-  //   }
-  //
-  //   if (!isCompleted.value) {
-  //     start();
-  //   }
-  // }
   void restoreFromSnapshot({
     required int initialIndex,
     required bool wasPreparing,
@@ -1403,21 +1467,31 @@ class ActivityRunController {
     required int? deadlineMs,
     required bool savedLoopEnabled,
     required int savedLoopCount,
+    int? savedActiveStepDurationMs,
+    int? savedPrepDurationMs,
   }) {
     loopEnabled.value = savedLoopEnabled;
     loopCount.value = savedLoopCount;
-    _prepDurationMs = sequence.preparationSeconds * 1000;
-    _activeStepDurationMs = 0;
+    _prepDurationMs = math.max(
+      sequence.preparationSeconds * 1000,
+      savedPrepDurationMs ?? 0,
+    );
+    _activeStepDurationMs = savedActiveStepDurationMs ?? 0;
 
     if (!wasRunning) {
       isPreparing.value = wasPreparing;
       currentIndex.value = initialIndex.clamp(0, timers.length - 1);
       remainingMs.value = savedRemainingMs;
       if (!wasPreparing) {
-        _activeStepDurationMs = math.max(0, savedRemainingMs);
+        _activeStepDurationMs = math.max(
+          _activeStepDurationMs,
+          savedRemainingMs,
+        );
       } else {
         _prepDurationMs = math.max(_prepDurationMs, savedRemainingMs);
       }
+      _halfwayCuePlayed =
+          !wasPreparing && remainingMs.value <= currentDurationMs ~/ 2;
       isRunning.value = false;
       isCompleted.value = false;
       return;
@@ -1437,10 +1511,12 @@ class ActivityRunController {
       currentIndex.value = initialIndex.clamp(0, timers.length - 1);
       remainingMs.value = diffMs;
       if (!wasPreparing) {
-        _activeStepDurationMs = math.max(0, diffMs);
+        _activeStepDurationMs = math.max(_activeStepDurationMs, diffMs);
       } else {
         _prepDurationMs = math.max(_prepDurationMs, diffMs);
       }
+      _halfwayCuePlayed =
+          !wasPreparing && remainingMs.value <= currentDurationMs ~/ 2;
       start();
       return;
     }
@@ -1450,23 +1526,22 @@ class ActivityRunController {
     if (wasPreparing) {
       isPreparing.value = false;
       currentIndex.value = 0;
+      _activeStepDurationMs = 0;
       final d0 = timers[0].durationInSeconds * 1000;
       if (overshootMs < d0) {
         remainingMs.value = d0 - overshootMs;
+        _halfwayCuePlayed = remainingMs.value <= currentDurationMs ~/ 2;
         start();
         return;
       }
-      // Gene - Nov, 8, 2026: Catch up elapsed background steps silently on restore so OS notification audio is not duplicated.
-      // advance(overshootMs: overshootMs - d0);
       advance(overshootMs: overshootMs - d0, playCue: false);
     } else {
       currentIndex.value = initialIndex.clamp(0, timers.length - 1);
-      // Gene - Nov, 8, 2026: Catch up elapsed background steps silently on restore so OS notification audio is not duplicated.
-      // advance(overshootMs: overshootMs);
       advance(overshootMs: overshootMs, playCue: false);
     }
 
     if (!isCompleted.value) {
+      _halfwayCuePlayed = remainingMs.value <= currentDurationMs ~/ 2;
       start();
     }
   }

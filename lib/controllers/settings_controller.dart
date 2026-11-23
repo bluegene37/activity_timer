@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+// Gene - Nov, 22, 2026: Expose NotificationPermissionStatus signal and OS permission recovery helpers for SettingsScreen.
+import 'package:signals/signals_flutter.dart';
 
 import '../components/alarm_sound_picker.dart';
 import '../models/alarm_sound.dart';
+import '../services/alarm_scheduler.dart';
 import '../services/cue_player.dart';
 import '../services/locator.dart';
 import '../services/ui_messenger.dart';
@@ -12,9 +15,32 @@ import 'app_controller.dart';
 class SettingsController {
   final CuePlayer _cuePlayer = AudioCuePlayer();
   late final AppController _appController;
+  final notificationStatus = signal<NotificationPermissionStatus>(
+    const NotificationPermissionStatus(),
+  );
 
   void onInit() {
     _appController = locator<AppController>();
+    unawaited(refreshNotificationStatus());
+  }
+
+  Future<void> refreshNotificationStatus() async {
+    notificationStatus.value =
+        await LocalNotificationAlarmScheduler.checkNotificationStatus();
+  }
+
+  Future<void> handleNotificationAccessTap() async {
+    final current = notificationStatus.value;
+    if (current.notificationsEnabled == false ||
+        current.exactAlarmsEnabled == false) {
+      await LocalNotificationAlarmScheduler.requestPermissionsFromSettings();
+      await refreshNotificationStatus();
+      if (notificationStatus.value.needsAttention) {
+        await LocalNotificationAlarmScheduler.openSystemNotificationSettings();
+      }
+      return;
+    }
+    await LocalNotificationAlarmScheduler.openSystemNotificationSettings();
   }
 
   void onClose() {

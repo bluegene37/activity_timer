@@ -12,6 +12,8 @@ import '../services/cue_player.dart';
 import '../services/database_service.dart';
 // Gene - Nov, 14, 2026: Added IntervalSessionService import to disarm interval timers on schedule completion and re-arm on reset/snooze.
 import '../services/interval_session_service.dart';
+// Gene - Nov, 22, 2026: Use WakelockCoordinator so ending/pausing one session does not drop wakelock for other active sessions.
+import '../services/wakelock_coordinator.dart';
 
 /// Runs an interval timer on the wall clock, decoupled from any screen.
 ///
@@ -84,6 +86,70 @@ class IntervalRunController {
     _initialize();
     _startTicker();
     unawaited(_syncBackgroundAlarms());
+  }
+
+  // Gene - Nov, 22, 2026: Expose full interval snapshot serialization/restoration (preserving paused state, snooze alarms, and finished single-day windows) and active-session rescheduling.
+  Future<void> rescheduleBackgroundAlarms() => _syncBackgroundAlarms();
+
+  Map<String, dynamic> toSnapshot() => {
+    'timerId': timer.id,
+    'timerJson': timer.toJson(),
+    'startedAtMs': _now().millisecondsSinceEpoch,
+    'isRunning': isRunning.value,
+    'isCompleted': isCompleted.value,
+    'currentAlarmIndex': currentAlarmIndex.value,
+    'allAlarmTimesMs':
+        allAlarmTimes.map((t) => t.millisecondsSinceEpoch).toList(),
+    'nextAlarmTimeMs': nextAlarmTime.value.millisecondsSinceEpoch,
+    'segmentStartTimeMs': segmentStartTime.value.millisecondsSinceEpoch,
+  };
+
+  void restoreFromSnapshot(Map<String, dynamic> data) {
+    final rawAlarms = data['allAlarmTimesMs'];
+    if (rawAlarms is List && rawAlarms.isNotEmpty) {
+      allAlarmTimes =
+          rawAlarms
+              .map((e) => DateTime.fromMillisecondsSinceEpoch((e as num).toInt()))
+              .toList();
+      final now = _now();
+      currentTime.value = now;
+      final savedIdx = (data['currentAlarmIndex'] as num?)?.toInt() ?? 0;
+      currentAlarmIndex.value = savedIdx.clamp(0, allAlarmTimes.length - 1);
+      final savedNextMs = (data['nextAlarmTimeMs'] as num?)?.toInt();
+      nextAlarmTime.value =
+          savedNextMs != null
+              ? DateTime.fromMillisecondsSinceEpoch(savedNextMs)
+              : allAlarmTimes[currentAlarmIndex.value];
+      final savedSegMs = (data['segmentStartTimeMs'] as num?)?.toInt();
+      segmentStartTime.value =
+          savedSegMs != null
+              ? DateTime.fromMillisecondsSinceEpoch(savedSegMs)
+              : (currentAlarmIndex.value > 0
+                  ? allAlarmTimes[currentAlarmIndex.value - 1]
+                  : now);
+      final wasRunning = data['isRunning'] as bool? ?? true;
+      isCompleted.value = false;
+      if (!wasRunning) {
+        isRunning.value = false;
+        unawaited(_scheduler.cancelAll());
+        unawaited(WakelockCoordinator.releaseIfIdle());
+        return;
+      }
+      isRunning.value = true;
+      _tick(playCue: false);
+      if (!isCompleted.value) {
+        _startTicker();
+        unawaited(_syncBackgroundAlarms());
+      }
+      return;
+    }
+    onInit();
+  }
+
+  void _persistSessionIfActive() {
+    if (identical(IntervalSessionService().active.value, this)) {
+      unawaited(IntervalSessionService().persistActiveSession());
+    }
   }
 
   /// Hands every future alarm to the OS so a locked phone still rings, and
@@ -500,17 +566,67 @@ class IntervalRunController {
   //   _advance();
   //   unawaited(_syncBackgroundAlarms());
   // }
+  // Gene - Nov, 22, 2026: Coordinate wakelock release via WakelockCoordinator and persist interval snapshots on advance, skip, toggle, and close.
+  // void _advance() {
+  //   if (currentAlarmIndex.value < allAlarmTimes.length - 1) {
+  //     currentAlarmIndex.value += 1;
+  //     nextAlarmTime.value = allAlarmTimes[currentAlarmIndex.value];
+  //     segmentStartTime.value = allAlarmTimes[currentAlarmIndex.value - 1];
+  //   } else {
+  //     isCompleted.value = true;
+  //     isRunning.value = false;
+  //     _ticker?.cancel();
+  //     _ticker = null;
+  //     unawaited(WakelockPlus.disable());
+  //     unawaited(_scheduler.cancelAll());
+  //     _logSessionCompletion();
+  //     // Gene - Nov, 7, 2026: Clear persisted interval session when schedule completes.
+  //     unawaited(DatabaseService().clearActiveIntervalSession());
+  //     // Gene - Nov, 14, 2026: Disarm IntervalTimer.isActive when schedule completes so the card switch reflects completion.
+  //     timer.isActive = false;
+  //     IntervalSessionService().syncArmedFlag(timer.id, isActive: false);
+  //   }
+  // }
+  //
+  // /// The forward button: silently skip to the next alarm.
+  // void skipToNext() {
+  //   _advance();
+  //   if (!isCompleted.value) {
+  //     final now = _now();
+  //     currentTime.value = now;
+  //     if (now.isBefore(segmentStartTime.value)) {
+  //       segmentStartTime.value = now;
+  //     }
+  //   }
+  //   unawaited(_syncBackgroundAlarms());
+  // }
+  //
+  // void toggle() {
+  //   if (isCompleted.value) {
+  //     return;
+  //   }
+  //   if (isRunning.value) {
+  //     _ticker?.cancel();
+  //     _ticker = null;
+  //     unawaited(WakelockPlus.disable());
+  //   } else {
+  //     _startTicker();
+  //   }
+  //   isRunning.value = !isRunning.value;
+  //   unawaited(_syncBackgroundAlarms());
+  // }
   void _advance() {
     if (currentAlarmIndex.value < allAlarmTimes.length - 1) {
       currentAlarmIndex.value += 1;
       nextAlarmTime.value = allAlarmTimes[currentAlarmIndex.value];
       segmentStartTime.value = allAlarmTimes[currentAlarmIndex.value - 1];
+      _persistSessionIfActive();
     } else {
       isCompleted.value = true;
       isRunning.value = false;
       _ticker?.cancel();
       _ticker = null;
-      unawaited(WakelockPlus.disable());
+      unawaited(WakelockCoordinator.releaseIfIdle());
       unawaited(_scheduler.cancelAll());
       _logSessionCompletion();
       // Gene - Nov, 7, 2026: Clear persisted interval session when schedule completes.
@@ -530,6 +646,7 @@ class IntervalRunController {
       if (now.isBefore(segmentStartTime.value)) {
         segmentStartTime.value = now;
       }
+      _persistSessionIfActive();
     }
     unawaited(_syncBackgroundAlarms());
   }
@@ -538,14 +655,16 @@ class IntervalRunController {
     if (isCompleted.value) {
       return;
     }
-    if (isRunning.value) {
+    final nextRunning = !isRunning.value;
+    isRunning.value = nextRunning;
+    if (!nextRunning) {
       _ticker?.cancel();
       _ticker = null;
-      unawaited(WakelockPlus.disable());
+      unawaited(WakelockCoordinator.releaseIfIdle());
     } else {
       _startTicker();
     }
-    isRunning.value = !isRunning.value;
+    _persistSessionIfActive();
     unawaited(_syncBackgroundAlarms());
   }
 
@@ -664,10 +783,17 @@ class IntervalRunController {
     }
   }
 
+  // Gene - Nov, 22, 2026: Release wakelock only when no concurrent session is running.
+  // void onClose() {
+  //   _ticker?.cancel();
+  //   unawaited(_cuePlayer.dispose());
+  //   unawaited(_scheduler.cancelAll());
+  //   unawaited(WakelockPlus.disable());
+  // }
   void onClose() {
     _ticker?.cancel();
     unawaited(_cuePlayer.dispose());
     unawaited(_scheduler.cancelAll());
-    unawaited(WakelockPlus.disable());
+    unawaited(WakelockCoordinator.releaseIfIdle());
   }
 }

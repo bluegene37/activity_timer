@@ -8,6 +8,8 @@ import '../services/alarm_scheduler.dart';
 import '../services/cue_player.dart';
 // Gene - Nov, 7, 2026: Added DatabaseService import for active brew session persistence.
 import '../services/database_service.dart';
+// Gene - Nov, 22, 2026: Use WakelockCoordinator so ending/pausing a brew never disables screen wakelock while another session runs.
+import '../services/wakelock_coordinator.dart';
 
 /// Runs a brew on the clock. Steps advance strictly by time; inside a pour
 /// step the controller also reports whether the pour window is still open, so
@@ -245,8 +247,23 @@ class BrewRunController {
     }
   }
 
+  // Gene - Nov, 22, 2026: Guard start() against double-start clock reset, compute exact elapsed ms on pause(), release wakelock via WakelockCoordinator, and expose rescheduleBackgroundAlarms().
+  // void start() {
+  //   if (isFinished.value) {
+  //     return;
+  //   }
+  //   _stepStartedAt = _now();
+  //   _ticker?.cancel();
+  //   _ticker = Timer.periodic(tickInterval, (_) => _tick());
+  //   unawaited(WakelockPlus.enable());
+  //   isRunning.value = true;
+  //   unawaited(_syncBackgroundAlarms());
+  //   unawaited(_persistSession());
+  // }
+  Future<void> rescheduleBackgroundAlarms() => _syncBackgroundAlarms();
+
   void start() {
-    if (isFinished.value) {
+    if (isFinished.value || isRunning.value) {
       return;
     }
     _stepStartedAt = _now();
@@ -301,13 +318,49 @@ class BrewRunController {
     return alarms;
   }
 
+  // Gene - Nov, 22, 2026: Compute exact elapsed time from _now() on pause(), guard non-running pause(), and coordinate wakelock release on pause/reset.
+  // void pause() {
+  //   _carriedMs = elapsedInStepMs.value;
+  //   _stepStartedAt = null;
+  //   _ticker?.cancel();
+  //   _ticker = null;
+  //   unawaited(WakelockPlus.disable());
+  //   isRunning.value = false;
+  //   unawaited(_scheduler.cancelAll());
+  //   unawaited(_persistSession());
+  // }
+  //
+  // void reset() {
+  //   _ticker?.cancel();
+  //   _ticker = null;
+  //   _stepStartedAt = null;
+  //   _carriedMs = 0;
+  //   stepIndex.value = 0;
+  //   elapsedInStepMs.value = 0;
+  //   isRunning.value = false;
+  //   isFinished.value = false;
+  //   unawaited(WakelockPlus.disable());
+  //   unawaited(_scheduler.cancelAll());
+  //   unawaited(DatabaseService().clearActiveBrewSession());
+  // }
   void pause() {
-    _carriedMs = elapsedInStepMs.value;
+    if (!isRunning.value) {
+      return;
+    }
+    final startedAt = _stepStartedAt;
+    if (startedAt != null) {
+      final rawElapsed = _carriedMs + _now().difference(startedAt).inMilliseconds;
+      final maxMs = currentStep.seconds * 1000;
+      _carriedMs = rawElapsed.clamp(0, maxMs);
+      elapsedInStepMs.value = _carriedMs;
+    } else {
+      _carriedMs = elapsedInStepMs.value;
+    }
     _stepStartedAt = null;
     _ticker?.cancel();
     _ticker = null;
-    unawaited(WakelockPlus.disable());
     isRunning.value = false;
+    unawaited(WakelockCoordinator.releaseIfIdle());
     unawaited(_scheduler.cancelAll());
     unawaited(_persistSession());
   }
@@ -321,7 +374,7 @@ class BrewRunController {
     elapsedInStepMs.value = 0;
     isRunning.value = false;
     isFinished.value = false;
-    unawaited(WakelockPlus.disable());
+    unawaited(WakelockCoordinator.releaseIfIdle());
     unawaited(_scheduler.cancelAll());
     unawaited(DatabaseService().clearActiveBrewSession());
   }
@@ -359,7 +412,9 @@ class BrewRunController {
   //     unawaited(_persistSession());
   //   }
   // }
-  void _tick({bool playCue = true}) {
+  // Gene - Nov, 22, 2026: Coordinate wakelock release via WakelockCoordinator on _finish/_close and avoid duplicate _syncBackgroundAlarms call during restoreFromSnapshot catch-up.
+  // void _tick({bool playCue = true}) {
+  void _tick({bool playCue = true, bool syncAlarms = true}) {
     final startedAt = _stepStartedAt;
     if (startedAt == null) {
       return;
@@ -391,12 +446,10 @@ class BrewRunController {
       elapsedInStepMs.value = overflowMs;
       advancedStep = true;
     }
-    // Gene - Nov, 15, 2026: Re-sync OS alarms when advancing across a brew step boundary so rolling schedules stay armed.
-    // if (advancedStep) {
-    //   unawaited(_persistSession());
-    // }
     if (advancedStep) {
-      unawaited(_syncBackgroundAlarms());
+      if (syncAlarms) {
+        unawaited(_syncBackgroundAlarms());
+      }
       unawaited(_persistSession());
     }
   }
@@ -408,7 +461,7 @@ class BrewRunController {
     elapsedInStepMs.value = currentStep.seconds * 1000;
     isRunning.value = false;
     isFinished.value = true;
-    unawaited(WakelockPlus.disable());
+    unawaited(WakelockCoordinator.releaseIfIdle());
     unawaited(_scheduler.cancelAll());
     unawaited(DatabaseService().clearActiveBrewSession());
   }
@@ -437,9 +490,7 @@ class BrewRunController {
     _carriedMs = savedCarriedMs;
     _stepStartedAt = startedAt;
     isRunning.value = true;
-    // Gene - Nov, 8, 2026: Catch up elapsed brew steps silently on restore so OS notification audio is not duplicated.
-    // _tick();
-    _tick(playCue: false);
+    _tick(playCue: false, syncAlarms: false);
     if (!isFinished.value) {
       _ticker?.cancel();
       _ticker = Timer.periodic(tickInterval, (_) => _tick());
@@ -451,8 +502,9 @@ class BrewRunController {
 
   void onClose() {
     _ticker?.cancel();
+    isRunning.value = false;
     unawaited(_cuePlayer.dispose());
     unawaited(_scheduler.cancelAll());
-    unawaited(WakelockPlus.disable());
+    unawaited(WakelockCoordinator.releaseIfIdle());
   }
 }

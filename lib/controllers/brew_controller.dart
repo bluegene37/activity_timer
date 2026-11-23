@@ -3,6 +3,8 @@ import 'package:signals/signals_flutter.dart';
 import '../models/brew_recipe.dart';
 import '../routes/app_pages.dart';
 import '../routes/app_routes.dart';
+// Gene - Nov, 22, 2026: Clear active brew session when deleting its recipe (alphabetical directives order).
+import '../services/brew_session_service.dart';
 import '../services/database_service.dart';
 import '../services/ui_messenger.dart';
 
@@ -76,8 +78,20 @@ class BrewController {
     }
   }
 
+  // Gene - Nov, 22, 2026: Clear active brew session and OS alarms if the deleted recipe is running.
+  // Future<void> deleteBrew(String id) async {
+  //   try {
+  //     await _databaseService.deleteBrewRecipe(id);
+  //     recipes.removeWhere((recipe) => recipe.id == id);
+  //   } catch (e) {
+  //     UiMessenger().showMessage('Failed to delete brew: $e', title: 'Error');
+  //   }
+  // }
   Future<void> deleteBrew(String id) async {
     try {
+      if (BrewSessionService().active.value?.recipe.id == id) {
+        BrewSessionService().clear();
+      }
       await _databaseService.deleteBrewRecipe(id);
       recipes.removeWhere((recipe) => recipe.id == id);
     } catch (e) {

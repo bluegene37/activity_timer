@@ -1,3 +1,6 @@
+// Gene - Nov, 22, 2026: Import dart:async for unawaited OS scheduler cleanup on cold-start dismissal.
+import 'dart:async';
+
 import 'package:signals/signals.dart';
 
 import '../controllers/activity_run_controller.dart';
@@ -31,6 +34,8 @@ class ActivitySessionService {
   DateTime Function()? _lastClock;
   // Gene - Nov, 8, 2026: Guard against concurrent restoreSessionIfActive calls when notification tap and lifecycle resume fire simultaneously.
   Future<ActivityRunController?>? _restoreInFlight;
+  // Gene - Nov, 22, 2026: Keep recently completed sequence so Snooze 5m on delivered notification works even after completion cleanup.
+  TimerSequence? _lastCompletedSequence;
 
   /// True while a routine is running or paused mid-way — exactly the window
   /// in which the floater should be visible. A routine starts the moment it
@@ -133,6 +138,42 @@ class ActivitySessionService {
   // }
 
   // Gene - Nov, 7, 2026: Added optional scheduler and clock injection to obtain, fallback JSON deserialization in restoreSessionIfActive, and lifecycle syncOrRestore/suspendInMemory helpers.
+  // Gene - Nov, 22, 2026: Clear snooze fallback on new routine or explicit dismiss, cancel OS alarms even on cold-start Dismiss, add rescheduleActiveAlarms(), and pass expanded durations on snapshot restore.
+  // ActivityRunController obtain(
+  //   TimerSequence sequence, {
+  //   CuePlayer? cuePlayer,
+  //   AlarmScheduler? scheduler,
+  //   DateTime Function()? clock,
+  // }) {
+  //   final current = active.value;
+  //   if (current != null && current.sequence.id == sequence.id) {
+  //     current.refreshFromSequence();
+  //     return current;
+  //   }
+  //   active.value?.onClose();
+  //   _lastCuePlayer = cuePlayer;
+  //   _lastScheduler = scheduler;
+  //   _lastClock = clock;
+  //   final controller = ActivityRunController(
+  //     sequence: sequence,
+  //     cuePlayer: cuePlayer,
+  //     scheduler: scheduler,
+  //     clock: clock,
+  //   );
+  //   controller.onInit();
+  //   setAfterBuild(active, controller);
+  //   return controller;
+  // }
+  //
+  // void clear() {
+  //   active.value?.onClose();
+  //   _lastCuePlayer = null;
+  //   _lastScheduler = null;
+  //   _lastClock = null;
+  //   _restoreInFlight = null;
+  //   setAfterBuild(active, null);
+  //   DatabaseService().clearActiveActivitySession();
+  // }
   ActivityRunController obtain(
     TimerSequence sequence, {
     CuePlayer? cuePlayer,
@@ -144,6 +185,7 @@ class ActivitySessionService {
       current.refreshFromSequence();
       return current;
     }
+    _lastCompletedSequence = null;
     active.value?.onClose();
     _lastCuePlayer = cuePlayer;
     _lastScheduler = scheduler;
@@ -159,14 +201,36 @@ class ActivitySessionService {
     return controller;
   }
 
-  void clear() {
-    active.value?.onClose();
+  Future<void> rescheduleActiveAlarms() async {
+    final current = active.value;
+    if (current != null && !current.isCompleted.value) {
+      await current.rescheduleBackgroundAlarms();
+    }
+  }
+
+  void clear({bool preserveSnoozeFallback = false}) {
+    final current = active.value;
+    if (preserveSnoozeFallback && current != null) {
+      _lastCompletedSequence = current.sequence;
+    } else if (!preserveSnoozeFallback) {
+      _lastCompletedSequence = null;
+    }
+    if (current != null) {
+      current.onClose();
+    } else {
+      final scheduler =
+          _lastScheduler ??
+          LocalNotificationAlarmScheduler(
+            idBase: LocalNotificationAlarmScheduler.activityIdBase,
+          );
+      unawaited(scheduler.cancelAll());
+    }
     _lastCuePlayer = null;
     _lastScheduler = null;
     _lastClock = null;
     _restoreInFlight = null;
     setAfterBuild(active, null);
-    DatabaseService().clearActiveActivitySession();
+    unawaited(DatabaseService().clearActiveActivitySession());
   }
 
   /// Drops the in-memory controller while preserving the persisted Hive
@@ -201,6 +265,29 @@ class ActivitySessionService {
     }
   }
 
+  // Gene - Nov, 22, 2026: Preserve snooze fallback on completion sync, restore expanded step/prep durations, and support sequenceId fallback in snoozeActiveOrRestored.
+  // Future<ActivityRunController?> syncOrRestore({
+  //   DatabaseService? databaseService,
+  //   CuePlayer? cuePlayer,
+  //   AlarmScheduler? scheduler,
+  //   DateTime Function()? clock,
+  // }) async {
+  //   final current = active.value;
+  //   if (current != null) {
+  //     current.syncWithClock();
+  //     if (current.isCompleted.value) {
+  //       clear();
+  //       return null;
+  //     }
+  //     return current;
+  //   }
+  //   return restoreSessionIfActive(
+  //     databaseService: databaseService,
+  //     cuePlayer: cuePlayer ?? _lastCuePlayer,
+  //     scheduler: scheduler ?? _lastScheduler,
+  //     clock: clock ?? _lastClock,
+  //   );
+  // }
   Future<ActivityRunController?> syncOrRestore({
     DatabaseService? databaseService,
     CuePlayer? cuePlayer,
@@ -211,7 +298,7 @@ class ActivitySessionService {
     if (current != null) {
       current.syncWithClock();
       if (current.isCompleted.value) {
-        clear();
+        clear(preserveSnoozeFallback: true);
         return null;
       }
       return current;
@@ -265,7 +352,7 @@ class ActivitySessionService {
     if (existing != null) {
       existing.syncWithClock();
       if (existing.isCompleted.value) {
-        clear();
+        clear(preserveSnoozeFallback: true);
         return null;
       }
       return existing;
@@ -313,20 +400,72 @@ class ActivitySessionService {
       savedLoopEnabled:
           data['loopEnabled'] as bool? ?? sequence.defaultLoopEnabled,
       savedLoopCount: data['loopCount'] as int? ?? 0,
+      savedActiveStepDurationMs:
+          (data['activeStepDurationMs'] as num?)?.toInt(),
+      savedPrepDurationMs: (data['prepDurationMs'] as num?)?.toInt(),
     );
 
     if (controller.isCompleted.value) {
+      _lastCompletedSequence = sequence;
+      controller.onClose();
       await db.clearActiveActivitySession();
       return null;
     }
 
+    _lastCuePlayer = resolvedCuePlayer;
+    _lastScheduler = resolvedScheduler;
+    _lastClock = resolvedClock;
     setAfterBuild(active, controller);
     return controller;
   }
 
-  // Gene - Nov, 8, 2026: Added snoozeActiveOrRestored() so tapping "Snooze 5m" on an OS notification re-arms the session even if its final step just completed.
+  // Gene - Nov, 22, 2026: Resolve completed sequence from Hive, in-memory fallback, or DB by payload sequenceId so Snooze 5m always succeeds.
+  // Future<ActivityRunController?> snoozeActiveOrRestored(
+  //   Duration duration, {
+  //   DatabaseService? databaseService,
+  //   CuePlayer? cuePlayer,
+  //   AlarmScheduler? scheduler,
+  //   DateTime Function()? clock,
+  // }) async {
+  //   final existing = active.value;
+  //   if (existing != null) {
+  //     existing.snooze(duration);
+  //     return existing;
+  //   }
+  //
+  //   final db = databaseService ?? DatabaseService();
+  //   final data = await db.getActiveActivitySession();
+  //   if (data == null) {
+  //     return null;
+  //   }
+  //
+  //   final sequenceId = data['sequenceId'] as String?;
+  //   if (sequenceId == null) {
+  //     return null;
+  //   }
+  //
+  //   TimerSequence? sequence = await db.getActivitySequence(sequenceId);
+  //   if (sequence == null && data['sequenceJson'] is Map) {
+  //     sequence = TimerSequence.fromJson(
+  //       Map<String, dynamic>.from(data['sequenceJson'] as Map),
+  //     );
+  //   }
+  //   if (sequence == null) {
+  //     return null;
+  //   }
+  //
+  //   final controller = obtain(
+  //     sequence,
+  //     cuePlayer: cuePlayer ?? _lastCuePlayer,
+  //     scheduler: scheduler ?? _lastScheduler,
+  //     clock: clock ?? _lastClock,
+  //   );
+  //   controller.snooze(duration);
+  //   return controller;
+  // }
   Future<ActivityRunController?> snoozeActiveOrRestored(
     Duration duration, {
+    String? sequenceId,
     DatabaseService? databaseService,
     CuePlayer? cuePlayer,
     AlarmScheduler? scheduler,
@@ -339,21 +478,28 @@ class ActivitySessionService {
     }
 
     final db = databaseService ?? DatabaseService();
+    TimerSequence? sequence;
     final data = await db.getActiveActivitySession();
-    if (data == null) {
-      return null;
+    if (data != null) {
+      final savedId = data['sequenceId'] as String?;
+      if (savedId != null) {
+        sequence = await db.getActivitySequence(savedId);
+      }
+      if (sequence == null && data['sequenceJson'] is Map) {
+        sequence = TimerSequence.fromJson(
+          Map<String, dynamic>.from(data['sequenceJson'] as Map),
+        );
+      }
     }
 
-    final sequenceId = data['sequenceId'] as String?;
-    if (sequenceId == null) {
-      return null;
-    }
-
-    TimerSequence? sequence = await db.getActivitySequence(sequenceId);
-    if (sequence == null && data['sequenceJson'] is Map) {
-      sequence = TimerSequence.fromJson(
-        Map<String, dynamic>.from(data['sequenceJson'] as Map),
-      );
+    sequence ??=
+        (_lastCompletedSequence != null &&
+                (sequenceId == null ||
+                    _lastCompletedSequence!.id == sequenceId))
+            ? _lastCompletedSequence
+            : null;
+    if (sequence == null && sequenceId != null) {
+      sequence = await db.getActivitySequence(sequenceId);
     }
     if (sequence == null) {
       return null;

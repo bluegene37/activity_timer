@@ -1,3 +1,6 @@
+  // Gene - Nov, 22, 2026: Import dart:async for unawaited cold-start launch payload fallback in WidgetsBinding post-frame callback.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
@@ -50,15 +53,46 @@ Future<void> main() async {
   //
   // runApp(const MyApp());
 
-  // Gene - Nov, 06, 2026: Restored active activity and interval sessions and initialized notification launch handling so background runs revive seamlessly upon notification tap.
+  // Gene - Nov, 22, 2026: Initialize notifications and process cold-start Snooze 5m / Dismiss actions BEFORE restoreSessionIfActive deletes completed sessions from Hive.
+  // // Gene - Nov, 06, 2026: Restored active activity and interval sessions and initialized notification launch handling so background runs revive seamlessly upon notification tap.
+  // setUpLocator();
+  // locator<AppController>();
+  //
+  // await ActivitySessionService().restoreSessionIfActive();
+  // await IntervalSessionService().restoreSessionIfActive();
+  // // Gene - Nov, 7, 2026: Restore active brew session on startup so its floating pill revives upon notification launch.
+  // await BrewSessionService().restoreSessionIfActive();
+  // await LocalNotificationAlarmScheduler.initializeAndCheckLaunch();
   setUpLocator();
   locator<AppController>();
 
+  final launchDetails =
+      await LocalNotificationAlarmScheduler.initializeAndGetLaunchDetails();
+  final handledLaunchAction =
+      await LocalNotificationAlarmScheduler.handleLaunchDetailsBeforeRestore(
+        launchDetails,
+      );
+
   await ActivitySessionService().restoreSessionIfActive();
   await IntervalSessionService().restoreSessionIfActive();
-  // Gene - Nov, 7, 2026: Restore active brew session on startup so its floating pill revives upon notification launch.
   await BrewSessionService().restoreSessionIfActive();
-  await LocalNotificationAlarmScheduler.initializeAndCheckLaunch();
+
+  if (!handledLaunchAction &&
+      (launchDetails?.didNotificationLaunchApp ?? false)) {
+    final response = launchDetails?.notificationResponse;
+    final payload = response?.payload;
+    if (payload != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(
+          LocalNotificationAlarmScheduler.handlePayload(
+            payload,
+            actionId: response?.actionId,
+            notificationId: response?.id,
+          ),
+        );
+      });
+    }
+  }
 
   runApp(const MyApp());
 }

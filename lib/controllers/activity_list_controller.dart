@@ -9,6 +9,8 @@ import '../models/activity_timer.dart';
 import '../models/session_history.dart';
 import '../routes/app_pages.dart';
 import '../routes/app_routes.dart';
+// Gene - Nov, 22, 2026: Clear active activity session when deleting its sequence (alphabetical directives order).
+import '../services/activity_session_service.dart';
 import '../services/database_service.dart';
 import '../services/ui_messenger.dart';
 import '../utils/time_format.dart';
@@ -332,10 +334,31 @@ class ActivityListController {
     }
   }
 
+  // Gene - Nov, 22, 2026: Clear active activity session and OS alarms if the deleted routine is running.
+  // Future<void> deleteSequence(int index) async {
+  //   final sequence = sequences[index];
+  //
+  //   try {
+  //     await _databaseService.deleteActivitySequence(sequence.id);
+  //     sequences.removeAt(index);
+  //
+  //     await Future<void>.delayed(const Duration(milliseconds: 100));
+  //     UiMessenger().showMessage('Activity deleted', title: 'Success');
+  //   } catch (e) {
+  //     await Future<void>.delayed(const Duration(milliseconds: 100));
+  //     UiMessenger().showMessage(
+  //       'Failed to delete activity: $e',
+  //       title: 'Error',
+  //     );
+  //   }
+  // }
   Future<void> deleteSequence(int index) async {
     final sequence = sequences[index];
 
     try {
+      if (ActivitySessionService().active.value?.sequence.id == sequence.id) {
+        ActivitySessionService().clear();
+      }
       await _databaseService.deleteActivitySequence(sequence.id);
       sequences.removeAt(index);
 

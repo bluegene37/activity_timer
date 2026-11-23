@@ -9,10 +9,13 @@ import 'package:intl/intl.dart';
 import 'package:signals/signals_flutter.dart';
 
 import '../components/glowing_timer_ring.dart';
+// Gene - Nov, 22, 2026: Sync in-screen mute toggle with AppController so SettingsScreen and OS notifications stay synchronized.
+import '../controllers/app_controller.dart';
 import '../controllers/interval_run_controller.dart';
 import '../models/interval_timer.dart';
 import '../models/settings.dart';
 import '../services/interval_session_service.dart';
+import '../services/locator.dart';
 import '../theme/app_theme.dart';
 
 class IntervalTimerScreen extends StatefulWidget {
@@ -122,26 +125,66 @@ class _IntervalTimerScreenState extends State<IntervalTimerScreen> {
                 onPressed: () => Navigator.pop(context),
               ),
               actions: [
-                // Sound toggle button
+                // Gene - Nov, 22, 2026: Route mute button through AppController when registered so SettingsScreen and background notifications update immediately.
+                // // Sound toggle button
+                // IconButton(
+                //   icon: Icon(
+                //     _settings.soundEnabled
+                //         ? CupertinoIcons.speaker_2_fill
+                //         : CupertinoIcons.speaker_slash_fill,
+                //     color:
+                //         _settings.soundEnabled
+                //             ? colorScheme.primary
+                //             : colorScheme.onSurfaceVariant,
+                //     size: 20,
+                //   ),
+                //   onPressed: () async {
+                //     unawaited(HapticFeedback.selectionClick());
+                //     final bool newValue = !_settings.soundEnabled;
+                //     await _settings.setSoundEnabled(newValue);
+                //     setState(() {});
+                //   },
+                //   tooltip:
+                //       _settings.soundEnabled ? 'Mute sound' : 'Enable sound',
+                // ),
                 IconButton(
                   icon: Icon(
-                    _settings.soundEnabled
+                    (locator.isRegistered<AppController>()
+                            ? locator<AppController>().soundEnabled.value
+                            : _settings.soundEnabled)
                         ? CupertinoIcons.speaker_2_fill
                         : CupertinoIcons.speaker_slash_fill,
                     color:
-                        _settings.soundEnabled
+                        (locator.isRegistered<AppController>()
+                                ? locator<AppController>().soundEnabled.value
+                                : _settings.soundEnabled)
                             ? colorScheme.primary
                             : colorScheme.onSurfaceVariant,
                     size: 20,
                   ),
                   onPressed: () async {
                     unawaited(HapticFeedback.selectionClick());
-                    final bool newValue = !_settings.soundEnabled;
-                    await _settings.setSoundEnabled(newValue);
-                    setState(() {});
+                    final hasApp = locator.isRegistered<AppController>();
+                    final current =
+                        hasApp
+                            ? locator<AppController>().soundEnabled.value
+                            : _settings.soundEnabled;
+                    final next = !current;
+                    if (hasApp) {
+                      await locator<AppController>().setSoundEnabled(next);
+                    } else {
+                      await _settings.setSoundEnabled(next);
+                    }
+                    if (mounted) {
+                      setState(() {});
+                    }
                   },
                   tooltip:
-                      _settings.soundEnabled ? 'Mute sound' : 'Enable sound',
+                      (locator.isRegistered<AppController>()
+                              ? locator<AppController>().soundEnabled.value
+                              : _settings.soundEnabled)
+                          ? 'Mute sound'
+                          : 'Enable sound',
                 ),
                 IconButton(
                   icon: Icon(

@@ -79,10 +79,21 @@ class DatabaseService {
   //   return Hive.openBox<dynamic>(_activeSessionsBoxName);
   // }
 
-  // Gene - Nov, 06, 2026: Open primary sequence, interval, history, and brew boxes on init; active sessions box is accessed on demand.
+  // Gene - Nov, 22, 2026: Open _activeSessionsBox on init so cold-start session clear/restore never skips disk state.
+  // // Gene - Nov, 06, 2026: Open primary sequence, interval, history, and brew boxes on init; active sessions box is accessed on demand.
+  // /// Open every box the app reads from.
+  // Future<void> init() async {
+  //   await (_sequences, _intervalTimers, _history, _brewRecipes).wait;
+  // }
   /// Open every box the app reads from.
   Future<void> init() async {
-    await (_sequences, _intervalTimers, _history, _brewRecipes).wait;
+    await (
+      _sequences,
+      _intervalTimers,
+      _history,
+      _brewRecipes,
+      _activeSessionsBox,
+    ).wait;
   }
 
   // ACTIVITY SEQUENCE METHODS
@@ -905,17 +916,28 @@ class DatabaseService {
     }
   }
 
+  // Gene - Nov, 22, 2026: Always open _activeSessionsBox when clearing so cold-start notification Dismiss never leaves stale records on disk.
+  // Future<void> clearActiveActivitySession() async {
+  //   _activeSessionsMemoryCache.remove('activity_session');
+  //   if (_isInFakeAsync) {
+  //     return;
+  //   }
+  //   try {
+  //     if (!Hive.isBoxOpen(_activeSessionsBoxName)) {
+  //       return;
+  //     }
+  //     final box = Hive.box<dynamic>(_activeSessionsBoxName);
+  //     await box.delete('activity_session');
+  //   } catch (_) {}
+  // }
   Future<void> clearActiveActivitySession() async {
     _activeSessionsMemoryCache.remove('activity_session');
     if (_isInFakeAsync) {
       return;
     }
     try {
-      if (!Hive.isBoxOpen(_activeSessionsBoxName)) {
-        return;
-      }
-      final box = Hive.box<dynamic>(_activeSessionsBoxName);
-      await box.delete('activity_session');
+      final box = await _activeSessionsBox;
+      await box?.delete('activity_session');
     } catch (_) {}
   }
 
@@ -952,17 +974,28 @@ class DatabaseService {
     }
   }
 
+  // Gene - Nov, 22, 2026: Always open _activeSessionsBox when clearing so cold-start notification Dismiss never leaves stale records on disk.
+  // Future<void> clearActiveIntervalSession() async {
+  //   _activeSessionsMemoryCache.remove('interval_session');
+  //   if (_isInFakeAsync) {
+  //     return;
+  //   }
+  //   try {
+  //     if (!Hive.isBoxOpen(_activeSessionsBoxName)) {
+  //       return;
+  //     }
+  //     final box = Hive.box<dynamic>(_activeSessionsBoxName);
+  //     await box.delete('interval_session');
+  //   } catch (_) {}
+  // }
   Future<void> clearActiveIntervalSession() async {
     _activeSessionsMemoryCache.remove('interval_session');
     if (_isInFakeAsync) {
       return;
     }
     try {
-      if (!Hive.isBoxOpen(_activeSessionsBoxName)) {
-        return;
-      }
-      final box = Hive.box<dynamic>(_activeSessionsBoxName);
-      await box.delete('interval_session');
+      final box = await _activeSessionsBox;
+      await box?.delete('interval_session');
     } catch (_) {}
   }
 
@@ -1000,17 +1033,28 @@ class DatabaseService {
     }
   }
 
+  // Gene - Nov, 22, 2026: Always open _activeSessionsBox when clearing so cold-start notification Dismiss never leaves stale records on disk.
+  // Future<void> clearActiveBrewSession() async {
+  //   _activeSessionsMemoryCache.remove('brew_session');
+  //   if (_isInFakeAsync) {
+  //     return;
+  //   }
+  //   try {
+  //     if (!Hive.isBoxOpen(_activeSessionsBoxName)) {
+  //       return;
+  //     }
+  //     final box = Hive.box<dynamic>(_activeSessionsBoxName);
+  //     await box.delete('brew_session');
+  //   } catch (_) {}
+  // }
   Future<void> clearActiveBrewSession() async {
     _activeSessionsMemoryCache.remove('brew_session');
     if (_isInFakeAsync) {
       return;
     }
     try {
-      if (!Hive.isBoxOpen(_activeSessionsBoxName)) {
-        return;
-      }
-      final box = Hive.box<dynamic>(_activeSessionsBoxName);
-      await box.delete('brew_session');
+      final box = await _activeSessionsBox;
+      await box?.delete('brew_session');
     } catch (_) {}
   }
 
